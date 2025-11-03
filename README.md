@@ -17,11 +17,27 @@ A comprehensive CLI tool for tracking and analyzing your Claude Code usage metri
 ## Installation
 
 ```bash
-# Install dependencies
-python3 -m pip install click rich python-dateutil
-
-# Clone or navigate to the repository
+# Clone the repository
+git clone https://github.com/Skyscanner/claude_monitor.git
 cd claude_monitor
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+Alternatively, you can install it as a package:
+
+```bash
+# Install in editable mode (recommended for development)
+pip install -e .
+
+# Or install normally
+pip install .
+```
+
+After installation, you can run it directly with:
+```bash
+claude-monitor
 ```
 
 ## Usage
@@ -37,7 +53,7 @@ python3 -m src.claude_monitor.cli
 The interactive menu features:
 - **Claude Monitor Logo**: Styled in Skyscanner blue
 - **View Selection**: Choose from Full Dashboard, Token Usage, Activity Report, Integrations, or File History
-- **Time Range Selection**: Today, Last 7 days, Last 30 days, Last year, or All time
+- **Time Range Selection**: Today, Last 7 days, Last 30 days, Current quarter, Last year, or All time
 
 ### Command Line Options
 
@@ -52,6 +68,9 @@ python3 -m src.claude_monitor.cli --week
 
 # Show last 30 days
 python3 -m src.claude_monitor.cli --month
+
+# Show current quarter (Q1: Jan-Mar, Q2: Apr-Jun, Q3: Jul-Sep, Q4: Oct-Dec)
+python3 -m src.claude_monitor.cli --quarter
 
 # Show only today
 python3 -m src.claude_monitor.cli --today
