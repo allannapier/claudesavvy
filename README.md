@@ -107,7 +107,20 @@ Export your metrics for further analysis:
 
 ## Screenshots
 
-*Screenshots will be added in the next update showing the dashboard, token usage, and project pages.*
+### Dashboard Overview
+The main dashboard provides an at-a-glance view of all your Claude Code metrics.
+
+![Dashboard](docs/images/dashboard.png)
+
+### Token Usage & Costs
+Detailed breakdown of token consumption with cost calculations and cache efficiency.
+
+![Token Usage](docs/images/tokens.png)
+
+### Features & Tools
+Track tool usage, sub-agents, MCP integrations, and installed skills.
+
+![Features](docs/images/features.png)
 
 ## Metrics Explained
 
