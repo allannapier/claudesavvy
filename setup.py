@@ -8,6 +8,13 @@ setup(
     description="Web-based usage monitoring tool for Claude Code",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
+    package_data={
+        "claude_monitor.web": [
+            "templates/**/*.html",
+            "static/**/*",
+        ],
+    },
+    include_package_data=True,
     install_requires=[
         "click>=8.1.0",
         "rich>=13.0.0",
