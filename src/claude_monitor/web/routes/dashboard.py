@@ -349,6 +349,47 @@ def api_feature_detail(repo_path: str, feature_type: str, feature_id: str) -> st
         return f'<div class="alert alert-error">Error loading feature details: {str(e)}</div>'
 
 
+@dashboard_bp.route('/export/configuration/<path:repo_path>')
+def export_configuration(repo_path: str):
+    """
+    Export configuration features as JSON.
+
+    Args:
+        repo_path: Path to the repository
+
+    Returns:
+        JSON file download
+    """
+    from flask import jsonify, Response
+    import json as json_lib
+
+    try:
+        service = current_app.dashboard_service
+        features = service.get_configuration_features(repo_path)
+
+        # Find repository name
+        repos = service.get_discovered_repositories()
+        repo_name = "configuration"
+        for repo in repos:
+            if repo['path'] == repo_path:
+                repo_name = repo['name'].replace(' ', '_').lower()
+                break
+
+        # Create JSON response
+        json_data = json_lib.dumps(features, indent=2, default=str)
+
+        return Response(
+            json_data,
+            mimetype='application/json',
+            headers={
+                'Content-Disposition': f'attachment; filename={repo_name}_configuration.json'
+            }
+        )
+    except Exception as e:
+        logger.error(f'Error exporting configuration: {e}', exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 @dashboard_bp.route('/api/dashboard')
 def api_dashboard() -> str:
     """

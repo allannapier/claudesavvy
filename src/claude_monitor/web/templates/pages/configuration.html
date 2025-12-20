@@ -4,34 +4,61 @@
 {% block title %}Configuration - Claude Monitor{% endblock %}
 
 {% block main_content %}
-<div class="space-y-8" x-data="{ activeTab: 'skills', selectedFeature: null }">
+<div class="space-y-8" x-data="{ activeTab: 'skills', selectedFeature: null, selectedRepoPath: '{{ selected_repo.path if selected_repo else '' }}' }">
     <!-- Page Title -->
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between flex-wrap gap-4">
         <div>
             <h1 class="text-3xl font-bold text-gray-900">Configuration</h1>
             <p class="mt-2 text-gray-600">Claude Code configuration viewer</p>
         </div>
 
-        <!-- Repository Selector -->
-        {% if repositories %}
-        <div class="w-64">
-            <label for="repo-select" class="block text-sm font-medium text-gray-700 mb-2">Repository</label>
-            <select
-                id="repo-select"
-                class="w-full rounded-lg border-gray-300 border py-2 px-3 focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]"
-                hx-get="/api/configuration/{value}"
-                hx-trigger="change"
-                hx-target="#feature-list"
-                hx-swap="innerHTML"
-            >
-                {% for repo in repositories %}
-                <option value="{{ repo.path }}" {% if selected_repo and repo.path == selected_repo.path %}selected{% endif %}>
-                    {{ repo.name }}
-                </option>
-                {% endfor %}
-            </select>
+        <div class="flex items-center gap-4">
+            <!-- Repository Selector -->
+            {% if repositories %}
+            <div class="w-64">
+                <label for="repo-select" class="block text-sm font-medium text-gray-700 mb-2">Repository</label>
+                <select
+                    id="repo-select"
+                    x-model="selectedRepoPath"
+                    class="w-full rounded-lg border-gray-300 border py-2 px-3 focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]"
+                    hx-get="/api/configuration/{value}"
+                    hx-trigger="change"
+                    hx-target="#feature-list"
+                    hx-swap="innerHTML"
+                >
+                    {% for repo in repositories %}
+                    <option value="{{ repo.path }}" {% if selected_repo and repo.path == selected_repo.path %}selected{% endif %}>
+                        {{ repo.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <!-- Action Buttons -->
+            <div class="flex gap-2 mt-7">
+                <!-- Export Button -->
+                {% if selected_repo %}
+                <a :href="'/export/configuration/' + encodeURIComponent(selectedRepoPath)"
+                   class="px-4 py-2 bg-[#0770E3] text-white rounded-lg hover:bg-[#0660C3] transition-colors flex items-center gap-2"
+                   download>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Export
+                </a>
+                {% endif %}
+
+                <!-- Refresh Button -->
+                <button onclick="window.location.reload()"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Refresh
+                </button>
+            </div>
         </div>
-        {% endif %}
     </div>
 
     <!-- Summary Cards -->
