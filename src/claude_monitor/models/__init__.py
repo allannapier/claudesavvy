@@ -1,0 +1,240 @@
+"""Models package for Claude Monitor."""
+
+from enum import Enum
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import List, Optional, Dict, Any
+
+
+class ConfigSource(Enum):
+    """Source of a configuration feature."""
+    USER = "user"
+    PLUGIN = "plugin"
+    PROJECT = "project"
+
+
+@dataclass
+class RepositoryConfig:
+    """Repository configuration information."""
+    path: Path
+    name: str
+    claude_dir: Path
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            'path': str(self.path),
+            'name': self.name,
+            'claude_dir': str(self.claude_dir),
+        }
+
+
+@dataclass
+class Skill:
+    """Claude Code skill configuration."""
+    name: str
+    description: str
+    source: ConfigSource
+    path: Path
+    content: str = ""
+    version: Optional[str] = None
+    agents: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            'name': self.name,
+            'description': self.description,
+            'source': self.source.value,
+            'path': str(self.path),
+            'content': self.content,
+            'version': self.version,
+            'agents': self.agents,
+        }
+
+
+@dataclass
+class MCP:
+    """Model Context Protocol server configuration."""
+    name: str
+    command: str
+    args: List[str]
+    source: ConfigSource
+    plugin_path: Optional[Path] = None
+    env: Dict[str, str] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            'name': self.name,
+            'command': self.command,
+            'args': self.args,
+            'source': self.source.value,
+            'plugin_path': str(self.plugin_path) if self.plugin_path else None,
+            'env': self.env,
+        }
+
+
+@dataclass
+class Command:
+    """Slash command configuration."""
+    name: str
+    content: str
+    source: ConfigSource
+    path: Path
+    description: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            'name': self.name,
+            'content': self.content,
+            'source': self.source.value,
+            'path': str(self.path),
+            'description': self.description,
+        }
+
+
+@dataclass
+class Plugin:
+    """Plugin configuration."""
+    name: str
+    version: str
+    description: str
+    install_path: Path
+    author: Optional[str] = None
+    license: Optional[str] = None
+    keywords: List[str] = field(default_factory=list)
+    enabled: bool = True
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            'name': self.name,
+            'version': self.version,
+            'description': self.description,
+            'install_path': str(self.install_path),
+            'author': self.author,
+            'license': self.license,
+            'keywords': self.keywords,
+            'enabled': self.enabled,
+        }
+
+
+@dataclass
+class Hook:
+    """Hook configuration."""
+    description: str
+    triggers: List[str]
+    matchers: List[str]
+    handler: str
+    source: ConfigSource
+    config: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            'description': self.description,
+            'triggers': self.triggers,
+            'matchers': self.matchers,
+            'handler': self.handler,
+            'source': self.source.value,
+            'config': self.config,
+        }
+
+
+@dataclass
+class Agent:
+    """Agent configuration."""
+    name: str
+    description: str
+    source: ConfigSource
+    path: Path
+    model: Optional[str] = None
+    color: Optional[str] = None
+    tools: List[str] = field(default_factory=list)
+    instructions: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            'name': self.name,
+            'description': self.description,
+            'source': self.source.value,
+            'path': str(self.path),
+            'model': self.model,
+            'color': self.color,
+            'tools': self.tools,
+            'instructions': self.instructions,
+        }
+
+
+@dataclass
+class InheritanceLevel:
+    """Single level in an inheritance chain."""
+    source: ConfigSource
+    path: Path
+    feature: Any  # The actual feature object
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            'source': self.source.value,
+            'path': str(self.path),
+            'feature': self.feature.to_dict() if hasattr(self.feature, 'to_dict') else str(self.feature),
+        }
+
+
+@dataclass
+class InheritanceChain:
+    """Full inheritance chain for a feature."""
+    feature_type: str
+    feature_name: str
+    levels: List[InheritanceLevel] = field(default_factory=list)
+    winner: Optional[ConfigSource] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            'feature_type': self.feature_type,
+            'feature_name': self.feature_name,
+            'levels': [level.to_dict() for level in self.levels],
+            'winner': self.winner.value if self.winner else None,
+        }
+
+
+@dataclass
+class ConfigurationFeatures:
+    """All configuration features for a repository."""
+    skills: List[Skill] = field(default_factory=list)
+    mcps: List[MCP] = field(default_factory=list)
+    commands: List[Command] = field(default_factory=list)
+    plugins: List[Plugin] = field(default_factory=list)
+    hooks: List[Hook] = field(default_factory=list)
+    agents: List[Agent] = field(default_factory=list)
+
+    def get_feature_count(self) -> Dict[str, int]:
+        """Get count of each feature type."""
+        return {
+            'skills': len(self.skills),
+            'mcps': len(self.mcps),
+            'commands': len(self.commands),
+            'plugins': len(self.plugins),
+            'hooks': len(self.hooks),
+            'agents': len(self.agents),
+        }
+
+
+__all__ = [
+    'ConfigSource',
+    'RepositoryConfig',
+    'Skill',
+    'MCP',
+    'Command',
+    'Plugin',
+    'Hook',
+    'Agent',
+    'InheritanceLevel',
+    'InheritanceChain',
+    'ConfigurationFeatures',
+]

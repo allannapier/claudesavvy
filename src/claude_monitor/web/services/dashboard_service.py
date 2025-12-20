@@ -17,10 +17,12 @@ from ...parsers.debug import DebugLogParser
 from ...parsers.files import FileHistoryParser
 from ...parsers.tools import ToolUsageParser, ToolStats
 from ...parsers.skills import SkillsParser, ConfigurationParser, SkillInfo
+from ...parsers.configuration_scanner import ConfigurationScanner
 from ...analyzers.usage import UsageAnalyzer, UsageSummary
 from ...analyzers.tokens import TokenAnalyzer, TokenSummary
 from ...analyzers.integrations import IntegrationAnalyzer, IntegrationSummary
 from ...analyzers.features import FeaturesAnalyzer, FeaturesSummary
+from ...analyzers.configuration import ConfigurationAnalyzer
 
 
 class DashboardService:
@@ -77,6 +79,10 @@ class DashboardService:
             self._config_parser,
             time_filter=None
         )
+
+        # Initialize configuration scanner and analyzer
+        self._config_scanner = ConfigurationScanner(self._config_parser)
+        self._configuration_analyzer = ConfigurationAnalyzer(self._config_scanner)
 
     def _build_project_map(self) -> Dict[str, str]:
         """
@@ -706,3 +712,67 @@ class DashboardService:
             'top_tools': self.get_top_tools(limit=5, time_filter=time_filter),
             'top_subagents': self.get_top_subagents(limit=5, time_filter=time_filter),
         }
+
+    # ========== Configuration Methods ==========
+
+    def get_discovered_repositories(self) -> List[Dict]:
+        """
+        Get all discovered repositories with .claude/ directories.
+
+        Returns:
+            List of repository dicts
+        """
+        repos = self._config_scanner.scan_for_repositories()
+        return [repo.to_dict() for repo in repos]
+
+    def get_configuration_features(self, repo_path: str) -> Dict[str, Any]:
+        """
+        Get all configuration features for a repository.
+
+        Args:
+            repo_path: Path to repository as string
+
+        Returns:
+            Dict with all features categorized
+        """
+        path = Path(repo_path)
+        return self._configuration_analyzer.get_feature_breakdown(path)
+
+    def get_feature_detail(
+        self, repo_path: str, feature_type: str, feature_id: str
+    ) -> Dict[str, Any]:
+        """
+        Get detailed information about a specific feature.
+
+        Args:
+            repo_path: Path to repository as string
+            feature_type: Type of feature (skill, command, etc.)
+            feature_id: ID/name of the feature
+
+        Returns:
+            Dict with feature details
+        """
+        path = Path(repo_path)
+        return self._configuration_analyzer.get_feature_detail(
+            feature_type, feature_id, path
+        )
+
+    def get_inheritance_chain(
+        self, repo_path: str, feature_type: str, feature_id: str
+    ) -> List[Dict]:
+        """
+        Get inheritance chain for a feature.
+
+        Args:
+            repo_path: Path to repository as string
+            feature_type: Type of feature
+            feature_id: ID/name of the feature
+
+        Returns:
+            List of inheritance levels
+        """
+        path = Path(repo_path)
+        inheritance_tree = self._configuration_analyzer.get_inheritance_tree(
+            feature_type, feature_id, path
+        )
+        return inheritance_tree.get('levels', [])
