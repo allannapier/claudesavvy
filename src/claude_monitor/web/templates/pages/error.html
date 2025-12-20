@@ -1,0 +1,78 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}{{ error_title|default('Error') }} - Claude Monitor{% endblock %}
+
+{% block main_content %}
+<div class="min-h-[60vh] flex items-center justify-center">
+    <div class="max-w-2xl w-full">
+        <!-- Error Card -->
+        <div class="bg-white rounded-lg shadow-lg border-2 border-red-200 overflow-hidden">
+            <!-- Error Icon Header -->
+            <div class="bg-red-50 px-6 py-8 text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
+                    <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900">{{ error_title|default('Error Occurred') }}</h1>
+            </div>
+
+            <!-- Error Content -->
+            <div class="px-6 py-6 space-y-6">
+                <!-- Error Message -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">What happened?</h2>
+                    <p class="text-gray-700">{{ error_message|default('An unexpected error occurred.') }}</p>
+                </div>
+
+                <!-- Error Details -->
+                {% if error_details %}
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-2">Technical Details:</h3>
+                    <p class="text-sm text-gray-600 font-mono break-words">{{ error_details }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Suggestion -->
+                {% if suggestion %}
+                <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div>
+                            <h3 class="text-sm font-semibold text-blue-900 mb-1">Suggestion:</h3>
+                            <p class="text-sm text-blue-800">{{ suggestion }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Actions -->
+                <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                    <a href="/" class="inline-flex items-center justify-center px-4 py-2 bg-[#0770E3] text-white font-medium rounded-lg hover:bg-[#0560c1] transition-colors">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                        </svg>
+                        Return to Dashboard
+                    </a>
+                    <button onclick="window.location.reload()" class="inline-flex items-center justify-center px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Text -->
+        <div class="mt-6 text-center text-sm text-gray-600">
+            <p>If this problem persists, please check the server logs or report the issue.</p>
+            <p class="mt-2">
+                <a href="/health" class="text-[#0770E3] hover:underline">Check Server Health</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

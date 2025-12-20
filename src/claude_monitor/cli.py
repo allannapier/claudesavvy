@@ -89,6 +89,117 @@ def create_dashboard(
     )
 
 
+@click.group(invoke_without_command=True)
+@click.pass_context
+def main(ctx):
+    """
+    Claude Code Usage Tracking Tool
+
+    Display comprehensive metrics about your Claude Code usage including
+    sessions, token consumption, costs, projects, integrations, and more.
+
+    Use 'claude-monitor COMMAND --help' for more information on a command.
+
+    Examples:
+
+      # Show dashboard (default)
+      $ claude-monitor
+
+      # Show web interface
+      $ claude-monitor web
+
+      # Show today's activity
+      $ claude-monitor dashboard --today
+
+      # Start web server on custom port
+      $ claude-monitor web --port 8080
+    """
+    # If no command is provided, default to dashboard
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(dashboard)
+
+
+@click.command()
+@click.option(
+    '--port',
+    type=int,
+    default=5000,
+    help='Port to run web server on (default: 5000)'
+)
+@click.option(
+    '--host',
+    type=str,
+    default='127.0.0.1',
+    help='Host to bind to (default: 127.0.0.1)'
+)
+@click.option(
+    '--debug',
+    is_flag=True,
+    help='Run in debug mode with auto-reload'
+)
+@click.option(
+    '--claude-dir',
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    help='Custom Claude data directory (default: ~/.claude/)'
+)
+def web(port, host, debug, claude_dir):
+    """
+    Run Claude Monitor web server.
+
+    Start a Flask development server to view Claude Code usage metrics
+    in a web browser. Access the dashboard at http://localhost:5000
+
+    Examples:
+
+      # Start server on default port 5000
+      $ claude-monitor web
+
+      # Start on custom port with debug mode
+      $ claude-monitor web --port 8080 --debug
+
+      # Bind to all network interfaces
+      $ claude-monitor web --host 0.0.0.0
+
+      # Use custom Claude data directory
+      $ claude-monitor web --claude-dir /path/to/claude/data
+    """
+    console = Console()
+
+    try:
+        # Lazy import Flask to avoid requiring it when not using web command
+        from .web.app import create_app
+
+        # Get Claude data paths
+        if claude_dir:
+            paths = ClaudeDataPaths(Path(claude_dir))
+        else:
+            paths = get_claude_paths()
+
+        # Create Flask app with paths
+        app = create_app(paths)
+
+        # Display startup information
+        console.print(f"\n[cyan]Claude Monitor Web Server[/cyan]")
+        console.print(f"[dim]Starting web server...[/dim]\n")
+        console.print(f"[green]Web server running at:[/green] [bold]http://{host}:{port}[/bold]")
+        if debug:
+            console.print(f"[yellow]Debug mode:[/yellow] [bold]Enabled[/bold]")
+        console.print(f"\n[dim]Press Ctrl+C to stop the server[/dim]\n")
+
+        # Run Flask app
+        app.run(host=host, port=port, debug=debug)
+
+    except FileNotFoundError as e:
+        console.print(f"[red]Error:[/red] {e}", style="red")
+        console.print("\n[yellow]Make sure Claude Code has been used at least once.[/yellow]")
+        sys.exit(1)
+
+    except Exception as e:
+        console.print(f"[red]Unexpected error:[/red] {e}", style="red")
+        console.print("\n[dim]If this issue persists, please report it.[/dim]")
+        sys.exit(1)
+
+
 @click.command()
 @click.option(
     '--today',
@@ -152,7 +263,7 @@ def create_dashboard(
     default=None,
     help='Enable interactive menu mode (default when no options provided)'
 )
-def main(time_preset, since, focus, project, claude_dir, interactive):
+def dashboard(time_preset, since, focus, project, claude_dir, interactive):
     """
     Claude Code Usage Tracking Tool
 
@@ -269,6 +380,11 @@ def main(time_preset, since, focus, project, claude_dir, interactive):
         console.print(f"[red]Unexpected error:[/red] {e}", style="red")
         console.print("\n[dim]If this issue persists, please report it.[/dim]")
         sys.exit(1)
+
+
+# Register commands with the group
+main.add_command(dashboard)
+main.add_command(web)
 
 
 if __name__ == '__main__':

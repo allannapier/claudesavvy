@@ -1,0 +1,90 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Dashboard - Claude Monitor{% endblock %}
+
+{% block main_content %}
+<div class="space-y-8" x-data="{ selectedPeriod: 'all' }">
+    <!-- Page Title and Time Filter -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p class="mt-2 text-gray-600">Overview of your Claude Code usage and analytics</p>
+        </div>
+
+        <!-- Time Filter Pills -->
+        <div class="flex gap-2" role="group">
+            <button
+                hx-get="/api/dashboard?period=today"
+                hx-target="#dashboard-content"
+                hx-swap="innerHTML"
+                @click="selectedPeriod = 'today'"
+                :class="selectedPeriod === 'today' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
+                class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2"
+            >
+                Today
+            </button>
+            <button
+                hx-get="/api/dashboard?period=week"
+                hx-target="#dashboard-content"
+                hx-swap="innerHTML"
+                @click="selectedPeriod = 'week'"
+                :class="selectedPeriod === 'week' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
+                class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2"
+            >
+                Week
+            </button>
+            <button
+                hx-get="/api/dashboard?period=month"
+                hx-target="#dashboard-content"
+                hx-swap="innerHTML"
+                @click="selectedPeriod = 'month'"
+                :class="selectedPeriod === 'month' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
+                class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2"
+            >
+                Month
+            </button>
+            <button
+                hx-get="/api/dashboard?period=all"
+                hx-target="#dashboard-content"
+                hx-swap="innerHTML"
+                @click="selectedPeriod = 'all'"
+                :class="selectedPeriod === 'all' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
+                class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-[#0660c3] focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2"
+            >
+                All Time
+            </button>
+
+            <!-- Export Dropdown -->
+            <div class="relative ml-4" x-data="{ open: false }">
+                <button
+                    @click="open = !open"
+                    class="px-4 py-2 text-sm font-medium rounded-lg border bg-white text-gray-700 border-gray-300 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2"
+                >
+                    Export
+                    <svg class="inline-block w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div
+                    x-show="open"
+                    @click.away="open = false"
+                    class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10"
+                    style="display: none;"
+                >
+                    <a href="/export/csv" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        Export as CSV
+                    </a>
+                    <a href="/export/json" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        Export as JSON
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Content (HTMX Target) -->
+    <div id="dashboard-content">
+        {% include 'partials/dashboard_content.html' %}
+    </div>
+</div>
+{% endblock %}

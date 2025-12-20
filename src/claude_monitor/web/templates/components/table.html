@@ -1,0 +1,183 @@
+{# Table Component - Reusable table macro for consistent data display #}
+
+{% macro table(headers=[], class="", striped=True, hover=True) %}
+<div class="overflow-x-auto rounded-lg border border-gray-200 bg-white {{ class }}">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                {% for header in headers %}
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    {{ header }}
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+            {{ caller() }}
+        </tbody>
+    </table>
+</div>
+{% endmacro %}
+
+
+{# Table Row - Use inside table macro #}
+{% macro table_row(cells=[], hover=True, class="") %}
+<tr class="{% if hover %}hover:bg-gray-50 transition-colors{% endif %} {{ class }}">
+    {% for cell in cells %}
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        {{ cell | safe }}
+    </td>
+    {% endfor %}
+</tr>
+{% endmacro %}
+
+
+{# Data Table - Macro-based table with sorting and search capability #}
+{% macro data_table(title=None, id="data-table", search=True, export=False, class="") %}
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden {{ class }}">
+    <!-- Table Header -->
+    {% if title or search or export %}
+    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {% if title %}
+            <h3 class="text-lg font-semibold text-gray-900">{{ title }}</h3>
+            {% endif %}
+
+            <div class="flex flex-col md:flex-row gap-3">
+                {% if search %}
+                <div class="flex-1 md:flex-none">
+                    <input
+                        type="text"
+                        placeholder="Search..."
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-transparent"
+                        hx-trigger="keyup changed delay:500ms"
+                        hx-target="#{{ id }}-body"
+                        hx-include="[name='sort'], [name='page']"
+                    >
+                </div>
+                {% endif %}
+
+                {% if export %}
+                <button
+                    class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                    onclick="exportTable('{{ id }}')"
+                >
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Export
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Table -->
+    <div id="{{ id }}-body" class="overflow-x-auto">
+        {{ caller() }}
+    </div>
+
+    <!-- Pagination (optional) -->
+    <div class="px-6 py-4 border-t border-gray-200 bg-gray-50" id="{{ id }}-pagination">
+        <!-- Pagination controls can be inserted here via HTMX -->
+    </div>
+</div>
+{% endmacro %}
+
+
+{# Simple Responsive Table #}
+{% macro responsive_table(title=None, class="") %}
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden {{ class }}">
+    {% if title %}
+    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <h3 class="text-lg font-semibold text-gray-900">{{ title }}</h3>
+    </div>
+    {% endif %}
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            {{ caller() }}
+        </table>
+    </div>
+</div>
+{% endmacro %}
+
+
+{# Table Cell with Badge #}
+{% macro badge_cell(text, variant="default", class="") %}
+<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ class }}
+    {% if variant == 'success' %}bg-green-100 text-green-800
+    {% elif variant == 'warning' %}bg-yellow-100 text-yellow-800
+    {% elif variant == 'error' %}bg-red-100 text-red-800
+    {% elif variant == 'info' %}bg-blue-100 text-blue-800
+    {% elif variant == 'brand' %}bg-[#0770E3] bg-opacity-10 text-[#0770E3]
+    {% else %}bg-gray-100 text-gray-800
+    {% endif %}">
+    {{ text }}
+</span>
+{% endmacro %}
+
+
+{# Status Indicator with Text #}
+{% macro status_cell(text, status="active", class="") %}
+<div class="flex items-center gap-2 {{ class }}">
+    <div class="w-2 h-2 rounded-full {% if status == 'active' %}bg-green-500{% elif status == 'inactive' %}bg-gray-300{% elif status == 'pending' %}bg-yellow-500{% else %}bg-red-500{% endif %}"></div>
+    <span class="text-sm text-gray-900">{{ text }}</span>
+</div>
+{% endmacro %}
+
+
+{# Action Buttons Cell #}
+{% macro action_buttons(edit_url="#", delete_url="#", view_url="#", class="") %}
+<div class="flex items-center gap-2 {{ class }}">
+    {% if view_url and view_url != "#" %}
+    <a href="{{ view_url }}" class="inline-flex items-center px-3 py-1 rounded text-xs font-medium text-[#0770E3] hover:bg-[#0770E3] hover:bg-opacity-10 transition-colors">
+        View
+    </a>
+    {% endif %}
+
+    {% if edit_url and edit_url != "#" %}
+    <a href="{{ edit_url }}" class="inline-flex items-center px-3 py-1 rounded text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors">
+        Edit
+    </a>
+    {% endif %}
+
+    {% if delete_url and delete_url != "#" %}
+    <button onclick="if(confirm('Are you sure?')) htmx.ajax('DELETE', '{{ delete_url }}', '#table-container')" class="inline-flex items-center px-3 py-1 rounded text-xs font-medium text-red-600 hover:bg-red-50 transition-colors">
+        Delete
+    </button>
+    {% endif %}
+</div>
+{% endmacro %}
+
+
+{# Expandable Row - For detailed information #}
+{% macro expandable_row(summary, id=None) %}
+<tr class="cursor-pointer hover:bg-gray-50 transition-colors" x-data="{ expanded: false }" @click="expanded = !expanded">
+    <td colspan="100%" class="px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex-1">
+                {{ summary | safe }}
+            </div>
+            <svg class="w-4 h-4 text-gray-400 transform transition-transform" :class="{ 'rotate-180': expanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+            </svg>
+        </div>
+        <div x-show="expanded" x-transition class="mt-4 pl-4 border-l-2 border-[#0770E3]">
+            {{ caller() }}
+        </div>
+    </td>
+</tr>
+{% endmacro %}
+
+
+{# Empty Table State #}
+{% macro empty_table(message="No data available") %}
+<div class="text-center py-12">
+    <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+    </svg>
+    <p class="text-gray-500 font-medium">{{ message }}</p>
+</div>
+{% endmacro %}

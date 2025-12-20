@@ -1,0 +1,99 @@
+{# Card Component - Reusable card macro for consistent styling #}
+
+{% macro card(title=None, subtitle=None, icon=None, class="", footer=None, highlight=False) %}
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden {{ 'border-[#0770E3] border-2' if highlight else '' }} {{ class }}">
+    {% if title or icon %}
+    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                {% if icon %}
+                <div class="w-8 h-8 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3]">
+                    {{ icon | safe }}
+                </div>
+                {% endif %}
+                <div>
+                    {% if title %}
+                    <h3 class="font-semibold text-gray-900">{{ title }}</h3>
+                    {% endif %}
+                    {% if subtitle %}
+                    <p class="text-sm text-gray-600">{{ subtitle }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="px-6 py-4">
+        {{ caller() }}
+    </div>
+
+    {% if footer %}
+    <div class="px-6 py-3 border-t border-gray-200 bg-gray-50">
+        {{ footer | safe }}
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+
+{# Card Grid - Stat Card variant for displaying key metrics #}
+{% macro stat_card(label, value, trend=None, trend_label=None, icon=None, class="") %}
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 {{ class }}">
+    <div class="flex items-start justify-between">
+        <div class="flex-1">
+            <p class="text-sm font-medium text-gray-600">{{ label }}</p>
+            <p class="mt-2 text-2xl md:text-3xl font-bold text-gray-900">{{ value }}</p>
+            {% if trend and trend_label %}
+            <p class="mt-2 text-sm {{ 'text-green-600' if trend > 0 else 'text-red-600' }}">
+                <span class="font-medium">{{ '+' if trend > 0 else '' }}{{ trend }}%</span>
+                <span class="text-gray-600">{{ trend_label }}</span>
+            </p>
+            {% endif %}
+        </div>
+        {% if icon %}
+        <div class="w-12 h-12 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+            {{ icon | safe }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
+
+
+{# Empty State Card #}
+{% macro empty_card(title="No data available", description="", icon=None, action_text=None, action_url=None) %}
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 border-dashed p-12 text-center">
+    {% if icon %}
+    <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4 text-gray-400">
+        {{ icon | safe }}
+    </div>
+    {% endif %}
+    <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ title }}</h3>
+    {% if description %}
+    <p class="text-gray-600 mb-6">{{ description }}</p>
+    {% endif %}
+    {% if action_text and action_url %}
+    <a href="{{ action_url }}" class="inline-flex items-center px-4 py-2 bg-[#0770E3] text-white font-medium rounded-lg hover:bg-[#0560c1] transition-colors">
+        {{ action_text }}
+    </a>
+    {% endif %}
+</div>
+{% endmacro %}
+
+
+{# Hover Card - Interactive card variant #}
+{% macro hover_card(title, description, link="#", class="") %}
+<a href="{{ link }}" class="block">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-[#0770E3] transition-all duration-200 cursor-pointer {{ class }}">
+        <h3 class="font-semibold text-gray-900 group-hover:text-[#0770E3]">{{ title }}</h3>
+        <p class="mt-2 text-sm text-gray-600">{{ description }}</p>
+        <div class="mt-4 flex items-center text-[#0770E3] font-medium">
+            <span>Learn more</span>
+            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        </div>
+    </div>
+</a>
+{% endmacro %}

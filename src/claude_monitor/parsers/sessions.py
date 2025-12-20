@@ -53,9 +53,18 @@ class SessionMessage:
     model: Optional[str] = None
 
     @property
-    def datetime(self) -> datetime:
-        """Get datetime from ISO timestamp."""
-        return datetime.fromisoformat(self.timestamp.replace('Z', '+00:00'))
+    def datetime(self) -> Optional[datetime]:
+        """Get datetime from ISO timestamp.
+
+        Returns:
+            datetime object or None if timestamp is invalid/empty
+        """
+        if not self.timestamp or not self.timestamp.strip():
+            return None
+        try:
+            return datetime.fromisoformat(self.timestamp.replace('Z', '+00:00'))
+        except (ValueError, AttributeError):
+            return None
 
     @classmethod
     def from_dict(cls, data: dict) -> "SessionMessage":
@@ -119,11 +128,13 @@ class SessionStats:
         if message.cwd:
             self.projects.add(message.cwd)
 
+        # Only update timestamps if we have a valid datetime
         msg_dt = message.datetime
-        if self.earliest_timestamp is None or msg_dt < self.earliest_timestamp:
-            self.earliest_timestamp = msg_dt
-        if self.latest_timestamp is None or msg_dt > self.latest_timestamp:
-            self.latest_timestamp = msg_dt
+        if msg_dt is not None:
+            if self.earliest_timestamp is None or msg_dt < self.earliest_timestamp:
+                self.earliest_timestamp = msg_dt
+            if self.latest_timestamp is None or msg_dt > self.latest_timestamp:
+                self.latest_timestamp = msg_dt
 
     @property
     def session_count(self) -> int:
@@ -175,6 +186,10 @@ class SessionParser:
                 try:
                     data = json.loads(line)
                     message = SessionMessage.from_dict(data)
+
+                    # Skip messages with invalid timestamps
+                    if not message.timestamp or not message.timestamp.strip():
+                        continue
 
                     # Apply time filter
                     if time_filter and not time_filter.matches_iso_string(message.timestamp):

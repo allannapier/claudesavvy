@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Claude Monitor - Track Claude Code usage and analytics">
+    <meta name="theme-color" content="#0770E3">
+
+    <title>{% block title %}Claude Monitor{% endblock %}</title>
+
+    <!-- Tailwind CSS 3.x -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.11.1/dist/full.min.css" rel="stylesheet" type="text/css">
+
+    <!-- Alpine.js 3.x -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+    <!-- HTMX 2.0 -->
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+
+    <!-- Chart.js 4.x -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+    <!-- Custom brand color configuration for Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-blue': '#0770E3',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --brand-blue: #0770E3;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .btn-brand {
+            @apply bg-[#0770E3] hover:bg-[#0560c1] text-white font-medium transition-colors;
+        }
+
+        .text-brand {
+            @apply text-[#0770E3];
+        }
+
+        .border-brand {
+            @apply border-[#0770E3];
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50">
+    {% block content %}{% endblock %}
+</body>
+</html>
