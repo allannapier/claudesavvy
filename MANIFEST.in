@@ -1,0 +1,7 @@
+include README.md
+include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+include requirements.txt
+recursive-include src/claude_monitor/web/templates *.html
+recursive-include src/claude_monitor/web/static *

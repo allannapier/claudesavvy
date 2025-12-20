@@ -25,3 +25,6 @@ where = ["src"]
 
 [tool.setuptools.package-dir]
 "" = "src"
+
+[tool.setuptools.package-data]
+"claude_monitor.web" = ["templates/**/*.html", "static/**/*"]
