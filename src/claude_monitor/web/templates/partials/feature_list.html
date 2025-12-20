@@ -1,0 +1,240 @@
+<!-- Feature List Partial -->
+{% if features %}
+<!-- Skills Tab Content -->
+<div x-show="activeTab === 'skills'" class="space-y-3">
+    {% if features.skills %}
+        {% for skill in features.skills %}
+        <div class="border border-gray-200 rounded-lg p-4 hover:border-[#0770E3] hover:shadow-md transition-all cursor-pointer"
+             hx-get="/api/feature-detail/{{ selected_repo.path if selected_repo else '' }}/skill/{{ skill.name }}"
+             hx-trigger="click"
+             hx-target="#detail-panel"
+             hx-swap="innerHTML">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-[#0770E3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        <h4 class="text-lg font-semibold text-gray-900">{{ skill.name }}</h4>
+                        <span class="px-2 py-1 text-xs rounded-full {% if skill.source == 'user' %}bg-blue-100 text-blue-800{% elif skill.source == 'plugin' %}bg-purple-100 text-purple-800{% else %}bg-green-100 text-green-800{% endif %}">
+                            {{ skill.source }}
+                        </span>
+                    </div>
+                    <p class="mt-1 text-sm text-gray-600">{{ skill.description[:100] }}{% if skill.description|length > 100 %}...{% endif %}</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-12 text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+            </svg>
+            <p class="mt-2">No skills found</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- MCPs Tab Content -->
+<div x-show="activeTab === 'mcps'" class="space-y-3">
+    {% if features.mcps %}
+        {% for mcp in features.mcps %}
+        <div class="border border-gray-200 rounded-lg p-4 hover:border-[#0770E3] hover:shadow-md transition-all cursor-pointer"
+             hx-get="/api/feature-detail/{{ selected_repo.path if selected_repo else '' }}/mcp/{{ mcp.name }}"
+             hx-trigger="click"
+             hx-target="#detail-panel"
+             hx-swap="innerHTML">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-[#0770E3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <h4 class="text-lg font-semibold text-gray-900">{{ mcp.name }}</h4>
+                        <span class="px-2 py-1 text-xs rounded-full {% if mcp.source == 'user' %}bg-blue-100 text-blue-800{% elif mcp.source == 'plugin' %}bg-purple-100 text-purple-800{% else %}bg-green-100 text-green-800{% endif %}">
+                            {{ mcp.source }}
+                        </span>
+                    </div>
+                    <p class="mt-1 text-sm text-gray-600 font-mono">{{ mcp.command }}</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-12 text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <p class="mt-2">No MCP servers found</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Commands Tab Content -->
+<div x-show="activeTab === 'commands'" class="space-y-3">
+    {% if features.commands %}
+        {% for command in features.commands %}
+        <div class="border border-gray-200 rounded-lg p-4 hover:border-[#0770E3] hover:shadow-md transition-all cursor-pointer"
+             hx-get="/api/feature-detail/{{ selected_repo.path if selected_repo else '' }}/command/{{ command.name }}"
+             hx-trigger="click"
+             hx-target="#detail-panel"
+             hx-swap="innerHTML">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-[#0770E3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <h4 class="text-lg font-semibold text-gray-900 font-mono">/{{ command.name }}</h4>
+                        <span class="px-2 py-1 text-xs rounded-full {% if command.source == 'user' %}bg-blue-100 text-blue-800{% elif command.source == 'plugin' %}bg-purple-100 text-purple-800{% else %}bg-green-100 text-green-800{% endif %}">
+                            {{ command.source }}
+                        </span>
+                    </div>
+                    {% if command.description %}
+                    <p class="mt-1 text-sm text-gray-600">{{ command.description[:100] }}{% if command.description|length > 100 %}...{% endif %}</p>
+                    {% endif %}
+                </div>
+                <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-12 text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <p class="mt-2">No slash commands found</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Plugins Tab Content -->
+<div x-show="activeTab === 'plugins'" class="space-y-3">
+    {% if features.plugins %}
+        {% for plugin in features.plugins %}
+        <div class="border border-gray-200 rounded-lg p-4 hover:border-[#0770E3] hover:shadow-md transition-all cursor-pointer"
+             hx-get="/api/feature-detail/{{ selected_repo.path if selected_repo else '' }}/plugin/{{ plugin.name }}"
+             hx-trigger="click"
+             hx-target="#detail-panel"
+             hx-swap="innerHTML">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-[#0770E3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path>
+                        </svg>
+                        <h4 class="text-lg font-semibold text-gray-900">{{ plugin.name }}</h4>
+                        <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                            v{{ plugin.version }}
+                        </span>
+                    </div>
+                    <p class="mt-1 text-sm text-gray-600">{{ plugin.description[:100] }}{% if plugin.description|length > 100 %}...{% endif %}</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-12 text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path>
+            </svg>
+            <p class="mt-2">No plugins found</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Hooks Tab Content -->
+<div x-show="activeTab === 'hooks'" class="space-y-3">
+    {% if features.hooks %}
+        {% for hook in features.hooks %}
+        <div class="border border-gray-200 rounded-lg p-4 hover:border-[#0770E3] hover:shadow-md transition-all cursor-pointer"
+             hx-get="/api/feature-detail/{{ selected_repo.path if selected_repo else '' }}/hook/{{ hook.description }}"
+             hx-trigger="click"
+             hx-target="#detail-panel"
+             hx-swap="innerHTML">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-[#0770E3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        <h4 class="text-lg font-semibold text-gray-900">{{ hook.description }}</h4>
+                        <span class="px-2 py-1 text-xs rounded-full {% if hook.source == 'user' %}bg-blue-100 text-blue-800{% elif hook.source == 'plugin' %}bg-purple-100 text-purple-800{% else %}bg-green-100 text-green-800{% endif %}">
+                            {{ hook.source }}
+                        </span>
+                    </div>
+                    <p class="mt-1 text-sm text-gray-600">Triggers: {{ hook.triggers|join(', ') }}</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-12 text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <p class="mt-2">No hooks found</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Agents Tab Content -->
+<div x-show="activeTab === 'agents'" class="space-y-3">
+    {% if features.agents %}
+        {% for agent in features.agents %}
+        <div class="border border-gray-200 rounded-lg p-4 hover:border-[#0770E3] hover:shadow-md transition-all cursor-pointer"
+             hx-get="/api/feature-detail/{{ selected_repo.path if selected_repo else '' }}/agent/{{ agent.name }}"
+             hx-trigger="click"
+             hx-target="#detail-panel"
+             hx-swap="innerHTML">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-[#0770E3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <h4 class="text-lg font-semibold text-gray-900">{{ agent.name }}</h4>
+                        <span class="px-2 py-1 text-xs rounded-full {% if agent.source == 'user' %}bg-blue-100 text-blue-800{% elif agent.source == 'plugin' %}bg-purple-100 text-purple-800{% else %}bg-green-100 text-green-800{% endif %}">
+                            {{ agent.source }}
+                        </span>
+                    </div>
+                    <p class="mt-1 text-sm text-gray-600">{{ agent.description[:100] }}{% if agent.description|length > 100 %}...{% endif %}</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-12 text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+            <p class="mt-2">No agents found</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Detail Panel Placeholder -->
+<div id="detail-panel" class="mt-6"></div>
+
+{% else %}
+<div class="text-center py-12 text-gray-500">
+    <p>No features loaded</p>
+</div>
+{% endif %}

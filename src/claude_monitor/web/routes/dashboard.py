@@ -232,6 +232,123 @@ def features() -> str:
         return render_template('pages/features.html', features={})
 
 
+@dashboard_bp.route('/configuration')
+def configuration() -> str:
+    """Render the configuration page with Claude Code configuration viewer."""
+    from flask import request
+
+    try:
+        service = current_app.dashboard_service
+
+        # Get discovered repositories
+        repositories = service.get_discovered_repositories()
+
+        # Get selected repo from query params, default to first (User Configuration)
+        selected_repo_path = request.args.get('repo', repositories[0]['path'] if repositories else None)
+
+        # Find the selected repository
+        selected_repo = None
+        if selected_repo_path:
+            for repo in repositories:
+                if repo['path'] == selected_repo_path:
+                    selected_repo = repo
+                    break
+
+        # Default to first repo if not found
+        if not selected_repo and repositories:
+            selected_repo = repositories[0]
+            selected_repo_path = repositories[0]['path']
+
+        # Get features for selected repository
+        features = {}
+        if selected_repo_path:
+            features = service.get_configuration_features(selected_repo_path)
+
+        return render_template(
+            'pages/configuration.html',
+            repositories=repositories,
+            selected_repo=selected_repo,
+            features=features
+        )
+
+    except Exception as e:
+        logger.error(f'Error loading configuration page: {e}', exc_info=True)
+        return render_template(
+            'pages/configuration.html',
+            repositories=[],
+            selected_repo=None,
+            features={}
+        )
+
+
+@dashboard_bp.route('/api/configuration/<path:repo_path>')
+def api_configuration(repo_path: str) -> str:
+    """
+    API endpoint for HTMX to fetch configuration features for a specific repository.
+
+    Args:
+        repo_path: Path to the repository
+
+    Returns:
+        Rendered HTML partial with feature list
+    """
+    try:
+        service = current_app.dashboard_service
+        features = service.get_configuration_features(repo_path)
+
+        return render_template(
+            'partials/feature_list.html',
+            features=features
+        )
+
+    except Exception as e:
+        logger.error(f'Error loading configuration for repo {repo_path}: {e}', exc_info=True)
+        return render_template(
+            'partials/feature_list.html',
+            features={}
+        )
+
+
+@dashboard_bp.route('/api/feature-detail/<path:repo_path>/<feature_type>/<feature_id>')
+def api_feature_detail(repo_path: str, feature_type: str, feature_id: str) -> str:
+    """
+    API endpoint for HTMX to fetch detailed information about a specific feature.
+
+    Args:
+        repo_path: Path to the repository
+        feature_type: Type of feature (skill, mcp, command, plugin, hook, agent)
+        feature_id: Name/ID of the feature
+
+    Returns:
+        Rendered HTML partial with feature details
+    """
+    try:
+        service = current_app.dashboard_service
+        detail = service.get_feature_detail(repo_path, feature_type, feature_id)
+
+        # Render appropriate detail template based on feature type
+        template_map = {
+            'skill': 'partials/details/skill_detail.html',
+            'mcp': 'partials/details/mcp_detail.html',
+            'command': 'partials/details/command_detail.html',
+            'plugin': 'partials/details/plugin_detail.html',
+            'hook': 'partials/details/hook_detail.html',
+            'agent': 'partials/details/agent_detail.html',
+        }
+
+        template = template_map.get(feature_type, 'partials/details/feature_detail.html')
+
+        return render_template(
+            template,
+            feature=detail,
+            feature_type=feature_type
+        )
+
+    except Exception as e:
+        logger.error(f'Error loading detail for {feature_type} {feature_id}: {e}', exc_info=True)
+        return f'<div class="alert alert-error">Error loading feature details: {str(e)}</div>'
+
+
 @dashboard_bp.route('/api/dashboard')
 def api_dashboard() -> str:
     """
