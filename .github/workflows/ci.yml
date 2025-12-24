@@ -63,13 +63,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install pip-audit safety
 
-      - name: Run pip-audit
+      - name: Run pip-audit on dependencies
         run: |
-          pip install -e .
-          # Skip local editable package (not on PyPI)
-          pip-audit --strict --desc --skip-editable
+          # Install only the dependencies (not the local package) for auditing
+          pip install -r requirements.txt
+          pip-audit --strict --desc
 
       - name: Run safety check
         run: |
-          pip install -e .
           safety check || true
