@@ -278,3 +278,39 @@ class SessionParser:
                 reverse=True
             )
         )
+
+    def get_daily_stats(
+        self,
+        days: int = 7,
+        time_filter: Optional[TimeFilter] = None
+    ) -> dict[str, SessionStats]:
+        """
+        Get token statistics aggregated by day.
+
+        Args:
+            days: Number of days to include (default 7)
+            time_filter: Optional time filter
+
+        Returns:
+            Dict mapping date strings (YYYY-MM-DD) to SessionStats
+        """
+        from datetime import timedelta
+
+        # Initialize dict for each day
+        daily_stats: dict[str, SessionStats] = {}
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        for i in range(days, -1, -1):  # Include today
+            day = today - timedelta(days=i)
+            date_key = day.strftime('%Y-%m-%d')
+            daily_stats[date_key] = SessionStats()
+
+        # Parse messages and bucket by day
+        for message in self.parse_all(time_filter=time_filter):
+            msg_dt = message.datetime
+            if msg_dt:
+                date_key = msg_dt.strftime('%Y-%m-%d')
+                if date_key in daily_stats:
+                    daily_stats[date_key].add_message(message)
+
+        return daily_stats
