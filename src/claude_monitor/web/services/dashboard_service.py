@@ -776,6 +776,8 @@ class DashboardService:
         Returns:
             Dict with MCP server usage data
         """
+        from ...analyzers.tokens import DEFAULT_PRICING
+
         analyzer = self._features_analyzer
         if time_filter:
             analyzer = self._create_time_filtered_service(time_filter)._features_analyzer
@@ -800,17 +802,35 @@ class DashboardService:
                         'tool_count': 0,
                         'total_calls': 0,
                         'total_tokens': 0,
+                        'input_tokens': 0,
+                        'output_tokens': 0,
+                        'cache_read_tokens': 0,
+                        'cache_write_tokens': 0,
+                        'total_cost': 0.0,
                         'tools': []
                     }
 
                 servers[server_name]['tool_count'] += 1
                 servers[server_name]['total_calls'] += stats.invocation_count
                 servers[server_name]['total_tokens'] += stats.total_tokens
+                servers[server_name]['input_tokens'] += stats.total_input_tokens
+                servers[server_name]['output_tokens'] += stats.total_output_tokens
+                servers[server_name]['cache_read_tokens'] += stats.total_cache_read_tokens
+                servers[server_name]['cache_write_tokens'] += stats.total_cache_write_tokens
                 servers[server_name]['tools'].append({
                     'tool_name': tool_name,
                     'invocation_count': stats.invocation_count,
                     'total_tokens': stats.total_tokens
                 })
+
+        # Calculate costs per server using default pricing (Sonnet 4.5)
+        # Note: Tool-level token tracking doesn't include model info, so we use default rates
+        for server in servers.values():
+            input_cost = (server['input_tokens'] / 1_000_000) * DEFAULT_PRICING['input_per_mtok']
+            output_cost = (server['output_tokens'] / 1_000_000) * DEFAULT_PRICING['output_per_mtok']
+            cache_read_cost = (server['cache_read_tokens'] / 1_000_000) * DEFAULT_PRICING['cache_read_per_mtok']
+            cache_write_cost = (server['cache_write_tokens'] / 1_000_000) * DEFAULT_PRICING['cache_write_per_mtok']
+            server['total_cost'] = round(input_cost + output_cost + cache_read_cost + cache_write_cost, 4)
 
         # Sort servers by total calls
         sorted_servers = sorted(servers.values(), key=lambda x: x['total_calls'], reverse=True)
@@ -819,12 +839,16 @@ class DashboardService:
         total_mcp_servers = len(servers)
         total_mcp_tools = len(mcp_tools)
         total_mcp_calls = sum(stats.invocation_count for stats in mcp_tools.values())
+        total_mcp_tokens = sum(s['total_tokens'] for s in servers.values())
+        total_mcp_cost = sum(s['total_cost'] for s in servers.values())
         most_used_server = sorted_servers[0]['server_name'] if sorted_servers else 'None'
 
         return {
             'total_servers': total_mcp_servers,
             'total_tools': total_mcp_tools,
             'total_calls': total_mcp_calls,
+            'total_tokens': total_mcp_tokens,
+            'total_cost': round(total_mcp_cost, 2),
             'most_used_server': most_used_server,
             'servers': sorted_servers
         }

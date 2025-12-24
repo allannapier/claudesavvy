@@ -192,6 +192,7 @@ def integrations() -> str:
 
         # Get MCP integration data
         mcp_data = service.get_mcp_integrations()
+        available_models = service.get_available_models()
 
         # Format data for template
         integrations_data = {
@@ -199,11 +200,17 @@ def integrations() -> str:
             'most_used_ide': 'CLI',  # Claude Code is CLI-based
             'mcp_servers': mcp_data['total_servers'],
             'total_calls': mcp_data['total_calls'],
+            'total_tokens': mcp_data.get('total_tokens', 0),
+            'total_cost': mcp_data.get('total_cost', 0.0),
             'most_used_server': mcp_data['most_used_server'],
             'servers': mcp_data['servers']
         }
 
-        return render_template('pages/integrations.html', integrations=integrations_data)
+        return render_template(
+            'pages/integrations.html',
+            integrations=integrations_data,
+            available_models=available_models
+        )
 
     except Exception as e:
         logger.error(f'Error loading integrations page: {e}', exc_info=True)
@@ -584,6 +591,9 @@ def api_integrations() -> str:
         mcp_data = service.get_mcp_integrations(time_filter=time_filter)
         integrations_data = {
             'active_count': mcp_data['total_servers'],
+            'total_calls': mcp_data['total_calls'],
+            'total_tokens': mcp_data.get('total_tokens', 0),
+            'total_cost': mcp_data.get('total_cost', 0.0),
             'server_activity': mcp_data['servers']
         }
         return render_template('partials/integrations_content.html', integrations=integrations_data)
