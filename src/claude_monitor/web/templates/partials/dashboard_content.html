@@ -28,6 +28,7 @@
 
 <!-- Usage Overview Table -->
 {% from "components/table.html" import responsive_table %}
+<div class="mt-8">
 {% call responsive_table(title="Usage Overview") %}
 <thead class="bg-gray-50">
     <tr>
@@ -58,8 +59,10 @@
     </tr>
 </tbody>
 {% endcall %}
+</div>
 
 <!-- Token Summary Table -->
+<div class="mt-8">
 {% call responsive_table(title="Token Summary") %}
 <thead class="bg-gray-50">
     <tr>
@@ -96,8 +99,10 @@
     </tr>
 </tbody>
 {% endcall %}
+</div>
 
 <!-- Top 5 Projects -->
+<div class="mt-8">
 {% if projects.projects %}
 {% call responsive_table(title="Top 5 Projects") %}
 <thead class="bg-gray-50">
@@ -118,6 +123,7 @@
 </tbody>
 {% endcall %}
 {% endif %}
+</div>
 
 <!-- Charts Section -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">

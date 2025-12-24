@@ -102,6 +102,7 @@ class Plugin:
     version: str
     description: str
     install_path: Path
+    source: ConfigSource = ConfigSource.PLUGIN
     author: Optional[str] = None
     license: Optional[str] = None
     keywords: List[str] = field(default_factory=list)
@@ -115,6 +116,7 @@ class Plugin:
             'version': self.version,
             'description': self.description,
             'install_path': str(self.install_path),
+            'source': self.source.value,
             'author': self.author,
             'license': self.license,
             'keywords': self.keywords,

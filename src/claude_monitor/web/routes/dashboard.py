@@ -295,6 +295,9 @@ def api_configuration(repo_path: str) -> str:
     """
     try:
         service = current_app.dashboard_service
+        # Flask's path converter strips leading slash, so add it back if missing
+        if not repo_path.startswith('/'):
+            repo_path = '/' + repo_path
         features = service.get_configuration_features(repo_path)
 
         return render_template(
@@ -325,6 +328,9 @@ def api_feature_detail(repo_path: str, feature_type: str, feature_id: str) -> st
     """
     try:
         service = current_app.dashboard_service
+        # Flask's path converter strips leading slash, so add it back if missing
+        if not repo_path.startswith('/'):
+            repo_path = '/' + repo_path
         detail = service.get_feature_detail(repo_path, feature_type, feature_id)
 
         # Render appropriate detail template based on feature type
@@ -366,6 +372,9 @@ def export_configuration(repo_path: str):
 
     try:
         service = current_app.dashboard_service
+        # Flask's path converter strips leading slash, so add it back if missing
+        if not repo_path.startswith('/'):
+            repo_path = '/' + repo_path
         features = service.get_configuration_features(repo_path)
 
         # Find repository name
