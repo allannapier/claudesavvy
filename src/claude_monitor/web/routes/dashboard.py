@@ -340,7 +340,9 @@ def api_configuration(repo_path: str) -> str:
     except Exception as e:
         # Sanitize user-provided repo_path to prevent log injection
         safe_repo_path = repo_path.replace('\r', '').replace('\n', '')
-        logger.error(f'Error loading configuration for repo {safe_repo_path}: {e}', exc_info=True)
+        # Sanitize exception message to prevent log injection via newline characters
+        safe_error = str(e).replace('\r', '').replace('\n', '')
+        logger.error(f'Error loading configuration for repo {safe_repo_path}: {safe_error}', exc_info=True)
         return render_template(
             'partials/feature_list.html',
             features={}
