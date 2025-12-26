@@ -384,7 +384,9 @@ def api_feature_detail(repo_path: str, feature_type: str, feature_id: str) -> st
         )
 
     except Exception as e:
-        logger.error(f'Error loading detail for {feature_type} {feature_id}: {e}', exc_info=True)
+        safe_feature_type = feature_type.replace('\r', '').replace('\n', '')
+        safe_feature_id = feature_id.replace('\r', '').replace('\n', '')
+        logger.error(f'Error loading detail for {safe_feature_type} {safe_feature_id}: {e}', exc_info=True)
         return f'<div class="alert alert-error">Error loading feature details: {str(e)}</div>'
 
 
