@@ -646,6 +646,142 @@ class DashboardService:
             'datasets': datasets,
         }
 
+    def get_project_context_utilization_trend(
+        self,
+        days: int = 7,
+        time_filter: Optional[TimeFilter] = None,
+        max_projects: int = 8
+    ) -> Dict[str, Any]:
+        """
+        Get daily context utilization trend per project for charts.
+
+        Args:
+            days: Number of days to include (default 7)
+            time_filter: Optional time filter - if provided, overrides days parameter
+            max_projects: Maximum number of projects to include
+
+        Returns:
+            Dict with labels and datasets for Chart.js line chart
+        """
+        # If time filter is provided, calculate days from it
+        if time_filter and time_filter.start_time:
+            now = datetime.now()
+            delta = now - time_filter.start_time
+            days = max(1, delta.days + 1)
+
+        project_utilization = self._session_parser.get_project_context_utilization(
+            days=days,
+            time_filter=time_filter,
+            max_projects=max_projects
+        )
+
+        # Get date labels from the first project
+        labels = []
+        if project_utilization:
+            first_project = list(project_utilization.values())[0]
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+            for date_str in sorted(first_project.keys()):
+                # Create human-readable label
+                date = datetime.strptime(date_str, '%Y-%m-%d')
+                days_ago = (today - date).days
+
+                if days <= 7:
+                    if days_ago == 0:
+                        labels.append('Today')
+                    elif days_ago == 1:
+                        labels.append('Yesterday')
+                    else:
+                        labels.append(f'{days_ago}d ago')
+                else:
+                    labels.append(date.strftime('%b %d'))
+
+        # Build datasets for each project (showing average utilization)
+        datasets = []
+        colors = [
+            '#0770E3',  # Blue
+            '#34D399',  # Green
+            '#F59E0B',  # Amber
+            '#8B5CF6',  # Purple
+            '#EC4899',  # Pink
+            '#14B8A6',  # Teal
+            '#F97316',  # Orange
+            '#6366F1',  # Indigo
+        ]
+
+        for idx, (project_name, daily_data) in enumerate(project_utilization.items()):
+            color = colors[idx % len(colors)]
+            data = [daily_data[date]['avg_utilization'] for date in sorted(daily_data.keys())]
+
+            datasets.append({
+                'label': project_name,
+                'data': data,
+                'borderColor': color,
+                'color': color,
+            })
+
+        return {
+            'labels': labels,
+            'datasets': datasets,
+        }
+
+    def get_context_utilization_summary(
+        self,
+        time_filter: Optional[TimeFilter] = None
+    ) -> Dict[str, Any]:
+        """
+        Get overall context utilization statistics.
+
+        Args:
+            time_filter: Optional time filter to apply
+
+        Returns:
+            Dict with context utilization statistics
+        """
+        from ...analyzers.tokens import MODEL_CONTEXT_WINDOW, DEFAULT_CONTEXT_WINDOW
+
+        # Get all messages with utilization data
+        utilizations = []
+        model_counts = {}
+
+        for message in self._session_parser.parse_all(time_filter=time_filter):
+            util = message.context_utilization
+            if util is not None:
+                utilizations.append(util)
+                if message.model:
+                    model_counts[message.model] = model_counts.get(message.model, 0) + 1
+
+        if not utilizations:
+            return {
+                'avg_utilization': 0.0,
+                'max_utilization': 0.0,
+                'total_requests': 0,
+                'high_util_count': 0,  # over 80%
+                'very_high_util_count': 0,  # over 90%
+                'model_counts': {},
+            }
+
+        avg_util = sum(utilizations) / len(utilizations)
+        max_util = max(utilizations)
+        high_util_count = sum(1 for u in utilizations if u >= 80)
+        very_high_util_count = sum(1 for u in utilizations if u >= 90)
+
+        # Get display names for models
+        from ...analyzers.tokens import get_model_display_name
+        model_counts_display = {
+            get_model_display_name(model): count
+            for model, count in sorted(model_counts.items(), key=lambda x: x[1], reverse=True)
+        }
+
+        return {
+            'avg_utilization': round(avg_util, 1),
+            'max_utilization': round(max_util, 1),
+            'total_requests': len(utilizations),
+            'high_util_count': high_util_count,
+            'very_high_util_count': very_high_util_count,
+            'model_counts': model_counts_display,
+        }
+
     def get_token_summary_by_model(
         self,
         model_id: str,

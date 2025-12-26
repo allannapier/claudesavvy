@@ -66,6 +66,26 @@ class SessionMessage:
         except (ValueError, AttributeError):
             return None
 
+    @property
+    def context_utilization(self) -> Optional[float]:
+        """Get context window utilization percentage for this message.
+
+        Returns:
+            Context utilization as a percentage (0-100+), or None if no usage/model info
+        """
+        if not self.usage or not self.model:
+            return None
+
+        # Get context window size for model (default to 200K for Claude 4.x)
+        from ..analyzers.tokens import MODEL_CONTEXT_WINDOW, DEFAULT_CONTEXT_WINDOW
+
+        context_window = MODEL_CONTEXT_WINDOW.get(self.model, DEFAULT_CONTEXT_WINDOW)
+        if context_window == 0:
+            return None
+
+        total_tokens = self.usage.input_tokens + self.usage.output_tokens
+        return (total_tokens / context_window) * 100
+
     @classmethod
     def from_dict(cls, data: dict) -> "SessionMessage":
         """Create SessionMessage from parsed JSON dict."""
@@ -470,5 +490,114 @@ class SessionParser:
                 }
 
             result[project_name] = daily_costs
+
+        return result
+
+    def get_project_context_utilization(
+        self,
+        days: int = 7,
+        time_filter: Optional[TimeFilter] = None,
+        max_projects: int = 10
+    ) -> dict[str, dict[str, dict[str, float]]]:
+        """
+        Get daily context window utilization statistics per project.
+
+        Args:
+            days: Number of days to include (default 7), including today
+            time_filter: Optional time filter
+            max_projects: Maximum number of top projects to include
+
+        Returns:
+            Dict mapping project names to date strings to utilization data:
+            {
+                "project_name": {
+                    "2024-01-01": {
+                        "avg_utilization": 45.2,
+                        "max_utilization": 85.3,
+                        "total_requests": 10,
+                        "high_util_count": 2  # requests over 80%
+                    },
+                    ...
+                }
+            }
+        """
+        from datetime import timedelta
+
+        # Get top projects by total requests
+        all_project_stats = self.get_project_stats(time_filter=time_filter)
+        top_projects = sorted(
+            all_project_stats.items(),
+            key=lambda x: x[1].message_count,
+            reverse=True
+        )[:max_projects]
+
+        # Initialize dates
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        date_keys = []
+        for i in range(days - 1, -1, -1):
+            day = today - timedelta(days=i)
+            date_keys.append(day.strftime('%Y-%m-%d'))
+
+        # Collect top project paths for efficient lookup
+        project_paths = [project_path for project_path, _ in top_projects]
+        project_paths_set = set(project_paths)
+
+        # Prepare per-project, per-day utilization data
+        project_utilization_map: dict[str, dict[str, list[float]]] = {}
+        for project_path in project_paths:
+            project_utilization_map[project_path] = {date_key: [] for date_key in date_keys}
+
+        # Single pass over all messages, collect utilization values
+        for message in self.parse_all(time_filter=time_filter):
+            project_path = message.cwd
+            if project_path not in project_paths_set:
+                continue
+
+            utilization = message.context_utilization
+            if utilization is None:
+                continue
+
+            msg_dt = message.datetime
+            if not msg_dt:
+                continue
+
+            date_key = msg_dt.strftime('%Y-%m-%d')
+            project_utils = project_utilization_map.get(project_path)
+            if project_utils and date_key in project_utils:
+                project_utils[date_key].append(utilization)
+
+        # For each top project, calculate statistics
+        result = {}
+        for project_path, _ in top_projects:
+            # Get short project name for display
+            project_name = Path(project_path).name
+
+            project_utils = project_utilization_map.get(project_path, {})
+
+            # Calculate daily statistics
+            daily_stats = {}
+            for date_key in date_keys:
+                utilizations = project_utils.get(date_key, [])
+
+                if utilizations:
+                    avg_util = sum(utilizations) / len(utilizations)
+                    max_util = max(utilizations)
+                    high_util_count = sum(1 for u in utilizations if u >= 80)
+
+                    daily_stats[date_key] = {
+                        'avg_utilization': round(avg_util, 1),
+                        'max_utilization': round(max_util, 1),
+                        'total_requests': len(utilizations),
+                        'high_util_count': high_util_count,
+                    }
+                else:
+                    daily_stats[date_key] = {
+                        'avg_utilization': 0.0,
+                        'max_utilization': 0.0,
+                        'total_requests': 0,
+                        'high_util_count': 0,
+                    }
+
+            result[project_name] = daily_stats
 
         return result

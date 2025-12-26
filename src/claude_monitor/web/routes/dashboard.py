@@ -147,12 +147,13 @@ def projects() -> str:
         service = current_app.dashboard_service
         project_breakdown: Dict[str, Any] = service.get_project_breakdown()
         available_models = service.get_available_models()
-
+        context_util_trend: Dict[str, Any] = service.get_project_context_utilization_trend(days=14, max_projects=8)
 
         return render_template(
             'pages/projects.html',
             projects=project_breakdown,
-            available_models=available_models
+            available_models=available_models,
+            context_util_trend=context_util_trend
         )
 
     except ValueError as e:
@@ -539,12 +540,17 @@ def api_projects() -> str:
 
         available_models = service.get_available_models(time_filter=time_filter)
 
+        # For "All Time", show last 14 days on chart for better context
+        chart_days = 14 if period == 'all' else 7
+        context_util_trend = service.get_project_context_utilization_trend(days=chart_days, time_filter=time_filter, max_projects=8)
+
         # Render partial content
         return render_template(
             'partials/projects_content.html',
             projects=project_breakdown,
             available_models=available_models,
-            selected_model=model
+            selected_model=model,
+            context_util_trend=context_util_trend
         )
 
     except Exception as e:

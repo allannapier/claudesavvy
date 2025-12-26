@@ -94,6 +94,44 @@ for region in ['eu', 'us', '']:
 DEFAULT_PRICING = MODEL_PRICING['claude-sonnet-4-5-20250929']
 
 
+# Context window sizes for Claude models (in tokens)
+# https://www.anthropic.com/pricing
+MODEL_CONTEXT_WINDOW = {
+    'claude-opus-4-5-20251101': 200000,
+    'claude-sonnet-4-5-20250929': 200000,
+    'claude-haiku-4-5-20251001': 200000,
+    'claude-opus-4-20250514': 200000,
+    'claude-sonnet-4-20250514': 200000,
+}
+
+# Bedrock context window aliases
+for region in ['eu', 'us', '']:
+    prefix = f'{region}.anthropic' if region else 'anthropic'
+    MODEL_CONTEXT_WINDOW[f'{prefix}.claude-sonnet-4-5-20250929-v1:0'] = MODEL_CONTEXT_WINDOW['claude-sonnet-4-5-20250929']
+    MODEL_CONTEXT_WINDOW[f'{prefix}.claude-opus-4-5-20251101-v1:0'] = MODEL_CONTEXT_WINDOW['claude-opus-4-5-20251101']
+    MODEL_CONTEXT_WINDOW[f'{prefix}.claude-opus-4-20250514-v1:0'] = MODEL_CONTEXT_WINDOW['claude-opus-4-20250514']
+    MODEL_CONTEXT_WINDOW[f'{prefix}.claude-haiku-4-5-20251001-v1:0'] = MODEL_CONTEXT_WINDOW['claude-haiku-4-5-20251001']
+
+# Default context window (200K tokens for Claude 4.x models)
+DEFAULT_CONTEXT_WINDOW = 200000
+
+
+def calculate_context_utilization(tokens: TokenUsage, model: str) -> float:
+    """
+    Calculate context window utilization percentage for a request.
+
+    Args:
+        tokens: TokenUsage instance with input/output token counts
+        model: Model ID to get context window size
+
+    Returns:
+        Context utilization as a percentage (0-100+)
+    """
+    context_window = MODEL_CONTEXT_WINDOW.get(model, DEFAULT_CONTEXT_WINDOW)
+    total_tokens = tokens.input_tokens + tokens.output_tokens
+    return (total_tokens / context_window) * 100 if context_window > 0 else 0.0
+
+
 @dataclass
 class CostBreakdown:
     """Breakdown of costs by token type."""
