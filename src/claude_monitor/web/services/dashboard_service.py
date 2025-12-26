@@ -503,6 +503,150 @@ class DashboardService:
             'data': data,
         }
 
+    def get_daily_cost_trend(
+        self,
+        days: int = 7,
+        time_filter: Optional[TimeFilter] = None
+    ) -> Dict[str, Any]:
+        """
+        Get daily cost trend for charts.
+
+        Args:
+            days: Number of days to include (default 7)
+            time_filter: Optional time filter - if provided, overrides days parameter
+
+        Returns:
+            Dict with labels and datasets for Chart.js
+        """
+        # If time filter is provided, calculate days from it
+        if time_filter and time_filter.start_time:
+            now = datetime.now()
+            delta = now - time_filter.start_time
+            days = max(1, delta.days + 1)
+
+        daily_costs = self._session_parser.get_daily_cost_trend(days=days, time_filter=time_filter)
+
+        labels = []
+        total_costs = []
+        input_costs = []
+        output_costs = []
+        cache_costs = []
+
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        for date_str in sorted(daily_costs.keys()):
+            costs = daily_costs[date_str]
+            total_costs.append(costs['total_cost'])
+            input_costs.append(costs['input_cost'])
+            output_costs.append(costs['output_cost'])
+            cache_costs.append(costs['cache_write_cost'] + costs['cache_read_cost'])
+
+            # Create human-readable label based on how many days we're showing
+            date = datetime.strptime(date_str, '%Y-%m-%d')
+            days_ago = (today - date).days
+
+            if days <= 7:
+                # For week or less, show relative labels
+                if days_ago == 0:
+                    labels.append('Today')
+                elif days_ago == 1:
+                    labels.append('Yesterday')
+                else:
+                    labels.append(f'{days_ago}d ago')
+            else:
+                # For longer periods, show date labels (Dec 15 format)
+                labels.append(date.strftime('%b %d'))
+
+        return {
+            'labels': labels,
+            'datasets': {
+                'total': total_costs,
+                'input': input_costs,
+                'output': output_costs,
+                'cache': cache_costs,
+            }
+        }
+
+    def get_project_cost_trend(
+        self,
+        days: int = 7,
+        time_filter: Optional[TimeFilter] = None,
+        max_projects: int = 8
+    ) -> Dict[str, Any]:
+        """
+        Get daily cost trend per project for charts.
+
+        Args:
+            days: Number of days to include (default 7)
+            time_filter: Optional time filter - if provided, overrides days parameter
+            max_projects: Maximum number of projects to include
+
+        Returns:
+            Dict with labels and datasets for Chart.js line chart
+        """
+        # If time filter is provided, calculate days from it
+        if time_filter and time_filter.start_time:
+            now = datetime.now()
+            delta = now - time_filter.start_time
+            days = max(1, delta.days + 1)
+
+        project_daily_stats = self._session_parser.get_project_daily_stats(
+            days=days,
+            time_filter=time_filter,
+            max_projects=max_projects
+        )
+
+        # Get date labels from the first project
+        labels = []
+        if project_daily_stats:
+            first_project = list(project_daily_stats.values())[0]
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+            for date_str in sorted(first_project.keys()):
+                # Create human-readable label
+                date = datetime.strptime(date_str, '%Y-%m-%d')
+                days_ago = (today - date).days
+
+                if days <= 7:
+                    if days_ago == 0:
+                        labels.append('Today')
+                    elif days_ago == 1:
+                        labels.append('Yesterday')
+                    else:
+                        labels.append(f'{days_ago}d ago')
+                else:
+                    labels.append(date.strftime('%b %d'))
+
+        # Build datasets for each project
+        datasets = []
+        colors = [
+            '#0770E3',  # Blue
+            '#34D399',  # Green
+            '#F59E0B',  # Amber
+            '#8B5CF6',  # Purple
+            '#EC4899',  # Pink
+            '#14B8A6',  # Teal
+            '#F97316',  # Orange
+            '#6366F1',  # Indigo
+        ]
+
+        for idx, (project_name, daily_data) in enumerate(project_daily_stats.items()):
+            color = colors[idx % len(colors)]
+            data = [daily_data[date]['total_cost'] for date in sorted(daily_data.keys())]
+
+            datasets.append({
+                'label': project_name,
+                'data': data,
+                'borderColor': color,
+                'backgroundColor': color.replace(')', ', 0.1)').replace('rgb', 'rgba').replace('#', ''),
+                'color': color,
+            })
+
+        return {
+            'labels': labels,
+            'datasets': datasets,
+        }
+
     def get_token_summary_by_model(
         self,
         model_id: str,

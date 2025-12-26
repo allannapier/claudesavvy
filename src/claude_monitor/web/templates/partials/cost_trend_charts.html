@@ -1,0 +1,218 @@
+<!-- Cost Trend Chart -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Cost Over Time</h3>
+    <div style="height: 250px;">
+        <canvas id="costTrendChart"></canvas>
+    </div>
+</div>
+
+<!-- Project Cost Trend Chart -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Project Costs Over Time</h3>
+    <div style="height: 300px;">
+        <canvas id="projectCostTrendChart"></canvas>
+    </div>
+</div>
+
+<script>
+(function() {
+    // Destroy existing charts if they exist (for HTMX reloads)
+    const existingCostChart = Chart.getChart('costTrendChart');
+    if (existingCostChart) existingCostChart.destroy();
+    const existingProjectCostChart = Chart.getChart('projectCostTrendChart');
+    if (existingProjectCostChart) existingProjectCostChart.destroy();
+
+    // Use requestAnimationFrame to wait for DOM layout before creating charts
+    requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+            initCostCharts();
+        });
+    });
+
+    function initCostCharts() {
+        // Cost Trend Chart
+        const costCtx = document.getElementById('costTrendChart');
+        if (costCtx) {
+            const costLabels = {{ cost_trend.labels|default([])|tojson }};
+            const costDatasets = {{ cost_trend.datasets|default({})|tojson }};
+
+            // Only create chart if we have data
+            if (costLabels && costLabels.length > 0) {
+                new Chart(costCtx, {
+                    type: 'line',
+                    data: {
+                        labels: costLabels,
+                        datasets: [
+                            {
+                                label: 'Total Cost',
+                                data: costDatasets.total || [],
+                                borderColor: '#0770E3',
+                                backgroundColor: 'rgba(7, 112, 227, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Input',
+                                data: costDatasets.input || [],
+                                borderColor: '#34D399',
+                                backgroundColor: 'transparent',
+                                tension: 0.4,
+                                fill: false,
+                                borderWidth: 1.5,
+                                borderDash: [5, 5]
+                            },
+                            {
+                                label: 'Output',
+                                data: costDatasets.output || [],
+                                borderColor: '#F59E0B',
+                                backgroundColor: 'transparent',
+                                tension: 0.4,
+                                fill: false,
+                                borderWidth: 1.5,
+                                borderDash: [5, 5]
+                            },
+                            {
+                                label: 'Cache',
+                                data: costDatasets.cache || [],
+                                borderColor: '#8B5CF6',
+                                backgroundColor: 'transparent',
+                                tension: 0.4,
+                                fill: false,
+                                borderWidth: 1.5,
+                                borderDash: [5, 5]
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: {
+                                    padding: 15,
+                                    usePointStyle: true,
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        let value = context.parsed.y;
+                                        if (value > 0) {
+                                            label += '$' + value.toFixed(2);
+                                        } else {
+                                            return null;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toFixed(2);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Project Cost Trend Chart
+        const projectCostCtx = document.getElementById('projectCostTrendChart');
+        if (projectCostCtx) {
+            const projectLabels = {{ project_cost_trend.labels|default([])|tojson }};
+            const projectDatasets = {{ project_cost_trend.datasets|default([])|tojson }};
+
+            // Only create chart if we have data
+            if (projectLabels && projectLabels.length > 0 && projectDatasets && projectDatasets.length > 0) {
+                new Chart(projectCostCtx, {
+                    type: 'line',
+                    data: {
+                        labels: projectLabels,
+                        datasets: projectDatasets.map(ds => ({
+                            label: ds.label,
+                            data: ds.data,
+                            borderColor: ds.borderColor,
+                            backgroundColor: 'transparent',
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 2
+                        }))
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: {
+                                    padding: 12,
+                                    usePointStyle: true,
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        let value = context.parsed.y;
+                                        if (value > 0) {
+                                            label += '$' + value.toFixed(2);
+                                        } else {
+                                            return null;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toFixed(2);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    }
+})();
+</script>
