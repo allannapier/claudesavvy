@@ -49,39 +49,13 @@ Claude Monitor provides comprehensive analytics for your Claude Code usage by re
 
 ### Installation
 
-Choose the installation method that works best for you:
-
-#### Option 1: PyPI (Recommended for Python users)
+**Install via PyPI (Recommended):**
 
 ```bash
-pip install claude-monitor
+pip install monitor-claude
 ```
 
-#### Option 2: Pre-built Binary (No Python required)
-
-Download the latest executable for your platform from [Releases](https://github.com/allannapier/claude_monitor/releases):
-
-**macOS:**
-```bash
-# Download claude-monitor-macos from releases
-chmod +x claude-monitor-macos
-./claude-monitor-macos
-```
-
-**Linux:**
-```bash
-# Download claude-monitor from releases
-chmod +x claude-monitor
-./claude-monitor
-```
-
-**Windows:**
-```bash
-# Download claude-monitor.exe from releases
-claude-monitor.exe
-```
-
-#### Option 3: From Source (For development)
+**Install from source (for development):**
 
 ```bash
 # Clone the repository
@@ -90,16 +64,13 @@ cd claude_monitor
 
 # Install the package
 pip install .
-
-# Or install in development mode
-pip install -e .
 ```
 
 ### Running
 
 ```bash
 # Start the web server (default port 5000)
-claude-monitor
+monitor-claude
 
 # Open your browser to http://localhost:5000
 ```
@@ -112,19 +83,19 @@ That's it! The dashboard will load your Claude Code usage data automatically.
 
 ```bash
 # Start server on default port 5000
-claude-monitor
+monitor-claude
 
 # Start on custom port
-claude-monitor --port 8080
+monitor-claude --port 8080
 
 # Bind to all network interfaces (allow external access)
-claude-monitor --host 0.0.0.0
+monitor-claude --host 0.0.0.0
 
 # Enable debug mode with auto-reload
-claude-monitor --debug
+monitor-claude --debug
 
 # Use custom Claude data directory
-claude-monitor --claude-dir /path/to/claude/data
+monitor-claude --claude-dir /path/to/claude/data
 ```
 
 ### Web Interface
@@ -260,14 +231,14 @@ Want to contribute? Check out [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 pip install -e .
 
 # Run with debug mode (auto-reload on code changes)
-claude-monitor --debug
+monitor-claude --debug
 ```
 
 ### Run Tests
 
 ```bash
 # Manual testing - verify all routes work
-claude-monitor
+monitor-claude
 # Then navigate to each page in your browser
 ```
 
@@ -297,7 +268,7 @@ claude-monitor
 
 ### Web server won't start
 - Check if port 5000 is already in use
-- Try a different port: `claude-monitor --port 8080`
+- Try a different port: `monitor-claude --port 8080`
 - Check Python version: `python3 --version` (requires 3.9+)
 
 ### Data not showing

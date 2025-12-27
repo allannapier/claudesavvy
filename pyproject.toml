@@ -1,6 +1,6 @@
 [project]
 name = "monitor-claude"
-version = "1.0.5"
+version = "1.0.6"
 description = "Web-based usage monitoring tool for Claude Code"
 authors = [{name = "Allan Napier"}]
 readme = "README.md"
