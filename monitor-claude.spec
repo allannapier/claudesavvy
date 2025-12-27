@@ -3,7 +3,7 @@
 block_cipher = None
 
 a = Analysis(
-    ['src/claude_monitor/cli.py'],
+    ['src/claude_monitor/__main__.py'],
     pathex=['src'],
     binaries=[],
     datas=[
