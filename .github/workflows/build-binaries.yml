@@ -38,18 +38,15 @@ jobs:
 
       - name: Build executable with PyInstaller
         run: |
-          pyinstaller --onefile \
-            --name claude-monitor \
-            --add-data "src/claude_monitor/web/templates:templates" \
-            --add-data "src/claude_monitor/web/static:static" \
-            --hidden-import=flask \
-            --hidden-import=jinja2 \
-            src/claude_monitor/cli.py
+          pyinstaller claude-monitor.spec
 
-      - name: Verify executable
-        run: |
-          ./dist/claude-monitor --help || dist\claude-monitor.exe --help
-        shell: bash
+      - name: Verify executable (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: ./dist/claude-monitor --help
+
+      - name: Verify executable (Windows)
+        if: runner.os == 'Windows'
+        run: dist\claude-monitor.exe --help
 
       - name: Create release
         uses: softprops/action-gh-release@v1
