@@ -783,9 +783,9 @@ def api_project_analyze() -> Any:
         return jsonify(analysis), 200
 
     except Exception as e:
-        logger.error(f'Error analyzing project: {e}', exc_info=True)
+        logger.error(f'Error analyzing project: {e}')
         return jsonify({
-            'error': str(e),
+            'error': 'An error occurred while analyzing the project',
             'project_name': project_name,
             'recommendations': [],
             'metrics': {},

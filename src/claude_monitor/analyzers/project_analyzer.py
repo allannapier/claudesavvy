@@ -6,13 +6,12 @@ from typing import Optional, Dict, List, Any
 
 from ..parsers.sessions import SessionParser
 from ..parsers.tools import ToolUsageParser
-from ..parsers.skills import SkillsParser, ConfigurationParser
+from ..parsers.skills import SkillsParser
 from ..parsers.configuration_scanner import ConfigurationScanner
 from ..utils.time_filter import TimeFilter
 from ..models import (
     Recommendation,
     ProjectAnalysis,
-    ConfigurationFeatures,
     ConfigSource,
 )
 
@@ -254,6 +253,7 @@ class ProjectAnalyzer:
                             all_configured_mcps[mcp.name] = mcp.source
                             user_mcps.append(mcp.name)
                 except Exception:
+                    # Failed to read user MCP config; skip
                     pass
 
         # Project-level MCPs
@@ -271,6 +271,7 @@ class ProjectAnalyzer:
                             all_configured_mcps[mcp.name] = mcp.source
                             plugin_mcps.append(mcp.name)
             except Exception:
+                # Failed to read project MCP config; skip
                 pass
 
         # Also get plugin MCPs from user config
@@ -284,6 +285,7 @@ class ProjectAnalyzer:
                             if mcp.name not in plugin_mcps:
                                 plugin_mcps.append(mcp.name)
                 except Exception:
+                    # Failed to read plugin MCP config; skip
                     pass
 
         # Total configured MCP count
@@ -450,7 +452,6 @@ class ProjectAnalyzer:
         economy_calls = 0
 
         model_breakdown = {}
-        haiku_available = False
 
         for model_id, tokens in matching_stats.model_usage.items():
             from ..analyzers.tokens import TokenAnalyzer, MODEL_PRICING
@@ -463,7 +464,6 @@ class ProjectAnalyzer:
                 premium_calls += 1
             elif tier == 'economy':
                 economy_calls += 1
-                haiku_available = True
             else:
                 mid_calls += 1
 
