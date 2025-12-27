@@ -36,7 +36,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='claude-monitor',
+    name='monitor-claude',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

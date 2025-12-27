@@ -46,7 +46,7 @@ jobs:
 
       - name: Verify CLI entry point works
         run: |
-          claude-monitor --help
+          monitor-claude --help
 
   security:
     runs-on: ubuntu-latest

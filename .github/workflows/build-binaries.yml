@@ -14,14 +14,14 @@ jobs:
         python-version: ['3.11']
         include:
           - os: ubuntu-latest
-            artifact_name: claude-monitor
-            artifact_path: dist/claude-monitor
+            artifact_name: monitor-claude
+            artifact_path: dist/monitor-claude
           - os: macos-latest
-            artifact_name: claude-monitor-macos
-            artifact_path: dist/claude-monitor
+            artifact_name: monitor-claude-macos
+            artifact_path: dist/monitor-claude
           - os: windows-latest
-            artifact_name: claude-monitor.exe
-            artifact_path: dist/claude-monitor.exe
+            artifact_name: monitor-claude.exe
+            artifact_path: dist/monitor-claude.exe
 
     steps:
       - uses: actions/checkout@v4
@@ -38,15 +38,15 @@ jobs:
 
       - name: Build executable with PyInstaller
         run: |
-          pyinstaller claude-monitor.spec
+          pyinstaller monitor-claude.spec
 
       - name: Verify executable (Linux/macOS)
         if: runner.os != 'Windows'
-        run: ./dist/claude-monitor --help
+        run: ./dist/monitor-claude --help
 
       - name: Verify executable (Windows)
         if: runner.os == 'Windows'
-        run: dist\claude-monitor.exe --help
+        run: dist\monitor-claude.exe --help
 
       - name: Create release
         uses: softprops/action-gh-release@v1
