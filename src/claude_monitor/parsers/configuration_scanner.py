@@ -665,7 +665,7 @@ class ConfigurationScanner:
                 tools=tools,
                 instructions=content
             )
-        except (OSError, ValueError):
+        except OSError:
             return None
 
     def resolve_feature_inheritance(
