@@ -49,6 +49,7 @@ class SkillInfo:
                     description = first_line.lstrip('#').strip()
             except Exception:
                 # Description is optional; use empty string as default
+                pass
 
         return cls(
             name=name,

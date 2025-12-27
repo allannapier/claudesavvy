@@ -454,7 +454,7 @@ class ProjectAnalyzer:
         model_breakdown = {}
 
         for model_id, tokens in matching_stats.model_usage.items():
-            from ..analyzers.tokens import TokenAnalyzer, MODEL_PRICING
+            from ..analyzers.tokens import TokenAnalyzer
             cost = TokenAnalyzer.calculate_cost(tokens, model_id)
             total_cost += cost.total_cost
             total_calls += 1
