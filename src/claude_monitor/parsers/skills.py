@@ -47,7 +47,7 @@ class SkillInfo:
                     first_line = f.readline().strip()
                     # Remove markdown header markers
                     description = first_line.lstrip('#').strip()
-            except Exception:
+            except OSError:
                 # Description is optional; use empty string as default
                 pass
 
@@ -124,7 +124,7 @@ class SkillsParser:
                                 skill_info = SkillInfo.from_directory(skill_dir)
                                 if skill_info:
                                     skills.append(skill_info)
-        except Exception:
+        except (OSError, json.JSONDecodeError):
             # Failed to read plugin data; skip this plugin
             pass
 
@@ -166,7 +166,7 @@ class ConfigurationParser:
         try:
             with open(self.settings_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except Exception:
+        except (OSError, json.JSONDecodeError):
             # Failed to read settings file; return empty dict
             return {}
 
@@ -224,7 +224,7 @@ class ConfigurationParser:
                     depth = len(item.relative_to(search_path).parts)
                     if depth <= 3:
                         configs.append(item)
-        except Exception:
+        except (OSError, PermissionError):
             # Skip directories we cannot access
             pass
 
@@ -249,6 +249,6 @@ class ConfigurationParser:
         try:
             with open(settings_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except Exception:
+        except (OSError, json.JSONDecodeError):
             # Failed to read project settings; return empty dict
             return {}

@@ -221,7 +221,7 @@ class ConfigurationScanner:
                                             )
                                             if skill:
                                                 skills.append(skill)
-            except Exception:
+            except (OSError, json.JSONDecodeError):
                 # Failed to read plugin skills; skip
                 pass
 
@@ -282,7 +282,7 @@ class ConfigurationScanner:
                 version=version,
                 agents=agents
             )
-        except Exception:
+        except OSError:
             return None
 
     def _parse_mcps(self, project_claude_dir: Path, user_claude_dir: Path) -> List[MCP]:
@@ -297,7 +297,7 @@ class ConfigurationScanner:
                 with open(user_settings_file, 'r', encoding='utf-8') as f:
                     settings_data = json.load(f)
                     mcp_servers.update(self._extract_mcp_servers_from_permissions(settings_data))
-            except Exception:
+            except (OSError, json.JSONDecodeError):
                 # Failed to read user settings; skip
                 pass
 
@@ -308,7 +308,7 @@ class ConfigurationScanner:
                 with open(project_settings_file, 'r', encoding='utf-8') as f:
                     settings_data = json.load(f)
                     mcp_servers.update(self._extract_mcp_servers_from_permissions(settings_data))
-            except Exception:
+            except (OSError, json.JSONDecodeError):
                 # Failed to read project settings; skip
                 pass
 
@@ -324,7 +324,7 @@ class ConfigurationScanner:
                         project_mcps = self._extract_mcp_servers_from_permissions(project_data)
                         if server_name not in project_mcps:
                             source = ConfigSource.USER
-                except Exception:
+                except (OSError, json.JSONDecodeError):
                     source = ConfigSource.USER
             else:
                 source = ConfigSource.USER
@@ -363,7 +363,7 @@ class ConfigurationScanner:
                                                 source=ConfigSource.PLUGIN,
                                                 plugin_path=install_path
                                             ))
-            except Exception:
+            except (OSError, json.JSONDecodeError):
                 # Failed to read plugin MCP configs; skip
                 pass
 
@@ -416,7 +416,7 @@ class ConfigurationScanner:
                                         )
                                         if command:
                                             commands.append(command)
-            except Exception:
+            except (OSError, json.JSONDecodeError):
                 # Failed to read plugin commands; skip
                 pass
 
@@ -447,7 +447,7 @@ class ConfigurationScanner:
                 path=cmd_file,
                 description=description
             )
-        except Exception:
+        except OSError:
             return None
 
     def _parse_plugins(self, user_claude_dir: Path) -> List[Plugin]:
@@ -488,7 +488,7 @@ class ConfigurationScanner:
                                 ) else metadata.get('author')
                                 license_type = metadata.get('license')
                                 keywords = metadata.get('keywords', [])
-                        except Exception:
+                        except (OSError, json.JSONDecodeError):
                             # Failed to read plugin metadata; use defaults
                             pass
 
@@ -514,7 +514,7 @@ class ConfigurationScanner:
                         enabled=enabled_plugins.get(plugin_name, False),
                         features=features
                     ))
-        except Exception:
+        except (OSError, json.JSONDecodeError):
             # Failed to read plugins list; return empty list
             pass
 
@@ -564,10 +564,10 @@ class ConfigurationScanner:
                                                 source=ConfigSource.PLUGIN,
                                                 plugin_name=plugin_name
                                             ))
-                        except Exception:
+                        except (OSError, json.JSONDecodeError):
                             # Failed to read hooks config; skip this plugin
                             pass
-        except Exception:
+        except (OSError, json.JSONDecodeError):
             # Failed to read installed plugins; return empty list
             pass
 
@@ -611,7 +611,7 @@ class ConfigurationScanner:
                                 agent = self._parse_agent_file(agent_file, ConfigSource.PLUGIN)
                                 if agent:
                                     agents.append(agent)
-            except Exception:
+            except (OSError, json.JSONDecodeError):
                 # Failed to read plugin agents; skip
                 pass
 
@@ -665,7 +665,7 @@ class ConfigurationScanner:
                 tools=tools,
                 instructions=content
             )
-        except Exception:
+        except OSError:
             return None
 
     def resolve_feature_inheritance(

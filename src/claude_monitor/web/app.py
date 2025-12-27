@@ -120,21 +120,21 @@ def create_app(claude_data_paths: Optional[ClaudeDataPaths] = None) -> Flask:
     try:
         from .routes.dashboard import dashboard_bp
         app.register_blueprint(dashboard_bp)
-    except ImportError:
+    except (ImportError, ModuleNotFoundError):
         # Dashboard blueprint is optional
         pass
 
     try:
         from .routes.api import api_bp
         app.register_blueprint(api_bp)
-    except ImportError:
+    except (ImportError, ModuleNotFoundError):
         # API blueprint is optional
         pass
 
     try:
         from .routes.charts import charts_bp
         app.register_blueprint(charts_bp)
-    except ImportError:
+    except (ImportError, ModuleNotFoundError):
         # Charts blueprint is optional
         pass
 
