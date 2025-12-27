@@ -48,6 +48,7 @@ class SkillInfo:
                     # Remove markdown header markers
                     description = first_line.lstrip('#').strip()
             except Exception:
+                # Description is optional; use empty string as default
                 pass
 
         return cls(
@@ -124,6 +125,7 @@ class SkillsParser:
                                 if skill_info:
                                     skills.append(skill_info)
         except Exception:
+            # Failed to read plugin data; skip this plugin
             pass
 
         return skills
@@ -165,6 +167,7 @@ class ConfigurationParser:
             with open(self.settings_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception:
+            # Failed to read settings file; return empty dict
             return {}
 
     def get_enabled_plugins(self) -> dict[str, bool]:
@@ -222,6 +225,7 @@ class ConfigurationParser:
                     if depth <= 3:
                         configs.append(item)
         except Exception:
+            # Skip directories we cannot access
             pass
 
         return sorted(configs)
@@ -246,4 +250,5 @@ class ConfigurationParser:
             with open(settings_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception:
+            # Failed to read project settings; return empty dict
             return {}

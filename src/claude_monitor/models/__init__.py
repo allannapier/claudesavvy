@@ -1,5 +1,6 @@
 """Models package for Claude Monitor."""
 
+from datetime import datetime
 from enum import Enum
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -237,6 +238,80 @@ class ConfigurationFeatures:
         }
 
 
+@dataclass
+class Recommendation:
+    """A single optimization recommendation for a project."""
+    category: str  # 'mcp', 'model', 'config', 'cache', 'agent'
+    severity: str  # 'high', 'medium', 'low', 'info'
+    title: str
+    description: str
+    impact: str  # "Estimated savings: ~$X/month" or similar
+    action_items: List[str] = field(default_factory=list)
+    details: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            'category': self.category,
+            'severity': self.severity,
+            'title': self.title,
+            'description': self.description,
+            'impact': self.impact,
+            'action_items': self.action_items,
+            'details': self.details,
+        }
+
+
+@dataclass
+class ProjectAnalysis:
+    """Complete optimization analysis for a project."""
+    project_path: str
+    project_name: str
+    recommendations: List[Recommendation]
+    metrics: Dict[str, Any]
+    analyzed_at: datetime
+
+    @property
+    def high_severity_count(self) -> int:
+        """Count of high severity recommendations."""
+        return sum(1 for r in self.recommendations if r.severity == 'high')
+
+    @property
+    def medium_severity_count(self) -> int:
+        """Count of medium severity recommendations."""
+        return sum(1 for r in self.recommendations if r.severity == 'medium')
+
+    @property
+    def low_severity_count(self) -> int:
+        """Count of low severity recommendations."""
+        return sum(1 for r in self.recommendations if r.severity == 'low')
+
+    @property
+    def total_recommendations(self) -> int:
+        """Total count of recommendations."""
+        return len(self.recommendations)
+
+    def recommendations_by_category(self, category: str) -> List[Recommendation]:
+        """Get recommendations filtered by category."""
+        return [r for r in self.recommendations if r.category == category]
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            'project_path': self.project_path,
+            'project_name': self.project_name,
+            'recommendations': [r.to_dict() for r in self.recommendations],
+            'metrics': self.metrics,
+            'analyzed_at': self.analyzed_at.isoformat() if self.analyzed_at else None,
+            'summary': {
+                'high_severity': self.high_severity_count,
+                'medium_severity': self.medium_severity_count,
+                'low_severity': self.low_severity_count,
+                'total': self.total_recommendations,
+            }
+        }
+
+
 __all__ = [
     'ConfigSource',
     'RepositoryConfig',
@@ -249,4 +324,6 @@ __all__ = [
     'InheritanceLevel',
     'InheritanceChain',
     'ConfigurationFeatures',
+    'Recommendation',
+    'ProjectAnalysis',
 ]

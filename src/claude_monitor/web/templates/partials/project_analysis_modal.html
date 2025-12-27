@@ -1,0 +1,314 @@
+{# Modal for displaying project analysis and recommendations #}
+<div id="analysis-modal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity" onclick="closeAnalysisModal()"></div>
+
+    <!-- Modal panel -->
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-3xl">
+                <!-- Header -->
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 flex items-center justify-between border-b border-gray-200">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900" id="modal-title">
+                            <span id="analysis-project-name">Project Analysis</span>
+                        </h3>
+                        <p class="text-sm text-gray-500 mt-1">Optimization recommendations based on usage patterns</p>
+                    </div>
+                    <button onclick="closeAnalysisModal()" class="text-gray-400 hover:text-gray-500">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="px-4 py-4 sm:px-6 max-h-[70vh] overflow-y-auto" id="analysis-content">
+                    <!-- Loading state -->
+                    <div class="flex items-center justify-center py-12" id="analysis-loading">
+                        <svg class="animate-spin h-8 w-8 text-[#0770E3]" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="ml-3 text-gray-600">Analyzing project...</span>
+                    </div>
+
+                    <!-- Results (hidden initially) -->
+                    <div id="analysis-results" class="hidden space-y-6">
+                        <!-- Summary Cards -->
+                        <div class="grid grid-cols-4 gap-4" id="analysis-summary">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <!-- Metrics -->
+                        <div class="bg-gray-50 rounded-lg p-4" id="analysis-metrics">
+                            <h4 class="text-sm font-medium text-gray-700 mb-3">Project Metrics</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm" id="metrics-grid">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Recommendations by category -->
+                        <div id="recommendations-container" class="space-y-4">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <!-- No recommendations state -->
+                        <div id="no-recommendations" class="hidden text-center py-8">
+                            <svg class="mx-auto h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <h3 class="mt-2 text-sm font-medium text-gray-900">No recommendations</h3>
+                            <p class="mt-1 text-sm text-gray-500">This project looks well-optimized!</p>
+                        </div>
+                    </div>
+
+                    <!-- Error state -->
+                    <div id="analysis-error" class="hidden text-center py-8">
+                        <svg class="mx-auto h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">Analysis failed</h3>
+                        <p class="mt-1 text-sm text-gray-500" id="error-message">Unable to analyze this project.</p>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 flex justify-end gap-3 border-t border-gray-200">
+                    <button onclick="closeAnalysisModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Store current analysis data
+let currentAnalysis = null;
+
+function openAnalysisModal(projectPath, projectName, period = 'all') {
+    const modal = document.getElementById('analysis-modal');
+    const loading = document.getElementById('analysis-loading');
+    const results = document.getElementById('analysis-results');
+    const error = document.getElementById('analysis-error');
+
+    // Reset states
+    loading.classList.remove('hidden');
+    results.classList.add('hidden');
+    error.classList.add('hidden');
+
+    // Set project name
+    document.getElementById('analysis-project-name').textContent = projectName || 'Project Analysis';
+
+    // Show modal
+    modal.classList.remove('hidden');
+
+    // Fetch analysis
+    const url = new URL('/api/project/analyze', window.location.origin);
+    url.searchParams.append('project_path', projectPath);
+    url.searchParams.append('project_name', projectName || 'Unknown');
+    url.searchParams.append('period', period);
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            currentAnalysis = data;
+            loading.classList.add('hidden');
+
+            if (data.error) {
+                error.classList.remove('hidden');
+                document.getElementById('error-message').textContent = data.error;
+                return;
+            }
+
+            results.classList.remove('hidden');
+            renderAnalysisResults(data);
+        })
+        .catch(err => {
+            loading.classList.add('hidden');
+            error.classList.remove('hidden');
+            document.getElementById('error-message').textContent = err.message;
+        });
+}
+
+function closeAnalysisModal() {
+    document.getElementById('analysis-modal').classList.add('hidden');
+    currentAnalysis = null;
+}
+
+function renderAnalysisResults(data) {
+    const summary = data.summary || {};
+    const metrics = data.metrics || {};
+    const recommendations = data.recommendations || [];
+
+    // Render summary cards
+    renderSummaryCards(summary);
+
+    // Render metrics
+    renderMetrics(metrics);
+
+    // Render recommendations
+    renderRecommendations(recommendations);
+
+    // Show/hide no recommendations message
+    const noRecs = document.getElementById('no-recommendations');
+    const recsContainer = document.getElementById('recommendations-container');
+    if (recommendations.length === 0) {
+        noRecs.classList.remove('hidden');
+        recsContainer.classList.add('hidden');
+    } else {
+        noRecs.classList.add('hidden');
+        recsContainer.classList.remove('hidden');
+    }
+}
+
+function renderSummaryCards(summary) {
+    const container = document.getElementById('analysis-summary');
+    const cards = [
+        { label: 'Total', value: summary.total || 0, color: 'bg-gray-100 text-gray-800' },
+        { label: 'High', value: summary.high_severity || 0, color: 'bg-red-100 text-red-800' },
+        { label: 'Medium', value: summary.medium_severity || 0, color: 'bg-yellow-100 text-yellow-800' },
+        { label: 'Low', value: summary.low_severity || 0, color: 'bg-blue-100 text-blue-800' },
+    ];
+
+    container.innerHTML = cards.map(card => `
+        <div class="${card.color} rounded-lg p-3 text-center">
+            <div class="text-2xl font-bold">${card.value}</div>
+            <div class="text-xs opacity-75">${card.label}</div>
+        </div>
+    `).join('');
+}
+
+function renderMetrics(metrics) {
+    const container = document.getElementById('metrics-grid');
+    const metricItems = [];
+
+    if (metrics.mcp_server_count !== undefined) {
+        metricItems.push({ label: 'MCP Servers', value: metrics.mcp_server_count });
+    }
+    if (metrics.mcp_user_count !== undefined && metrics.mcp_user_count > 0) {
+        metricItems.push({ label: 'User MCPs', value: metrics.mcp_user_count });
+    }
+    if (metrics.mcp_project_count !== undefined && metrics.mcp_project_count > 0) {
+        metricItems.push({ label: 'Project MCPs', value: metrics.mcp_project_count });
+    }
+    if (metrics.mcp_plugin_count !== undefined && metrics.mcp_plugin_count > 0) {
+        metricItems.push({ label: 'Plugin MCPs', value: metrics.mcp_plugin_count });
+    }
+    if (metrics.mcp_used_count !== undefined) {
+        metricItems.push({ label: 'Used MCPs', value: metrics.mcp_used_count });
+    }
+    if (metrics.mcp_total_tools !== undefined) {
+        metricItems.push({ label: 'MCP Tools', value: metrics.mcp_total_tools });
+    }
+    if (metrics.mcp_unused_count !== undefined && metrics.mcp_unused_count > 0) {
+        metricItems.push({ label: 'Unused MCPs', value: metrics.mcp_unused_count });
+    }
+    if (metrics.premium_model_ratio !== undefined) {
+        metricItems.push({ label: 'Premium Model Ratio', value: `${(metrics.premium_model_ratio * 100).toFixed(0)}%` });
+    }
+    if (metrics.model_total_cost !== undefined) {
+        metricItems.push({ label: 'Total Cost', value: `$${metrics.model_total_cost.toFixed(2)}` });
+    }
+    if (metrics.claude_md_size_kb !== undefined) {
+        metricItems.push({ label: 'CLAUDE.md Size', value: `${metrics.claude_md_size_kb} KB` });
+    }
+    if (metrics.cache_hit_rate !== undefined) {
+        metricItems.push({ label: 'Cache Hit Rate', value: `${metrics.cache_hit_rate.toFixed(1)}%` });
+    }
+    if (metrics.project_agents_count !== undefined) {
+        metricItems.push({ label: 'Project Agents', value: metrics.project_agents_count });
+    }
+
+    container.innerHTML = metricItems.map(item => `
+        <div>
+            <div class="text-gray-500">${item.label}</div>
+            <div class="font-medium text-gray-900">${item.value}</div>
+        </div>
+    `).join('');
+}
+
+function renderRecommendations(recommendations) {
+    const container = document.getElementById('recommendations-container');
+
+    // Group by category
+    const categories = {
+        mcp: { name: 'MCP Servers', icon: 'M6 5c-.001 0-.002 0-.003 0a3 3 0 00-2.983 2.998C3 8.002 3 8.004 3 8.005V19a2 2 0 002 2h14a2 2 0 002-2V8.005c0-.001 0-.003 0-.005a3 3 0 00-2.997-2.998V5a1 1 0 10-2 0v.001H8V5a1 1 0 10-2 0z', color: 'purple' },
+        model: { name: 'Model Usage', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', color: 'blue' },
+        config: { name: 'Configuration', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', color: 'green' },
+        cache: { name: 'Cache Efficiency', icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4', color: 'orange' },
+        agent: { name: 'Agent Configuration', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', color: 'indigo' },
+    };
+
+    const severityColors = {
+        high: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', badge: 'bg-red-100 text-red-800' },
+        medium: { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-800', badge: 'bg-yellow-100 text-yellow-800' },
+        low: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', badge: 'bg-blue-100 text-blue-800' },
+        info: { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-800', badge: 'bg-gray-100 text-gray-800' },
+    };
+
+    // Group recommendations by category
+    const grouped = {};
+    recommendations.forEach(rec => {
+        if (!grouped[rec.category]) {
+            grouped[rec.category] = [];
+        }
+        grouped[rec.category].push(rec);
+    });
+
+    // Render each category
+    let html = '';
+    for (const [catKey, recs] of Object.entries(grouped)) {
+        const cat = categories[catKey] || { name: catKey, icon: '', color: 'gray' };
+
+        html += `
+            <div class="border border-gray-200 rounded-lg overflow-hidden">
+                <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-${cat.color}-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${cat.icon}" />
+                    </svg>
+                    <span class="font-medium text-gray-900">${cat.name}</span>
+                    <span class="ml-auto text-sm text-gray-500">${recs.length} recommendation(s)</span>
+                </div>
+                <div class="divide-y divide-gray-200">
+        `;
+
+        recs.forEach(rec => {
+            const colors = severityColors[rec.severity] || severityColors.info;
+            html += `
+                <div class="p-4 ${colors.bg}">
+                    <div class="flex items-start gap-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colors.badge} uppercase">${rec.severity}</span>
+                        <div class="flex-1">
+                            <h4 class="font-medium ${colors.text}">${rec.title}</h4>
+                            <p class="text-sm text-gray-700 mt-1">${rec.description}</p>
+                            ${rec.impact ? `<p class="text-sm text-gray-600 mt-2"><strong>Impact:</strong> ${rec.impact}</p>` : ''}
+                            ${rec.action_items && rec.action_items.length > 0 ? `
+                                <ul class="mt-3 text-sm text-gray-700 space-y-1">
+                                    ${rec.action_items.map(item => `<li class="flex items-start gap-2"><span class="text-gray-400">•</span>${item}</li>`).join('')}
+                                </ul>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeAnalysisModal();
+    }
+});
+</script>

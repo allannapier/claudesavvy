@@ -23,6 +23,7 @@ from ...analyzers.tokens import TokenAnalyzer, TokenSummary, get_model_display_n
 from ...analyzers.integrations import IntegrationAnalyzer, IntegrationSummary
 from ...analyzers.features import FeaturesAnalyzer, FeaturesSummary
 from ...analyzers.configuration import ConfigurationAnalyzer
+from ...analyzers.project_analyzer import ProjectAnalyzer
 
 
 class DashboardService:
@@ -83,6 +84,14 @@ class DashboardService:
         # Initialize configuration scanner and analyzer
         self._config_scanner = ConfigurationScanner(self._config_parser)
         self._configuration_analyzer = ConfigurationAnalyzer(self._config_scanner)
+
+        # Initialize project analyzer
+        self._project_analyzer = ProjectAnalyzer(
+            self._session_parser,
+            self._tool_parser,
+            self._skills_parser,
+            self._config_scanner,
+        )
 
     def _build_project_map(self) -> Dict[str, str]:
         """
@@ -1235,3 +1244,88 @@ class DashboardService:
             feature_type, feature_id, path
         )
         return inheritance_tree.get('levels', [])
+
+    # ========== Project Analysis Methods ==========
+
+    def get_project_analysis(
+        self,
+        project_path: str,
+        project_name: str,
+        time_filter: Optional[TimeFilter] = None
+    ) -> Dict[str, Any]:
+        """
+        Get optimization recommendations for a specific project.
+
+        Args:
+            project_path: Path to the project
+            project_name: Display name of the project
+            time_filter: Optional time filter for analysis period
+
+        Returns:
+            Dict with project analysis including recommendations and metrics
+        """
+        analysis = self._project_analyzer.analyze_project(
+            project_path=project_path,
+            project_name=project_name,
+            time_filter=time_filter
+        )
+        return analysis.to_dict()
+
+    def analyze_all_projects(
+        self,
+        time_filter: Optional[TimeFilter] = None
+    ) -> Dict[str, Any]:
+        """
+        Analyze all projects for optimization opportunities.
+
+        Args:
+            time_filter: Optional time filter for analysis period
+
+        Returns:
+            Dict with all project analyses and summary
+        """
+        # Get all projects from project breakdown
+        project_data = self.get_project_breakdown(time_filter)
+        all_analyses = []
+
+        for project in project_data.get('projects', []):
+            # Skip projects with very low usage
+            if project.get('command_count', 0) < 2:
+                continue
+
+            try:
+                analysis = self._project_analyzer.analyze_project(
+                    project_path=project.get('full_path', project.get('path', '')),
+                    project_name=project.get('name', 'Unknown'),
+                    time_filter=time_filter
+                )
+                all_analyses.append(analysis.to_dict())
+            except Exception:
+                # Skip projects that can't be analyzed
+                continue
+
+        # Sort by total recommendations (high severity first)
+        all_analyses.sort(
+            key=lambda x: (
+                x.get('summary', {}).get('high_severity', 0),
+                x.get('summary', {}).get('medium_severity', 0),
+                x.get('summary', {}).get('low_severity', 0)
+            ),
+            reverse=True
+        )
+
+        # Calculate summary stats
+        total_high = sum(a.get('summary', {}).get('high_severity', 0) for a in all_analyses)
+        total_medium = sum(a.get('summary', {}).get('medium_severity', 0) for a in all_analyses)
+        total_low = sum(a.get('summary', {}).get('low_severity', 0) for a in all_analyses)
+
+        return {
+            'projects': all_analyses,
+            'total_projects_analyzed': len(all_analyses),
+            'summary': {
+                'total_high_severity': total_high,
+                'total_medium_severity': total_medium,
+                'total_low_severity': total_low,
+                'total_recommendations': total_high + total_medium + total_low,
+            }
+        }

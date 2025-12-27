@@ -77,13 +77,15 @@ class ConfigurationScanner:
                     repos = self._scan_directory(common_dir, max_depth, current_depth=0)
                     repositories.extend(repos)
                 except PermissionError:
-                    pass  # Skip directories we can't access
+                    # Skip directories we can't access
+                    pass
 
         # Also scan base_path root (but not deep)
         try:
             repos = self._scan_directory(base_path, max_depth=1, current_depth=0)
             repositories.extend(repos)
         except PermissionError:
+            # Skip directories we can't access
             pass
 
         # Deduplicate by claude_dir path
@@ -220,6 +222,7 @@ class ConfigurationScanner:
                                             if skill:
                                                 skills.append(skill)
             except Exception:
+                # Failed to read plugin skills; skip
                 pass
 
         return skills
@@ -295,6 +298,7 @@ class ConfigurationScanner:
                     settings_data = json.load(f)
                     mcp_servers.update(self._extract_mcp_servers_from_permissions(settings_data))
             except Exception:
+                # Failed to read user settings; skip
                 pass
 
         # Parse MCPs from project settings.local.json
@@ -305,6 +309,7 @@ class ConfigurationScanner:
                     settings_data = json.load(f)
                     mcp_servers.update(self._extract_mcp_servers_from_permissions(settings_data))
             except Exception:
+                # Failed to read project settings; skip
                 pass
 
         # Create MCP objects for discovered servers from settings
@@ -317,9 +322,7 @@ class ConfigurationScanner:
                     with open(project_settings_file, 'r', encoding='utf-8') as f:
                         project_data = json.load(f)
                         project_mcps = self._extract_mcp_servers_from_permissions(project_data)
-                        if server_name in project_mcps:
-                            source = ConfigSource.PROJECT
-                        else:
+                        if server_name not in project_mcps:
                             source = ConfigSource.USER
                 except Exception:
                     source = ConfigSource.USER
@@ -361,6 +364,7 @@ class ConfigurationScanner:
                                                 plugin_path=install_path
                                             ))
             except Exception:
+                # Failed to read plugin MCP configs; skip
                 pass
 
         return mcps
@@ -413,6 +417,7 @@ class ConfigurationScanner:
                                         if command:
                                             commands.append(command)
             except Exception:
+                # Failed to read plugin commands; skip
                 pass
 
         return commands
@@ -484,6 +489,7 @@ class ConfigurationScanner:
                                 license_type = metadata.get('license')
                                 keywords = metadata.get('keywords', [])
                         except Exception:
+                            # Failed to read plugin metadata; use defaults
                             pass
 
                     # Count features
@@ -509,6 +515,7 @@ class ConfigurationScanner:
                         features=features
                     ))
         except Exception:
+            # Failed to read plugins list; return empty list
             pass
 
         return plugins
@@ -558,8 +565,10 @@ class ConfigurationScanner:
                                                 plugin_name=plugin_name
                                             ))
                         except Exception:
+                            # Failed to read hooks config; skip this plugin
                             pass
         except Exception:
+            # Failed to read installed plugins; return empty list
             pass
 
         return hooks
@@ -603,6 +612,7 @@ class ConfigurationScanner:
                                 if agent:
                                     agents.append(agent)
             except Exception:
+                # Failed to read plugin agents; skip
                 pass
 
         return agents

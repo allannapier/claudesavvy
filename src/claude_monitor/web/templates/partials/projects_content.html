@@ -48,6 +48,7 @@
                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Messages</th>
                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Tokens</th>
                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -72,11 +73,23 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{{ project.message_count|default(0)|int }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{{ project.total_tokens|default(0)|int }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-[#0770E3]">${{ project.total_cost|default(0.0)|float|round(2) }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                            <button
+                                onclick="openAnalysisModal('{{ project.full_path or project.path }}', '{{ project.name }}', window.selectedPeriod || 'all')"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-[#0770E3] bg-[#0770E3] bg-opacity-10 hover:bg-opacity-20 rounded-lg transition-colors"
+                                title="Get optimization recommendations for this project"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                </svg>
+                                Analyze
+                            </button>
+                        </td>
                     </tr>
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-500">
+                        <td colspan="7" class="px-6 py-12 text-center text-sm text-gray-500">
                             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
                             </svg>
@@ -88,3 +101,6 @@
         </table>
     </div>
 </div>
+
+<!-- Include the project analysis modal -->
+{% include 'partials/project_analysis_modal.html' %}

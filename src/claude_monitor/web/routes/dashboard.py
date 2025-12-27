@@ -736,6 +736,69 @@ def api_features() -> str:
         return f'<div class="text-red-600 p-4">Error loading features: {str(e)}</div>', 500
 
 
+@dashboard_bp.route('/api/project/analyze')
+def api_project_analyze() -> Any:
+    """
+    API endpoint to analyze a project for optimization recommendations.
+
+    Query params:
+        project_path: Full path to the project
+        project_name: Display name of the project
+        period: today|week|month|all (default: all)
+
+    Returns:
+        JSON with project analysis and recommendations
+    """
+    from flask import request, jsonify
+    from ...utils.time_filter import TimeFilter
+    from urllib.parse import unquote
+
+    try:
+        service = current_app.dashboard_service
+        project_path = request.args.get('project_path', '')
+        project_name = request.args.get('project_name', 'Unknown')
+        period = request.args.get('period', 'all')
+
+        # URL decode the project path
+        if project_path:
+            project_path = unquote(project_path)
+
+        # Create time filter based on period
+        time_filter = None
+        if period != 'all':
+            now = datetime.now()
+            if period == 'today':
+                start_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            elif period == 'week':
+                start_time = now - timedelta(days=7)
+            elif period == 'month':
+                start_time = now - timedelta(days=30)
+            else:
+                start_time = None
+
+            if start_time:
+                time_filter = TimeFilter(start_time=start_time, end_time=now)
+
+        # Get project analysis
+        analysis = service.get_project_analysis(
+            project_path=project_path,
+            project_name=project_name,
+            time_filter=time_filter
+        )
+
+        return jsonify(analysis), 200
+
+    except Exception as e:
+        logger.error(f'Error analyzing project: {e}')
+        return jsonify({
+            'error': 'An error occurred while analyzing the project',
+            'project_name': project_name,
+            'recommendations': [],
+            'metrics': {},
+            'summary': {'total': 0, 'high_severity': 0, 'medium_severity': 0, 'low_severity': 0}
+        }), 500
+
+
 @dashboard_bp.route('/export/<format>')
 def export_data(format: str) -> Any:
     """
