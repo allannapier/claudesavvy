@@ -282,7 +282,7 @@ class ConfigurationScanner:
                 version=version,
                 agents=agents
             )
-        except (OSError, ValueError):
+        except OSError:
             return None
 
     def _parse_mcps(self, project_claude_dir: Path, user_claude_dir: Path) -> List[MCP]:
