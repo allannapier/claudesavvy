@@ -41,12 +41,12 @@ jobs:
 
       - name: Verify package imports correctly
         run: |
-          python -c "from claude_monitor.cli import main; print('CLI import OK')"
-          python -c "from claude_monitor.web.app import create_app; print('Web app import OK')"
+          python -c "from claudesavvy.cli import main; print('CLI import OK')"
+          python -c "from claudesavvy.web.app import create_app; print('Web app import OK')"
 
       - name: Verify CLI entry point works
         run: |
-          monitor-claude --help
+          claudesavvy --help
 
   security:
     runs-on: ubuntu-latest

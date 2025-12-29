@@ -835,7 +835,7 @@ def export_data(format: str) -> Any:
                 'exported_at': datetime.now().isoformat()
             }
             response = make_response(jsonify(data))
-            response.headers['Content-Disposition'] = 'attachment; filename=claude_monitor_export.json'
+            response.headers['Content-Disposition'] = 'attachment; filename=claudesavvy_export.json'
             response.headers['Content-Type'] = 'application/json'
             return response
         
@@ -878,7 +878,7 @@ def export_data(format: str) -> Any:
                     ])
             
             response = make_response(output.getvalue())
-            response.headers['Content-Disposition'] = 'attachment; filename=claude_monitor_export.csv'
+            response.headers['Content-Disposition'] = 'attachment; filename=claudesavvy_export.csv'
             response.headers['Content-Type'] = 'text/csv'
             return response
     

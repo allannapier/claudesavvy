@@ -1,5 +1,5 @@
 [project]
-name = "monitor-claude"
+name = "claudesavvy"
 version = "1.0.6"
 description = "Web-based usage monitoring tool for Claude Code"
 authors = [{name = "Allan Napier"}]
@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-monitor-claude = "claude_monitor.cli:main"
+claudesavvy = "claudesavvy.cli:main"
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -27,4 +27,4 @@ where = ["src"]
 "" = "src"
 
 [tool.setuptools.package-data]
-"claude_monitor.web" = ["templates/**/*.html", "static/**/*"]
+"claudesavvy.web" = ["templates/**/*.html", "static/**/*"]
