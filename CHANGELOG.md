@@ -2,6 +2,18 @@
 
 All notable changes to ClaudeSavvy will be documented in this file.
 
+## [2.0.1] - 2025-12-29
+
+### Fixed
+- Fixed `AttributeError: 'list' object has no attribute 'get'` error in skills parser
+- Added robust error handling for `installed_plugins.json` parsing
+- Added type checking and logging for better debugging of plugin data structures
+- Features page now correctly handles plugin entries that are organized as lists
+
+### Changed
+- Improved defensive programming in SkillsParser with proper type validation
+- Added warning logs for unexpected data structures in plugin files
+
 ## [2.0.0] - 2025-12-29
 
 ### Changed
