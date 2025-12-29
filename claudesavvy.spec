@@ -3,12 +3,12 @@
 block_cipher = None
 
 a = Analysis(
-    ['src/claude_monitor/__main__.py'],
+    ['src/claudesavvy/__main__.py'],
     pathex=['src'],
     binaries=[],
     datas=[
-        ('src/claude_monitor/web/templates', 'claude_monitor/web/templates'),
-        ('src/claude_monitor/web/static', 'claude_monitor/web/static'),
+        ('src/claudesavvy/web/templates', 'claudesavvy/web/templates'),
+        ('src/claudesavvy/web/static', 'claudesavvy/web/static'),
     ],
     hiddenimports=[
         'flask',
@@ -16,11 +16,11 @@ a = Analysis(
         'click',
         'rich',
         'dateutil',
-        'claude_monitor',
-        'claude_monitor.utils',
-        'claude_monitor.utils.paths',
-        'claude_monitor.web',
-        'claude_monitor.web.app',
+        'claudesavvy',
+        'claudesavvy.utils',
+        'claudesavvy.utils.paths',
+        'claudesavvy.web',
+        'claudesavvy.web.app',
     ],
     hookspath=[],
     hooksconfig={},
@@ -41,7 +41,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='monitor-claude',
+    name='claudesavvy',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

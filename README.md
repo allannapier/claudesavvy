@@ -1,6 +1,6 @@
 <div align="center">
 
-# Claude Monitor
+# ClaudeSavvy
 
 ### The missing dashboard for Claude Code — track costs, optimize usage, stay in control.
 
@@ -8,7 +8,7 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Maintained](https://img.shields.io/badge/Maintained%3F-yes-green.svg)
 
-<img src="docs/images/hero-viewport.png" alt="Claude Monitor Dashboard" width="800">
+<img src="docs/images/hero-viewport.png" alt="ClaudeSavvy Dashboard" width="800">
 
 </div>
 
@@ -16,7 +16,7 @@
 
 ## Overview
 
-Claude Monitor provides comprehensive analytics for your Claude Code usage by reading local data files and presenting insights through a clean web interface. No API keys required, no data sent externally—everything runs locally on your machine.
+ClaudeSavvy provides comprehensive analytics for your Claude Code usage by reading local data files and presenting insights through a clean web interface. No API keys required, no data sent externally—everything runs locally on your machine.
 
 **Key Benefits:**
 - 📊 **Visual Analytics**: Modern web dashboard with detailed metrics
@@ -52,7 +52,7 @@ Claude Monitor provides comprehensive analytics for your Claude Code usage by re
 **Install via PyPI (Recommended):**
 
 ```bash
-pip install monitor-claude
+pip install claudesavvy
 ```
 
 **Install from source (for development):**
@@ -70,7 +70,7 @@ pip install .
 
 ```bash
 # Start the web server (default port 5000)
-monitor-claude
+claudesavvy
 
 # Open your browser to http://localhost:5000
 ```
@@ -83,19 +83,19 @@ That's it! The dashboard will load your Claude Code usage data automatically.
 
 ```bash
 # Start server on default port 5000
-monitor-claude
+claudesavvy
 
 # Start on custom port
-monitor-claude --port 8080
+claudesavvy --port 8080
 
 # Bind to all network interfaces (allow external access)
-monitor-claude --host 0.0.0.0
+claudesavvy --host 0.0.0.0
 
 # Enable debug mode with auto-reload
-monitor-claude --debug
+claudesavvy --debug
 
 # Use custom Claude data directory
-monitor-claude --claude-dir /path/to/claude/data
+claudesavvy --claude-dir /path/to/claude/data
 ```
 
 ### Web Interface
@@ -162,7 +162,7 @@ Shows how much money you've saved through prompt caching. The calculation compar
 
 ## Data Sources
 
-Claude Monitor reads data from your local Claude Code installation at `~/.claude/`:
+ClaudeSavvy reads data from your local Claude Code installation at `~/.claude/`:
 
 - **history.jsonl**: Command history and timestamps
 - **projects/**: Session data with detailed token usage
@@ -188,7 +188,7 @@ Claude Monitor reads data from your local Claude Code installation at `~/.claude
 
 ```
 claude_monitor/
-├── src/claude_monitor/
+├── src/claudesavvy/
 │   ├── cli.py              # Entry point - launches web server
 │   ├── parsers/            # Data parsers for Claude files
 │   │   ├── history.py      # Command history parser
@@ -231,14 +231,14 @@ Want to contribute? Check out [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 pip install -e .
 
 # Run with debug mode (auto-reload on code changes)
-monitor-claude --debug
+claudesavvy --debug
 ```
 
 ### Run Tests
 
 ```bash
 # Manual testing - verify all routes work
-monitor-claude
+claudesavvy
 # Then navigate to each page in your browser
 ```
 
@@ -268,7 +268,7 @@ monitor-claude
 
 ### Web server won't start
 - Check if port 5000 is already in use
-- Try a different port: `monitor-claude --port 8080`
+- Try a different port: `claudesavvy --port 8080`
 - Check Python version: `python3 --version` (requires 3.9+)
 
 ### Data not showing

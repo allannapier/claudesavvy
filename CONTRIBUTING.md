@@ -1,6 +1,6 @@
-# Contributing to Claude Monitor
+# Contributing to ClaudeSavvy
 
-Thank you for your interest in contributing to Claude Monitor! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to ClaudeSavvy! This document provides guidelines and instructions for contributing to the project.
 
 ## Welcome
 
@@ -39,13 +39,13 @@ pip install -r requirements.txt
 
 ```bash
 # Start the web server
-claude-monitor
+claudesavvy
 
 # Or run directly
-python3 -m src.claude_monitor.cli
+python3 -m src.claudesavvy.cli
 
 # Enable debug mode for development
-claude-monitor --debug
+claudesavvy --debug
 ```
 
 The web interface will be available at http://localhost:5000
@@ -100,7 +100,7 @@ Add export functionality for CSV format
 Understanding the architecture will help you contribute effectively:
 
 ```
-src/claude_monitor/
+src/claudesavvy/
 ├── cli.py                 # Entry point - launches web server
 ├── parsers/              # Data parsers (read Claude Code files)
 │   ├── history.py        # Command history parser
@@ -299,8 +299,8 @@ Closes #123
 
 ## License
 
-By contributing to Claude Monitor, you agree that your contributions will be licensed under the MIT License.
+By contributing to ClaudeSavvy, you agree that your contributions will be licensed under the MIT License.
 
 ---
 
-Thank you for contributing to Claude Monitor! 🚀
+Thank you for contributing to ClaudeSavvy! 🚀

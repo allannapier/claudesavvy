@@ -1,15 +1,15 @@
-"""Setup file for claude-monitor."""
+"""Setup file for claudesavvy."""
 
 from setuptools import setup, find_packages
 
 setup(
-    name="claude-monitor",
+    name="claudesavvy",
     version="1.0.1",
     description="Web-based usage monitoring tool for Claude Code",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     package_data={
-        "claude_monitor.web": [
+        "claudesavvy.web": [
             "templates/**/*.html",
             "static/**/*",
         ],
@@ -24,7 +24,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "claude-monitor=claude_monitor.cli:main",
+            "claudesavvy=claudesavvy.cli:main",
         ],
     },
     python_requires=">=3.9",

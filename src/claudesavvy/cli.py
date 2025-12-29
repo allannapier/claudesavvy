@@ -1,4 +1,4 @@
-"""Main CLI interface for claude-monitor."""
+"""Main CLI interface for claudesavvy."""
 
 import sys
 import click
@@ -33,7 +33,7 @@ from .utils.paths import get_claude_paths, ClaudeDataPaths
 )
 def main(port, host, debug, claude_dir):
     """
-    Claude Monitor - Web-based usage tracking for Claude Code
+    ClaudeSavvy - Web-based usage tracking for Claude Code
 
     Visualize your Claude Code usage metrics including sessions, token consumption,
     costs, projects, file operations, and MCP integrations through an intuitive
@@ -44,19 +44,19 @@ def main(port, host, debug, claude_dir):
     Examples:
 
       # Start server on default port 5000
-      $ claude-monitor
+      $ claudesavvy
 
       # Start on custom port
-      $ claude-monitor --port 8080
+      $ claudesavvy --port 8080
 
       # Bind to all network interfaces (allow external access)
-      $ claude-monitor --host 0.0.0.0
+      $ claudesavvy --host 0.0.0.0
 
       # Enable debug mode with auto-reload
-      $ claude-monitor --debug
+      $ claudesavvy --debug
 
       # Use custom Claude data directory
-      $ claude-monitor --claude-dir /path/to/claude/data
+      $ claudesavvy --claude-dir /path/to/claude/data
     """
     console = Console()
 
@@ -74,7 +74,7 @@ def main(port, host, debug, claude_dir):
         app = create_app(paths)
 
         # Display startup information
-        console.print("\n[cyan]═══ Claude Monitor Web Server ═══[/cyan]")
+        console.print("\n[cyan]═══ ClaudeSavvy Web Server ═══[/cyan]")
         console.print("[dim]Starting web interface...[/dim]\n")
         console.print(f"[green]✓ Server running at:[/green] [bold]http://{host}:{port}[/bold]")
 
@@ -90,7 +90,7 @@ def main(port, host, debug, claude_dir):
     except FileNotFoundError as e:
         console.print(f"\n[red]✗ Error:[/red] {e}")
         console.print("\n[yellow]Make sure Claude Code has been used at least once.[/yellow]")
-        console.print("[dim]Claude Monitor reads data from ~/.claude/ directory[/dim]\n")
+        console.print("[dim]ClaudeSavvy reads data from ~/.claude/ directory[/dim]\n")
         sys.exit(1)
 
     except ImportError as e:
