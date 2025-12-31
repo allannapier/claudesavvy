@@ -733,7 +733,7 @@ def api_features() -> str:
 
     except Exception as e:
         logger.error(f'Error loading filtered features: {e}', exc_info=True)
-        return f'<div class="text-red-600 p-4">Error loading features: {str(e)}</div>', 500
+        return '<div class="text-red-600 p-4">Error loading features. Please try again later.</div>', 500
 
 
 @dashboard_bp.route('/api/project/analyze')
