@@ -20,6 +20,24 @@
     <!-- HTMX 2.0 -->
     <script src="https://unpkg.com/htmx.org@2.0.0"></script>
 
+    <!-- HTMX Loading Indicator Configuration -->
+    <style>
+        /* Show loading indicator during HTMX requests */
+        .htmx-indicator {
+            display: none;
+            opacity: 0;
+            transition: opacity 200ms ease-in;
+        }
+        .htmx-request .htmx-indicator {
+            display: inline-block;
+            opacity: 1;
+        }
+        .htmx-request.htmx-indicator {
+            display: inline-block;
+            opacity: 1;
+        }
+    </style>
+
     <!-- Chart.js 4.x -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 
