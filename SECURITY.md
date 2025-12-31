@@ -29,7 +29,7 @@ Claude Monitor reads the following local files:
 - `~/.claude/skills/` - Installed skills
 - `~/.claude/settings.json` - Claude Code settings
 
-**All data stays on your machine.** The web server runs locally and by default listens on all network interfaces (0.0.0.0). For enhanced security, you can bind to localhost only using `--host 127.0.0.1`.
+**All data stays on your machine.** The web server runs locally and by default binds to localhost only (127.0.0.1) for security. If you need to access it from other machines on your network, you can explicitly bind to all interfaces using `--host 0.0.0.0`.
 
 ## Reporting a Vulnerability
 
@@ -72,8 +72,8 @@ When using Claude Monitor:
 
 ### For Users
 
-1. **Network Access**: By default, the server binds to all network interfaces (0.0.0.0)
-   - For enhanced security, bind to localhost only: `--host 127.0.0.1`
+1. **Network Access**: By default, the server binds to localhost only (127.0.0.1) for security
+   - To access from other machines, explicitly bind to all interfaces: `--host 0.0.0.0`
    - Never expose to the public internet without proper authentication
    - Use a firewall to restrict access when running on a network
 

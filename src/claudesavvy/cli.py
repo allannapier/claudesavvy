@@ -18,8 +18,8 @@ from .utils.paths import get_claude_paths, ClaudeDataPaths
 @click.option(
     '--host',
     type=str,
-    default='0.0.0.0',
-    help='Host to bind to (default: 0.0.0.0)'
+    default='127.0.0.1',
+    help='Host to bind to (default: 127.0.0.1)'
 )
 @click.option(
     '--debug',
