@@ -2,6 +2,23 @@
 
 All notable changes to ClaudeSavvy will be documented in this file.
 
+## [2.1.1] - 2025-12-31
+
+### Fixed
+- **Security**: Fixed cyclic import issue between `pricing.py` and `tokens.py`
+- **Security**: Fixed exception exposure in API endpoints - no longer exposes stack traces to users
+- **Security**: Reverted default host binding from `0.0.0.0` back to `127.0.0.1` for security-first approach
+- **Bug**: Fixed empty dictionary issue in `get_all_pricing()` - now always includes models with custom pricing
+- **UI**: Fixed page title from "Settings - Claude Monitor" to "Settings - LLM Monitor"
+- **Refactoring**: Removed hardcoded `MODEL_PRICING` - fully dynamic model discovery
+- **Documentation**: Updated SECURITY.md to reflect localhost-only default binding
+
+### Technical Details
+- `DEFAULT_PRICING` now defined in `pricing.py` to avoid import cycles
+- API endpoints return generic error messages instead of exception details
+- Custom pricing models are always shown, even when no session data exists
+- Consistent branding with "LLM Monitor" instead of "Claude Monitor"
+
 ## [2.1.0] - 2025-12-31
 
 ### Added
