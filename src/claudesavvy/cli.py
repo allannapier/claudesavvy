@@ -18,8 +18,8 @@ from .utils.paths import get_claude_paths, ClaudeDataPaths
 @click.option(
     '--host',
     type=str,
-    default='0.0.0.0',
-    help='Host to bind to (default: 0.0.0.0)'
+    default='127.0.0.1',
+    help='Host to bind to (default: 127.0.0.1)'
 )
 @click.option(
     '--debug',
@@ -43,14 +43,14 @@ def main(port, host, debug, claude_dir):
 
     Examples:
 
-      # Start server on default port 5000 (accessible from all network interfaces)
+      # Start server on default port 5000 (localhost-only, secure)
       $ claudesavvy
 
       # Start on custom port
       $ claudesavvy --port 8080
 
-      # Bind to localhost only (for enhanced security)
-      $ claudesavvy --host 127.0.0.1
+      # Make accessible from network (use with caution)
+      $ claudesavvy --host 0.0.0.0
 
       # Enable debug mode with auto-reload
       $ claudesavvy --debug

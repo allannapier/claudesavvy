@@ -929,7 +929,7 @@ def api_pricing_settings() -> Any:
 
     except Exception as e:
         logger.error(f'Error getting pricing settings: {e}', exc_info=True)
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to retrieve pricing settings'}), 500
 
 
 @dashboard_bp.route('/api/settings/pricing/update', methods=['POST'])
@@ -971,11 +971,11 @@ def api_update_pricing() -> Any:
 
         return jsonify(result), 200 if result['success'] else 500
 
-    except ValueError as e:
-        return jsonify({'success': False, 'error': f'Invalid value: {str(e)}'}), 400
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid value provided'}), 400
     except Exception as e:
         logger.error(f'Error updating pricing: {e}', exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'error': 'Failed to update pricing'}), 500
 
 
 @dashboard_bp.route('/api/settings/pricing/reset', methods=['POST'])
@@ -1005,4 +1005,4 @@ def api_reset_pricing() -> Any:
 
     except Exception as e:
         logger.error(f'Error resetting pricing: {e}', exc_info=True)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'error': 'Failed to reset pricing'}), 500

@@ -8,7 +8,13 @@ import json
 from pathlib import Path
 from typing import Dict, Optional
 
-from ..analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING
+# Default pricing for models without custom pricing or models not in MODEL_PRICING
+DEFAULT_PRICING = {
+    'input_per_mtok': 3.00,
+    'output_per_mtok': 15.00,
+    'cache_write_per_mtok': 3.75,
+    'cache_read_per_mtok': 0.30
+}
 
 
 class PricingSettings:
@@ -102,7 +108,7 @@ class PricingSettings:
             return custom_pricing[model]
 
         # Fall back to default pricing
-        return MODEL_PRICING.get(model, DEFAULT_PRICING)
+        return DEFAULT_PRICING
 
     def set_pricing_for_model(
         self,
@@ -166,19 +172,19 @@ class PricingSettings:
             Dictionary mapping all model IDs to their current pricing
             (custom if set, default otherwise).
         """
-        if not additional_models:
-            return {}
-
         custom_pricing = self.load_custom_pricing()
         result = {}
 
-        # Only include models that are actually being used
-        for model in additional_models:
-            # Use custom pricing if available, otherwise use default
-            if model in custom_pricing:
-                result[model] = custom_pricing[model]
-            else:
-                result[model] = DEFAULT_PRICING
+        # Include models with custom pricing first
+        for model, pricing in custom_pricing.items():
+            result[model] = pricing
+
+        # Add additional models from session data
+        if additional_models:
+            for model in additional_models:
+                # Only add if not already present (custom pricing takes precedence)
+                if model not in result:
+                    result[model] = DEFAULT_PRICING
 
         return result
 
