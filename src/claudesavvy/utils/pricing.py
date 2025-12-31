@@ -8,7 +8,12 @@ import json
 from pathlib import Path
 from typing import Dict, Optional
 
-from ..analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING
+
+# Default pricing per million tokens (input/output) when no custom pricing is set
+DEFAULT_PRICING = {
+    "input": 3.00,
+    "output": 15.00
+}
 
 
 class PricingSettings:
@@ -102,7 +107,7 @@ class PricingSettings:
             return custom_pricing[model]
 
         # Fall back to default pricing
-        return MODEL_PRICING.get(model, DEFAULT_PRICING)
+        return DEFAULT_PRICING
 
     def set_pricing_for_model(
         self,
@@ -166,19 +171,22 @@ class PricingSettings:
             Dictionary mapping all model IDs to their current pricing
             (custom if set, default otherwise).
         """
-        if not additional_models:
-            return {}
-
         custom_pricing = self.load_custom_pricing()
         result = {}
 
-        # Only include models that are actually being used
-        for model in additional_models:
-            # Use custom pricing if available, otherwise use default
-            if model in custom_pricing:
-                result[model] = custom_pricing[model]
-            else:
-                result[model] = DEFAULT_PRICING
+        # Start with models that have custom pricing configured
+        for model in custom_pricing:
+            result[model] = custom_pricing[model]
+
+        # Add additional models (from session data) with default or custom pricing
+        if additional_models:
+            # Only include models that are actually being used
+            for model in additional_models:
+                # Use custom pricing if available, otherwise use default
+                if model in custom_pricing:
+                    result[model] = custom_pricing[model]
+                else:
+                    result[model] = DEFAULT_PRICING
 
         return result
 
