@@ -455,7 +455,9 @@ class ProjectAnalyzer:
 
         for model_id, tokens in matching_stats.model_usage.items():
             from ..analyzers.tokens import TokenAnalyzer
-            cost = TokenAnalyzer.calculate_cost(tokens, model_id)
+            # Create a TokenAnalyzer instance to calculate costs
+            token_analyzer = TokenAnalyzer(self.session_parser, time_filter=time_filter)
+            cost = token_analyzer.calculate_cost(tokens, model_id)
             total_cost += cost.total_cost
             total_calls += 1
 
