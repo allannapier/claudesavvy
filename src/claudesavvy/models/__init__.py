@@ -186,14 +186,14 @@ class Agent:
 class InheritanceLevel:
     """Single level in an inheritance chain."""
     source: ConfigSource
-    path: Path
+    path: Optional[Path]
     feature: Any  # The actual feature object
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
             'source': self.source.value,
-            'path': str(self.path),
+            'path': str(self.path) if self.path else None,
             'feature': self.feature.to_dict() if hasattr(self.feature, 'to_dict') else str(self.feature),
         }
 
