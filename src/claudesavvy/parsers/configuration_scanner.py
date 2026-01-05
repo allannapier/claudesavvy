@@ -702,9 +702,22 @@ class ConfigurationScanner:
 
         for feature in feature_list:
             if feature.name == feature_name:
+                # Determine the appropriate path attribute based on feature type
+                if hasattr(feature, 'path'):
+                    feature_path = feature.path
+                elif hasattr(feature, 'install_path'):
+                    feature_path = feature.install_path
+                elif hasattr(feature, 'plugin_path'):
+                    feature_path = feature.plugin_path
+                elif hasattr(feature, 'handler_path'):
+                    feature_path = feature.handler_path
+                else:
+                    # Fallback for features without a path attribute
+                    feature_path = None
+
                 chain.levels.append(InheritanceLevel(
                     source=feature.source,
-                    path=feature.path if hasattr(feature, 'path') else feature.install_path,
+                    path=feature_path,
                     feature=feature
                 ))
                 break
