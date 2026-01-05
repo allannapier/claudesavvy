@@ -84,16 +84,16 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ tool.category|default('Unknown') }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{{ tool.usage_count }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{{ tool.total_tokens|default(0)|int }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">${{ "%.6f"|format(tool.cost_per_call|default(0.0)|float) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">${{ "%.4f"|format(tool.cost_per_call|default(0.0)|float) }}</td>
                     {% if features.has_trends %}
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
                         {% if tool.trend %}
                             {% if tool.trend.direction == 'down' %}
-                                <span class="text-green-600 font-medium" title="Previous: ${{ '%.6f'|format(tool.trend.prev_cost_per_call) }}">
+                                <span class="text-green-600 font-medium" title="Previous: ${{ '%.4f'|format(tool.trend.prev_cost_per_call) }}">
                                     &darr; {{ tool.trend.change_percent }}%
                                 </span>
                             {% elif tool.trend.direction == 'up' %}
-                                <span class="text-red-600 font-medium" title="Previous: ${{ '%.6f'|format(tool.trend.prev_cost_per_call) }}">
+                                <span class="text-red-600 font-medium" title="Previous: ${{ '%.4f'|format(tool.trend.prev_cost_per_call) }}">
                                     &uarr; +{{ tool.trend.change_percent }}%
                                 </span>
                             {% else %}

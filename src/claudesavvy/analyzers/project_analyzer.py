@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List, Any
 
-from ..parsers.sessions import SessionParser
+from ..parsers.sessions import SessionParser, SessionStats
 from ..parsers.tools import ToolUsageParser
 from ..parsers.skills import SkillsParser
 from ..parsers.configuration_scanner import ConfigurationScanner
@@ -843,7 +843,7 @@ class ProjectAnalyzer:
 
         # Can't compute trends without a bounded time period
         if time_filter is None or time_filter.start_time is None:
-            logger.info(f'Trends: No time filter or unbounded period')
+            logger.info('Trends: No time filter or unbounded period')
             metrics['trends_available'] = False
             return recommendations, metrics
 
@@ -1054,7 +1054,7 @@ class ProjectAnalyzer:
 
         return None
 
-    def _calculate_normalized_metrics(self, stats, time_filter: Optional[TimeFilter]) -> Dict[str, Any]:
+    def _calculate_normalized_metrics(self, stats: SessionStats, time_filter: Optional[TimeFilter]) -> Dict[str, Any]:
         """
         Calculate normalized metrics from SessionStats.
 
