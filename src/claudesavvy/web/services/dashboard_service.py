@@ -13,7 +13,7 @@ from ...utils.paths import get_claude_paths, ClaudeDataPaths
 from ...utils.time_filter import TimeFilter
 from ...utils.pricing import PricingSettings
 from ...parsers.history import HistoryParser
-from ...parsers.sessions import SessionParser, SubAgentParser, SubAgentExchange
+from ...parsers.sessions import SessionParser, SubAgentParser
 from ...parsers.debug import DebugLogParser
 from ...parsers.files import FileHistoryParser
 from ...parsers.tools import ToolUsageParser
@@ -1480,8 +1480,6 @@ class DashboardService:
         Returns:
             Dict with default pricing and custom overrides.
         """
-        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING
-
         all_pricing = self._pricing_settings.get_all_pricing(
             additional_models=additional_models
         )
