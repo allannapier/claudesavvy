@@ -16,12 +16,6 @@
 
 <script>
 (function() {
-    // Destroy existing charts if they exist (for HTMX reloads)
-    const existingTokenChart = Chart.getChart('tokenTrendChart');
-    if (existingTokenChart) existingTokenChart.destroy();
-    const existingPieChart = Chart.getChart('costPieChart');
-    if (existingPieChart) existingPieChart.destroy();
-
     // Use requestAnimationFrame to wait for DOM layout before creating charts
     // This fixes rendering issues when HTMX swaps in new content
     requestAnimationFrame(function() {
@@ -31,6 +25,13 @@
     });
 
     function initCharts() {
+        // Destroy existing charts if they exist (for HTMX reloads)
+        // Must be done right before creating new charts to avoid race conditions
+        const existingTokenChart = Chart.getChart('tokenTrendChart');
+        if (existingTokenChart) existingTokenChart.destroy();
+        const existingPieChart = Chart.getChart('costPieChart');
+        if (existingPieChart) existingPieChart.destroy();
+
         // Token Trend Chart
         const tokenCtx = document.getElementById('tokenTrendChart');
         if (tokenCtx) {

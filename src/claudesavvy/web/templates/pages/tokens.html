@@ -5,7 +5,7 @@
 {% block title %}Token Usage - Claude Monitor{% endblock %}
 
 {% block main_content %}
-<div class="space-y-8" x-data="{ selectedPeriod: '{{ period|default('all') }}', selectedModel: '{{ selected_model|default('') }}' }">
+<div class="space-y-8" x-data="{ selectedPeriod: '{{ period|default('1hour') }}', selectedModel: '{{ selected_model|default('') }}' }">
     <!-- Page Title and Filters -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -31,34 +31,48 @@
             </div>
 
             <!-- Time Filter -->
-            <div class="flex gap-2 items-center" role="group">
+            <div class="flex gap-1 sm:gap-2 flex-nowrap items-center" role="group">
+                <button
+                    @click="selectedPeriod = '15min'; htmx.ajax('GET', '/api/tokens?period=15min&model=' + selectedModel, {target: '#tokens-content', swap: 'innerHTML'})"
+                    :class="selectedPeriod === '15min' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
+                    class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
+                >
+                    15m
+                </button>
+                <button
+                    @click="selectedPeriod = '1hour'; htmx.ajax('GET', '/api/tokens?period=1hour&model=' + selectedModel, {target: '#tokens-content', swap: 'innerHTML'})"
+                    :class="selectedPeriod === '1hour' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
+                    class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
+                >
+                    1h
+                </button>
                 <button
                     @click="selectedPeriod = 'today'; htmx.ajax('GET', '/api/tokens?period=today&model=' + selectedModel, {target: '#tokens-content', swap: 'innerHTML'})"
                     :class="selectedPeriod === 'today' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
-                    class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2"
+                    class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
                 >
                     Today
                 </button>
                 <button
                     @click="selectedPeriod = 'week'; htmx.ajax('GET', '/api/tokens?period=week&model=' + selectedModel, {target: '#tokens-content', swap: 'innerHTML'})"
                     :class="selectedPeriod === 'week' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
-                    class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2"
+                    class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
                 >
                     Week
                 </button>
                 <button
                     @click="selectedPeriod = 'month'; htmx.ajax('GET', '/api/tokens?period=month&model=' + selectedModel, {target: '#tokens-content', swap: 'innerHTML'})"
                     :class="selectedPeriod === 'month' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
-                    class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2"
+                    class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
                 >
                     Month
                 </button>
                 <button
                     @click="selectedPeriod = 'all'; htmx.ajax('GET', '/api/tokens?period=all&model=' + selectedModel, {target: '#tokens-content', swap: 'innerHTML'})"
                     :class="selectedPeriod === 'all' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
-                    class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-[#0660c3] focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2"
+                    class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
                 >
-                    All Time
+                    All
                 </button>
 
                 <!-- Loading Spinner -->

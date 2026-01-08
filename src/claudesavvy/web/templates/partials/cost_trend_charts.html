@@ -16,12 +16,6 @@
 
 <script>
 (function() {
-    // Destroy existing charts if they exist (for HTMX reloads)
-    const existingCostChart = Chart.getChart('costTrendChart');
-    if (existingCostChart) existingCostChart.destroy();
-    const existingProjectCostChart = Chart.getChart('projectCostTrendChart');
-    if (existingProjectCostChart) existingProjectCostChart.destroy();
-
     // Use requestAnimationFrame to wait for DOM layout before creating charts
     requestAnimationFrame(function() {
         requestAnimationFrame(function() {
@@ -30,6 +24,13 @@
     });
 
     function initCostCharts() {
+        // Destroy existing charts if they exist (for HTMX reloads)
+        // Must be done right before creating new charts to avoid race conditions
+        const existingCostChart = Chart.getChart('costTrendChart');
+        if (existingCostChart) existingCostChart.destroy();
+        const existingProjectCostChart = Chart.getChart('projectCostTrendChart');
+        if (existingProjectCostChart) existingProjectCostChart.destroy();
+
         // Cost Trend Chart
         const costCtx = document.getElementById('costTrendChart');
         if (costCtx) {

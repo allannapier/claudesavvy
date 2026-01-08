@@ -1,22 +1,22 @@
 {% extends "layouts/app.html" %}
 {% from "components/card.html" import stat_card %}
 
-{% block title %}Integrations - Claude Monitor{% endblock %}
+{% block title %}Sub-Agents - ClaudeSavvy{% endblock %}
 
 {% block main_content %}
 <div class="space-y-8" x-data="{ selectedPeriod: '{{ period|default('1hour') }}' }">
     <!-- Page Title and Time Filter -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Integrations</h1>
-            <p class="mt-2 text-gray-600">MCP servers and tool integration statistics</p>
+            <h1 class="text-3xl font-bold text-gray-900">Sub-Agents</h1>
+            <p class="mt-2 text-gray-600">Token exchange analytics for Task tool sub-agent invocations</p>
         </div>
 
         <!-- Time Filter -->
         <div class="flex gap-1 sm:gap-2 flex-nowrap items-center" role="group">
             <button
-                hx-get="/api/integrations?period=15min"
-                hx-target="#integrations-content"
+                hx-get="/api/subagents?period=15min"
+                hx-target="#subagents-content"
                 hx-swap="innerHTML"
                 @click="selectedPeriod = '15min'"
                 :class="selectedPeriod === '15min' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
@@ -25,8 +25,8 @@
                 15m
             </button>
             <button
-                hx-get="/api/integrations?period=1hour"
-                hx-target="#integrations-content"
+                hx-get="/api/subagents?period=1hour"
+                hx-target="#subagents-content"
                 hx-swap="innerHTML"
                 @click="selectedPeriod = '1hour'"
                 :class="selectedPeriod === '1hour' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
@@ -35,8 +35,8 @@
                 1h
             </button>
             <button
-                hx-get="/api/integrations?period=today"
-                hx-target="#integrations-content"
+                hx-get="/api/subagents?period=today"
+                hx-target="#subagents-content"
                 hx-swap="innerHTML"
                 @click="selectedPeriod = 'today'"
                 :class="selectedPeriod === 'today' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
@@ -45,8 +45,8 @@
                 Today
             </button>
             <button
-                hx-get="/api/integrations?period=week"
-                hx-target="#integrations-content"
+                hx-get="/api/subagents?period=week"
+                hx-target="#subagents-content"
                 hx-swap="innerHTML"
                 @click="selectedPeriod = 'week'"
                 :class="selectedPeriod === 'week' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
@@ -55,8 +55,8 @@
                 Week
             </button>
             <button
-                hx-get="/api/integrations?period=month"
-                hx-target="#integrations-content"
+                hx-get="/api/subagents?period=month"
+                hx-target="#subagents-content"
                 hx-swap="innerHTML"
                 @click="selectedPeriod = 'month'"
                 :class="selectedPeriod === 'month' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
@@ -65,8 +65,8 @@
                 Month
             </button>
             <button
-                hx-get="/api/integrations?period=all"
-                hx-target="#integrations-content"
+                hx-get="/api/subagents?period=all"
+                hx-target="#subagents-content"
                 hx-swap="innerHTML"
                 @click="selectedPeriod = 'all'"
                 :class="selectedPeriod === 'all' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
@@ -85,9 +85,9 @@
         </div>
     </div>
 
-    <!-- Integrations Content (HTMX Target) -->
-    <div id="integrations-content">
-        {% include 'partials/integrations_content.html' %}
+    <!-- Sub-Agents Content (HTMX Target) -->
+    <div id="subagents-content">
+        {% include 'partials/subagents_content.html' %}
     </div>
 </div>
 {% endblock %}

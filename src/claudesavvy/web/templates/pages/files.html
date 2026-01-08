@@ -4,7 +4,7 @@
 {% block title %}Files - Claude Monitor{% endblock %}
 
 {% block main_content %}
-<div class="space-y-8" x-data="{ selectedPeriod: 'all' }">
+<div class="space-y-8" x-data="{ selectedPeriod: '1hour' }">
     <!-- Page Title and Time Filter -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -13,14 +13,34 @@
         </div>
 
         <!-- Time Filter -->
-        <div class="flex gap-2 items-center" role="group">
+        <div class="flex gap-1 sm:gap-2 flex-nowrap items-center" role="group">
+            <button
+                hx-get="/api/files?period=15min"
+                hx-target="#files-content"
+                hx-swap="innerHTML"
+                @click="selectedPeriod = '15min'"
+                :class="selectedPeriod === '15min' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
+                class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
+            >
+                15m
+            </button>
+            <button
+                hx-get="/api/files?period=1hour"
+                hx-target="#files-content"
+                hx-swap="innerHTML"
+                @click="selectedPeriod = '1hour'"
+                :class="selectedPeriod === '1hour' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
+                class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
+            >
+                1h
+            </button>
             <button
                 hx-get="/api/files?period=today"
                 hx-target="#files-content"
                 hx-swap="innerHTML"
                 @click="selectedPeriod = 'today'"
                 :class="selectedPeriod === 'today' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
-                class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2"
+                class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
             >
                 Today
             </button>
@@ -30,7 +50,7 @@
                 hx-swap="innerHTML"
                 @click="selectedPeriod = 'week'"
                 :class="selectedPeriod === 'week' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
-                class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2"
+                class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
             >
                 Week
             </button>
@@ -40,7 +60,7 @@
                 hx-swap="innerHTML"
                 @click="selectedPeriod = 'month'"
                 :class="selectedPeriod === 'month' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
-                class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2"
+                class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
             >
                 Month
             </button>
@@ -50,9 +70,9 @@
                 hx-swap="innerHTML"
                 @click="selectedPeriod = 'all'"
                 :class="selectedPeriod === 'all' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
-                class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-[#0660c3] focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2"
+                class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
             >
-                All Time
+                All
             </button>
 
             <!-- Loading Spinner -->
@@ -66,5 +86,5 @@
     </div>
 
     <!-- Files Content (HTMX Target) -->
-    <div id="files-content" hx-get="/api/files?period=all" hx-trigger="load" hx-target="this" hx-swap="innerHTML"></div>
+    <div id="files-content" hx-get="/api/files?period=1hour" hx-trigger="load" hx-target="this" hx-swap="innerHTML"></div>
 {% endblock %}

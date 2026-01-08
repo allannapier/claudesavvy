@@ -1,0 +1,264 @@
+<!-- Sub-Agent Exchange Detail Panel -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" x-data="{ activeTab: 'tokens' }">
+    <!-- Header -->
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div>
+            <div class="flex items-center gap-3">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                    {% if exchange.subagent_type == 'explore' or exchange.subagent_type == 'Explore' %}bg-blue-100 text-blue-800
+                    {% elif exchange.subagent_type == 'general' %}bg-green-100 text-green-800
+                    {% else %}bg-purple-100 text-purple-800{% endif %}">
+                    {{ exchange.subagent_type }}
+                </span>
+                <h3 class="text-lg font-semibold text-gray-900">Sub-Agent Exchange Detail</h3>
+            </div>
+            <p class="text-sm text-gray-500 mt-1">{{ exchange.description or "No description" }}</p>
+        </div>
+        <button 
+            onclick="document.getElementById('subagent-detail-panel').innerHTML = ''"
+            class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Metadata Row -->
+    <div class="px-6 py-3 bg-gray-50 border-b border-gray-200 grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+        <div>
+            <span class="text-gray-500">Time</span>
+            <p class="font-medium text-gray-900">{{ exchange.timestamp[:10] }} {{ exchange.timestamp[11:19] }}</p>
+        </div>
+        <div>
+            <span class="text-gray-500">Duration</span>
+            <p class="font-medium text-gray-900">{{ exchange.duration_seconds }}s</p>
+        </div>
+        <div>
+            <span class="text-gray-500">Total Tokens</span>
+            <p class="font-medium text-gray-900">{{ exchange.total_tokens|format_compact }}</p>
+        </div>
+        <div>
+            <span class="text-gray-500">Tool Calls</span>
+            <p class="font-medium text-gray-900">{{ exchange.total_tool_use_count }}</p>
+        </div>
+        <div>
+            <span class="text-gray-500">Cost</span>
+            <p class="font-medium text-[#0770E3]">${{ "%.4f"|format(exchange.cost) }}</p>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="border-b border-gray-200">
+        <nav class="flex -mb-px px-6" aria-label="Tabs">
+            <button @click="activeTab = 'tokens'" 
+                :class="activeTab === 'tokens' ? 'border-[#0770E3] text-[#0770E3]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                class="py-3 px-4 border-b-2 font-medium text-sm transition-colors">
+                Token Breakdown
+            </button>
+            <button @click="activeTab = 'prompt'" 
+                :class="activeTab === 'prompt' ? 'border-[#0770E3] text-[#0770E3]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                class="py-3 px-4 border-b-2 font-medium text-sm transition-colors">
+                Prompt Sent
+            </button>
+            <button @click="activeTab = 'result'" 
+                :class="activeTab === 'result' ? 'border-[#0770E3] text-[#0770E3]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                class="py-3 px-4 border-b-2 font-medium text-sm transition-colors">
+                Result Returned
+            </button>
+        </nav>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="p-6">
+        <!-- Token Breakdown Tab -->
+        <div x-show="activeTab === 'tokens'" x-cloak>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Sub-Agent Token Usage -->
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <h4 class="font-medium text-gray-900 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-[#0770E3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                        </svg>
+                        Sub-Agent Tokens
+                    </h4>
+                    
+                    <!-- Token Bar Chart -->
+                    <div class="space-y-3">
+                        {% set max_tokens = [exchange.subagent_usage.input_tokens, exchange.subagent_usage.output_tokens, exchange.subagent_usage.cache_read_tokens, exchange.subagent_usage.cache_creation_tokens]|max %}
+                        
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600">Input</span>
+                                <span class="font-medium">{{ exchange.subagent_usage.input_tokens|format_compact }}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-500 h-2 rounded-full" style="width: {{ (exchange.subagent_usage.input_tokens / max_tokens * 100) if max_tokens > 0 else 0 }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600">Output</span>
+                                <span class="font-medium">{{ exchange.subagent_usage.output_tokens|format_compact }}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-500 h-2 rounded-full" style="width: {{ (exchange.subagent_usage.output_tokens / max_tokens * 100) if max_tokens > 0 else 0 }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600">Cache Read</span>
+                                <span class="font-medium">{{ exchange.subagent_usage.cache_read_tokens|format_compact }}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-purple-500 h-2 rounded-full" style="width: {{ (exchange.subagent_usage.cache_read_tokens / max_tokens * 100) if max_tokens > 0 else 0 }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600">Cache Write</span>
+                                <span class="font-medium">{{ exchange.subagent_usage.cache_creation_tokens|format_compact }}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-amber-500 h-2 rounded-full" style="width: {{ (exchange.subagent_usage.cache_creation_tokens / max_tokens * 100) if max_tokens > 0 else 0 }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total -->
+                    <div class="mt-4 pt-3 border-t border-gray-200">
+                        <div class="flex justify-between">
+                            <span class="font-medium text-gray-900">Total Sub-Agent Tokens</span>
+                            <span class="font-bold text-gray-900">
+                                {{ (exchange.subagent_usage.input_tokens + exchange.subagent_usage.output_tokens + exchange.subagent_usage.cache_read_tokens + exchange.subagent_usage.cache_creation_tokens)|format_compact }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parent (Orchestrator) Token Usage -->
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <h4 class="font-medium text-gray-900 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Parent Message Tokens
+                    </h4>
+                    
+                    <!-- Token Bar Chart -->
+                    <div class="space-y-3">
+                        {% set parent_max = [exchange.parent_usage.input_tokens, exchange.parent_usage.output_tokens, exchange.parent_usage.cache_read_tokens, exchange.parent_usage.cache_creation_tokens]|max %}
+                        
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600">Input</span>
+                                <span class="font-medium">{{ exchange.parent_usage.input_tokens|format_compact }}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-400 h-2 rounded-full" style="width: {{ (exchange.parent_usage.input_tokens / parent_max * 100) if parent_max > 0 else 0 }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600">Output</span>
+                                <span class="font-medium">{{ exchange.parent_usage.output_tokens|format_compact }}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-400 h-2 rounded-full" style="width: {{ (exchange.parent_usage.output_tokens / parent_max * 100) if parent_max > 0 else 0 }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600">Cache Read</span>
+                                <span class="font-medium">{{ exchange.parent_usage.cache_read_tokens|format_compact }}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-purple-400 h-2 rounded-full" style="width: {{ (exchange.parent_usage.cache_read_tokens / parent_max * 100) if parent_max > 0 else 0 }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600">Cache Write</span>
+                                <span class="font-medium">{{ exchange.parent_usage.cache_creation_tokens|format_compact }}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-amber-400 h-2 rounded-full" style="width: {{ (exchange.parent_usage.cache_creation_tokens / parent_max * 100) if parent_max > 0 else 0 }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total -->
+                    <div class="mt-4 pt-3 border-t border-gray-200">
+                        <div class="flex justify-between">
+                            <span class="font-medium text-gray-900">Total Parent Tokens</span>
+                            <span class="font-bold text-gray-900">
+                                {{ (exchange.parent_usage.input_tokens + exchange.parent_usage.output_tokens + exchange.parent_usage.cache_read_tokens + exchange.parent_usage.cache_creation_tokens)|format_compact }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Token Legend -->
+            <div class="mt-6 flex flex-wrap justify-center gap-4 text-sm">
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-blue-500"></div>
+                    <span class="text-gray-600">Input</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span class="text-gray-600">Output</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-purple-500"></div>
+                    <span class="text-gray-600">Cache Read</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                    <span class="text-gray-600">Cache Write</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prompt Tab -->
+        <div x-show="activeTab === 'prompt'" x-cloak>
+            <div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="font-medium text-gray-900">Prompt Sent to Sub-Agent</h4>
+                    <span class="text-xs text-gray-500">{{ exchange.prompt|length }} characters</span>
+                </div>
+                <pre class="text-sm text-gray-800 whitespace-pre-wrap font-mono bg-white p-4 rounded border border-gray-200 max-h-96 overflow-y-auto">{{ exchange.prompt }}</pre>
+            </div>
+        </div>
+
+        <!-- Result Tab -->
+        <div x-show="activeTab === 'result'" x-cloak>
+            <div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="font-medium text-gray-900">Result Returned</h4>
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium 
+                            {% if exchange.status == 'success' %}bg-green-100 text-green-800
+                            {% else %}bg-red-100 text-red-800{% endif %}">
+                            {{ exchange.status }}
+                        </span>
+                        <span class="text-xs text-gray-500">{{ exchange.result_text|length }} characters</span>
+                    </div>
+                </div>
+                <pre class="text-sm text-gray-800 whitespace-pre-wrap font-mono bg-white p-4 rounded border border-gray-200 max-h-96 overflow-y-auto">{{ exchange.result_text or "No result text available" }}</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer with metadata -->
+    <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex flex-wrap gap-4">
+        <span><strong>Agent ID:</strong> {{ exchange.agent_id }}</span>
+        <span><strong>Session:</strong> {{ exchange.session_id }}</span>
+        <span><strong>Project:</strong> {{ exchange.project_name }}</span>
+    </div>
+</div>

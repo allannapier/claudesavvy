@@ -38,12 +38,15 @@
 
 
 {# Card Grid - Stat Card variant for displaying key metrics #}
-{% macro stat_card(label, value, trend=None, trend_label=None, icon=None, class="", truncate_value=False) %}
+{% macro stat_card(label, value, trend=None, trend_label=None, subtitle=None, icon=None, class="", truncate_value=False) %}
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 {{ class }}">
     <div class="flex items-start justify-between">
         <div class="flex-1 min-w-0">
             <p class="text-sm font-medium text-gray-600">{{ label }}</p>
             <p class="mt-2 text-2xl md:text-3xl font-bold text-gray-900 {% if truncate_value %}truncate max-w-full{% endif %}" {% if truncate_value %}title="{{ value }}"{% endif %}>{{ value }}</p>
+            {% if subtitle %}
+            <p class="mt-1 text-xs text-gray-500">{{ subtitle }}</p>
+            {% endif %}
             {% if trend and trend_label %}
             <p class="mt-2 text-sm {{ 'text-green-600' if trend > 0 else 'text-red-600' }}">
                 <span class="font-medium">{{ '+' if trend > 0 else '' }}{{ trend }}%</span>
