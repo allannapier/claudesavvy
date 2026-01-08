@@ -118,7 +118,7 @@ def index() -> str:
             "pages/error.html",
             error_title="Data Parsing Error",
             error_message="Unable to parse Claude Code usage data.",
-            error_details=f"There appears to be corrupted or invalid data in your ~/.claude/ directory. Error: {str(e)}",
+            error_details="There appears to be corrupted or invalid data in your ~/.claude/ directory.",
             suggestion="Try using the CLI tool to see if it shows more details: claude-monitor",
         ), 500
 
@@ -140,7 +140,7 @@ def index() -> str:
             "pages/error.html",
             error_title="Unexpected Error",
             error_message="An unexpected error occurred while loading the dashboard.",
-            error_details=str(e),
+            error_details="Check the server logs for more details.",
             suggestion="Please check the server logs for more details or report this issue.",
         ), 500
 
@@ -180,7 +180,7 @@ def tokens() -> str:
             "pages/error.html",
             error_title="Data Parsing Error",
             error_message="Unable to parse Claude Code usage data.",
-            error_details=f"Error: {str(e)}",
+            error_details="Check the server logs for details.",
             suggestion="Try using the CLI tool: claude-monitor",
         ), 500
 
@@ -190,7 +190,7 @@ def tokens() -> str:
             "pages/error.html",
             error_title="Unexpected Error",
             error_message="An unexpected error occurred.",
-            error_details=str(e),
+            error_details="Check the server logs for details.",
         ), 500
 
 
@@ -225,7 +225,7 @@ def projects() -> str:
             "pages/error.html",
             error_title="Data Parsing Error",
             error_message="Unable to parse Claude Code usage data.",
-            error_details=f"Error: {str(e)}",
+            error_details="Check the server logs for details.",
             suggestion="Try using the CLI tool: claude-monitor",
         ), 500
 
@@ -235,7 +235,7 @@ def projects() -> str:
             "pages/error.html",
             error_title="Unexpected Error",
             error_message="An unexpected error occurred.",
-            error_details=str(e),
+            error_details="Check the server logs for details.",
         ), 500
 
 
@@ -418,13 +418,11 @@ def api_configuration(repo_path: str) -> str:
 
         return render_template("partials/feature_list.html", features=features)
 
-    except Exception as e:
+    except Exception:
         # Sanitize user-provided repo_path to prevent log injection
         safe_repo_path = repo_path.replace("\r", "").replace("\n", "")
-        # Sanitize exception message to prevent log injection via newline characters
-        safe_error = str(e).replace("\r", "").replace("\n", "")
         logger.error(
-            f"Error loading configuration for repo {safe_repo_path}: {safe_error}",
+            f"Error loading configuration for repo {safe_repo_path}",
             exc_info=True,
         )
         return render_template("partials/feature_list.html", features={})
@@ -473,7 +471,7 @@ def api_feature_detail(repo_path: str, feature_type: str, feature_id: str) -> st
             f"Error loading detail for {safe_feature_type} {safe_feature_id}: {e}",
             exc_info=True,
         )
-        return f'<div class="alert alert-error">Error loading feature details: {str(e)}</div>'
+        return '<div class="alert alert-error">Error loading feature details</div>'
 
 
 @dashboard_bp.route("/export/configuration/<path:repo_path>")
@@ -517,7 +515,7 @@ def export_configuration(repo_path: str):
         )
     except Exception as e:
         logger.error(f"Error exporting configuration: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to export configuration"}), 500
 
 
 @dashboard_bp.route("/api/dashboard")
@@ -580,7 +578,7 @@ def api_dashboard() -> str:
 
     except Exception as e:
         logger.error(f"Error loading filtered dashboard: {e}", exc_info=True)
-        return f'<div class="text-red-600 p-4">Error loading data: {str(e)}</div>', 500
+        return '<div class="text-red-600 p-4">Error loading data</div>', 500
 
 
 @dashboard_bp.route("/api/projects")
@@ -626,7 +624,7 @@ def api_projects() -> str:
     except Exception as e:
         logger.error(f"Error loading filtered projects: {e}", exc_info=True)
         return (
-            f'<div class="text-red-600 p-4">Error loading projects: {str(e)}</div>',
+            '<div class="text-red-600 p-4">Error loading projects</div>',
             500,
         )
 
@@ -647,7 +645,7 @@ def api_files() -> str:
 
     except Exception as e:
         logger.error(f"Error loading filtered files: {e}", exc_info=True)
-        return f'<div class="text-red-600 p-4">Error loading files: {str(e)}</div>', 500
+        return '<div class="text-red-600 p-4">Error loading files</div>', 500
 
 
 @dashboard_bp.route("/api/integrations")
@@ -676,7 +674,7 @@ def api_integrations() -> str:
     except Exception as e:
         logger.error(f"Error loading filtered integrations: {e}", exc_info=True)
         return (
-            f'<div class="text-red-600 p-4">Error loading integrations: {str(e)}</div>',
+            '<div class="text-red-600 p-4">Error loading integrations</div>',
             500,
         )
 
@@ -715,7 +713,7 @@ def api_tokens() -> str:
     except Exception as e:
         logger.error(f"Error loading filtered tokens: {e}", exc_info=True)
         return (
-            f'<div class="text-red-600 p-4">Error loading tokens: {str(e)}</div>',
+            '<div class="text-red-600 p-4">Error loading tokens</div>',
             500,
         )
 
