@@ -183,6 +183,23 @@ class DashboardService:
 
         return service
 
+    def _get_analyzer(
+        self, analyzer_name: str, time_filter: Optional[TimeFilter] = None
+    ):
+        """
+        Get an analyzer, optionally applying a time filter.
+
+        Args:
+            analyzer_name: Name of the analyzer attribute (e.g., 'usage_analyzer', 'token_analyzer')
+            time_filter: Optional time filter to apply
+
+        Returns:
+            The requested analyzer, either from self or from a time-filtered service
+        """
+        if not time_filter:
+            return getattr(self, f'_{analyzer_name}')
+        return getattr(self._create_time_filtered_service(time_filter), f'_{analyzer_name}')
+
     # ========== Public Methods for Usage Data ==========
 
     def get_usage_summary(
@@ -197,9 +214,7 @@ class DashboardService:
         Returns:
             Dict with usage statistics suitable for web rendering
         """
-        analyzer = self._usage_analyzer
-        if time_filter:
-            analyzer = self._create_time_filtered_service(time_filter)._usage_analyzer
+        analyzer = self._get_analyzer('usage_analyzer', time_filter)
 
         summary: UsageSummary = analyzer.get_summary()
 
@@ -240,18 +255,12 @@ class DashboardService:
         Returns:
             Dict mapping project paths to activity metrics
         """
-        analyzer = self._usage_analyzer
-        if time_filter:
-            analyzer = self._create_time_filtered_service(time_filter)._usage_analyzer
+        analyzer = self._get_analyzer('usage_analyzer', time_filter)
 
         breakdown = analyzer.get_project_breakdown()
 
         # Get token breakdown for cost and token data
-        token_analyzer = self._token_analyzer
-        if time_filter:
-            token_analyzer = self._create_time_filtered_service(
-                time_filter
-            )._token_analyzer
+        token_analyzer = self._get_analyzer('token_analyzer', time_filter)
         token_breakdown = token_analyzer.get_project_breakdown()
 
         # Convert to list of dicts with field names expected by template
@@ -330,12 +339,8 @@ class DashboardService:
         Returns:
             Dict with project data filtered to only show usage of the specified model
         """
-        analyzer = self._usage_analyzer
-        token_analyzer = self._token_analyzer
-        if time_filter:
-            filtered_service = self._create_time_filtered_service(time_filter)
-            analyzer = filtered_service._usage_analyzer
-            token_analyzer = filtered_service._token_analyzer
+        analyzer = self._get_analyzer('usage_analyzer', time_filter)
+        token_analyzer = self._get_analyzer('token_analyzer', time_filter)
 
         # Get base project breakdown for structure (commands, sessions, etc.)
         base_breakdown = analyzer.get_project_breakdown()
@@ -414,9 +419,7 @@ class DashboardService:
         Returns:
             Dict with token statistics and costs (flattened for template use)
         """
-        analyzer = self._token_analyzer
-        if time_filter:
-            analyzer = self._create_time_filtered_service(time_filter)._token_analyzer
+        analyzer = self._get_analyzer('token_analyzer', time_filter)
 
         summary: TokenSummary = analyzer.get_summary()
 
@@ -447,9 +450,7 @@ class DashboardService:
         Returns:
             Dict mapping model names to token usage and costs
         """
-        analyzer = self._token_analyzer
-        if time_filter:
-            analyzer = self._create_time_filtered_service(time_filter)._token_analyzer
+        analyzer = self._get_analyzer('token_analyzer', time_filter)
 
         breakdown = analyzer.get_model_breakdown()
 
@@ -722,9 +723,7 @@ class DashboardService:
         Returns:
             Dict with token statistics for the specified model
         """
-        analyzer = self._token_analyzer
-        if time_filter:
-            analyzer = self._create_time_filtered_service(time_filter)._token_analyzer
+        analyzer = self._get_analyzer('token_analyzer', time_filter)
 
         breakdown = analyzer.get_model_breakdown()
 
@@ -785,9 +784,7 @@ class DashboardService:
         Returns:
             Dict mapping project names to token summaries
         """
-        analyzer = self._token_analyzer
-        if time_filter:
-            analyzer = self._create_time_filtered_service(time_filter)._token_analyzer
+        analyzer = self._get_analyzer('token_analyzer', time_filter)
 
         breakdown = analyzer.get_project_breakdown()
 
@@ -912,11 +909,7 @@ class DashboardService:
         Returns:
             Dict with all feature data
         """
-        analyzer = self._features_analyzer
-        if time_filter:
-            analyzer = self._create_time_filtered_service(
-                time_filter
-            )._features_analyzer
+        analyzer = self._get_analyzer('features_analyzer', time_filter)
 
         summary: FeaturesSummary = analyzer.get_summary()
 

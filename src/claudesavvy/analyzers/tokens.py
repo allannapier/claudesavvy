@@ -73,25 +73,19 @@ MODEL_PRICING = {
     },
 }
 
-# Bedrock pricing aliases - Sonnet
-for region in ['eu', 'us', '']:
-    prefix = f'{region}.anthropic' if region else 'anthropic'
-    MODEL_PRICING[f'{prefix}.claude-sonnet-4-5-20250929-v1:0'] = MODEL_PRICING['claude-sonnet-4-5-20250929']
+# Add Bedrock pricing aliases for models across regions
+def _add_bedrock_aliases(model_id: str, bedrock_model_id_base: str) -> None:
+    """Add regional Bedrock aliases (EU, US, default) for a model."""
+    for region in ['eu', 'us', '']:
+        prefix = f'{region}.anthropic' if region else 'anthropic'
+        bedrock_id = f'{prefix}.{bedrock_model_id_base}'
+        MODEL_PRICING[bedrock_id] = MODEL_PRICING[model_id]
 
-# Bedrock pricing aliases - Opus 4.5
-for region in ['eu', 'us', '']:
-    prefix = f'{region}.anthropic' if region else 'anthropic'
-    MODEL_PRICING[f'{prefix}.claude-opus-4-5-20251101-v1:0'] = MODEL_PRICING['claude-opus-4-5-20251101']
 
-# Bedrock pricing aliases - Opus 4
-for region in ['eu', 'us', '']:
-    prefix = f'{region}.anthropic' if region else 'anthropic'
-    MODEL_PRICING[f'{prefix}.claude-opus-4-20250514-v1:0'] = MODEL_PRICING['claude-opus-4-20250514']
-
-# Bedrock pricing aliases - Haiku 4.5
-for region in ['eu', 'us', '']:
-    prefix = f'{region}.anthropic' if region else 'anthropic'
-    MODEL_PRICING[f'{prefix}.claude-haiku-4-5-20251001-v1:0'] = MODEL_PRICING['claude-haiku-4-5-20251001']
+_add_bedrock_aliases('claude-sonnet-4-5-20250929', 'claude-sonnet-4-5-20250929-v1:0')
+_add_bedrock_aliases('claude-opus-4-5-20251101', 'claude-opus-4-5-20251101-v1:0')
+_add_bedrock_aliases('claude-opus-4-20250514', 'claude-opus-4-20250514-v1:0')
+_add_bedrock_aliases('claude-haiku-4-5-20251001', 'claude-haiku-4-5-20251001-v1:0')
 
 # Default pricing (Sonnet 4.5)
 DEFAULT_PRICING = MODEL_PRICING['claude-sonnet-4-5-20250929']
