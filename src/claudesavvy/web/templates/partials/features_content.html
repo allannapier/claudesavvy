@@ -99,7 +99,8 @@
                         <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
                             hx-get="/api/tool/{{ tool.name }}?period={{ period|default('all') }}"
                             hx-target="#tool-detail-panel"
-                            hx-swap="innerHTML">
+                            hx-swap="innerHTML"
+                            hx-indicator="this">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-[#0770E3] bg-opacity-10 rounded-lg">
