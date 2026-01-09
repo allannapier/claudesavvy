@@ -524,21 +524,19 @@ class DashboardService:
         ]
 
     def get_daily_token_trend(
-        self, days: int = 7, time_filter: Optional[TimeFilter] = None
+        self, time_filter: Optional[TimeFilter] = None
     ) -> Dict[str, Any]:
         """
         Get daily token usage for trend chart.
 
         Args:
-            days: Number of days to include (default 7). Note: when time_filter
-                  is provided, days is calculated from the filter's start_time
-                  and this parameter is ignored.
-            time_filter: Optional time filter - if provided, overrides days parameter
+            time_filter: Optional time filter to apply (default 7 days if not provided)
 
         Returns:
             Dict with labels and data arrays for charting
         """
-        # If time filter is provided, calculate days from it (overrides days param)
+        # Calculate days from time filter or use default
+        days = 7
         if time_filter and time_filter.start_time:
             now = datetime.now()
             delta = now - time_filter.start_time
@@ -580,19 +578,19 @@ class DashboardService:
         }
 
     def get_daily_cost_trend(
-        self, days: int = 7, time_filter: Optional[TimeFilter] = None
+        self, time_filter: Optional[TimeFilter] = None
     ) -> Dict[str, Any]:
         """
         Get daily cost trend for charts.
 
         Args:
-            days: Number of days to include (default 7)
-            time_filter: Optional time filter - if provided, overrides days parameter
+            time_filter: Optional time filter to apply (default 7 days if not provided)
 
         Returns:
             Dict with labels and datasets for Chart.js
         """
-        # If time filter is provided, calculate days from it
+        # Calculate days from time filter or use default
+        days = 7
         if time_filter and time_filter.start_time:
             now = datetime.now()
             delta = now - time_filter.start_time
@@ -645,7 +643,6 @@ class DashboardService:
 
     def get_project_cost_trend(
         self,
-        days: int = 7,
         time_filter: Optional[TimeFilter] = None,
         max_projects: int = 8,
     ) -> Dict[str, Any]:
@@ -653,14 +650,14 @@ class DashboardService:
         Get daily cost trend per project for charts.
 
         Args:
-            days: Number of days to include (default 7)
-            time_filter: Optional time filter - if provided, overrides days parameter
+            time_filter: Optional time filter to apply (default 7 days if not provided)
             max_projects: Maximum number of projects to include
 
         Returns:
             Dict with labels and datasets for Chart.js line chart
         """
-        # If time filter is provided, calculate days from it
+        # Calculate days from time filter or use default
+        days = 7
         if time_filter and time_filter.start_time:
             now = datetime.now()
             delta = now - time_filter.start_time

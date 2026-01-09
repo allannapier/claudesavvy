@@ -130,11 +130,6 @@ class TokenSummary:
         return self.cost_breakdown.total_cost
 
     @property
-    def net_cost(self) -> float:
-        """Net cost after cache savings."""
-        return self.cost_breakdown.total_cost
-
-    @property
     def cache_savings(self) -> float:
         """Savings from cache efficiency."""
         return self.cost_breakdown.cache_savings

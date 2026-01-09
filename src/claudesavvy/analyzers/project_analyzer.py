@@ -1,5 +1,6 @@
 """Project analyzer for optimization recommendations."""
 
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List, Any
@@ -14,6 +15,8 @@ from ..models import (
     ProjectAnalysis,
     ConfigSource,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ProjectAnalyzer:
@@ -245,6 +248,44 @@ class ProjectAnalyzer:
 
         return False
 
+    def _collect_mcps_from_source(
+        self,
+        repos,
+        repo_name: str,
+        source_filter: Optional[str] = None
+    ) -> tuple[Dict[str, Any], List[str]]:
+        """
+        Collect MCPs from a specific repository source.
+
+        Args:
+            repos: List of repositories to search
+            repo_name: Name of the repository to match
+            source_filter: Optional source type to filter by (e.g., 'plugin', 'project')
+
+        Returns:
+            Tuple of (all_mcps_dict, mcp_names_list)
+        """
+        all_mcps = {}
+        mcp_names = []
+
+        for repo in repos:
+            if repo.name == repo_name:
+                try:
+                    features = self.config_scanner.get_all_features(repo.claude_dir.parent)
+                    for mcp in features.mcps:
+                        # Filter by source if specified
+                        if source_filter and mcp.source.value != source_filter:
+                            continue
+                        if mcp.name not in all_mcps:
+                            all_mcps[mcp.name] = mcp.source
+                            mcp_names.append(mcp.name)
+                except Exception as e:
+                    # Failed to read MCP config; log and skip
+                    logger.debug(f"Failed to read MCPs from {repo_name}: {e}")
+                    pass
+
+        return all_mcps, mcp_names
+
     def _check_mcp_usage(
         self,
         project_path: str,
@@ -268,23 +309,14 @@ class ProjectAnalyzer:
         plugin_mcps = []
 
         # User-level MCPs (from ~/.claude/)
-        for repo in repos:
-            if repo.name == "User Configuration":
-                try:
-                    features = self.config_scanner.get_all_features(repo.claude_dir.parent)
-                    for mcp in features.mcps:
-                        if mcp.name not in all_configured_mcps:
-                            all_configured_mcps[mcp.name] = mcp.source
-                            user_mcps.append(mcp.name)
-                except Exception:
-                    # Failed to read user MCP config; skip
-                    pass
+        user_mcps_dict, user_mcps = self._collect_mcps_from_source(repos, "User Configuration")
+        all_configured_mcps.update(user_mcps_dict)
 
         # Project-level MCPs
         if project_path_obj:
-            try:
-                project_claude_dir = project_path_obj / '.claude'
-                if project_claude_dir.exists():
+            project_claude_dir = project_path_obj / '.claude'
+            if project_claude_dir.exists():
+                try:
                     features = self.config_scanner.get_all_features(project_path_obj)
                     for mcp in features.mcps:
                         if mcp.source.value == 'project':
@@ -294,23 +326,16 @@ class ProjectAnalyzer:
                         elif mcp.source.value == 'plugin' and mcp.name not in all_configured_mcps:
                             all_configured_mcps[mcp.name] = mcp.source
                             plugin_mcps.append(mcp.name)
-            except Exception:
-                # Failed to read project MCP config; skip
-                pass
+                except Exception as e:
+                    # Failed to read project MCP config; log and skip
+                    logger.debug(f"Failed to read project MCPs from {project_path_obj}: {e}")
 
-        # Also get plugin MCPs from user config
-        for repo in repos:
-            if repo.name == "User Configuration":
-                try:
-                    features = self.config_scanner.get_all_features(repo.claude_dir.parent)
-                    for mcp in features.mcps:
-                        if mcp.source.value == 'plugin' and mcp.name not in all_configured_mcps:
-                            all_configured_mcps[mcp.name] = mcp.source
-                            if mcp.name not in plugin_mcps:
-                                plugin_mcps.append(mcp.name)
-                except Exception:
-                    # Failed to read plugin MCP config; skip
-                    pass
+        # Plugin MCPs from user config
+        plugin_mcps_dict, user_plugin_mcps = self._collect_mcps_from_source(repos, "User Configuration", "plugin")
+        for mcp_name in user_plugin_mcps:
+            if mcp_name not in all_configured_mcps:
+                all_configured_mcps[mcp_name] = plugin_mcps_dict[mcp_name]
+                plugin_mcps.append(mcp_name)
 
         # Total configured MCP count
         mcp_count = len(all_configured_mcps)
