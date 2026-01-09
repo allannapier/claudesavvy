@@ -1,148 +1,195 @@
 {% from "components/card.html" import stat_card %}
 
-<!-- Summary Cards -->
-<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
-    {{ stat_card(
-        label="Total Tools Used",
-        value=(features.total_tools|default(0)|int)|string,
-        icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>'
-    ) }}
-
-    {{ stat_card(
-        label="Total Calls",
-        value=(features.total_calls|default(0)|int)|string,
-        icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>'
-    ) }}
-
-    {{ stat_card(
-        label="Total Tokens",
-        value=(features.total_tokens|default(0)|format_compact),
-        icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>'
-    ) }}
-
-    {{ stat_card(
-        label="Total Cost",
-        value="$" + (features.total_cost|default(0.0)|float|round(2)|string),
-        icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
-    ) }}
-
-    {{ stat_card(
-        label="Sub-Agents Used",
-        value=(features.sub_agents_used|default(0)|int)|string,
-        icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>'
-    ) }}
-</div>
-
-<!-- Pricing Disclaimer -->
-<div class="mt-4 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
-    <div class="flex items-start gap-2">
-        <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-        <p class="text-sm text-blue-700">
-            <strong>Pricing note:</strong> Tool costs are estimated using Claude Sonnet 4.5 rates, as per-tool model tracking is not available.
-        </p>
+<!-- Tab Navigation -->
+<div class="mb-6" x-data="{ activeView: 'tools' }">
+    <div class="border-b border-gray-200">
+        <nav class="flex -mb-px" aria-label="Tabs">
+            <button @click="activeView = 'tools'" 
+                :class="activeView === 'tools' ? 'border-[#0770E3] text-[#0770E3]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                class="py-3 px-6 border-b-2 font-medium text-sm transition-colors">
+                Tools Overview
+            </button>
+            <button @click="activeView = 'timeline'" 
+                :class="activeView === 'timeline' ? 'border-[#0770E3] text-[#0770E3]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                class="py-3 px-6 border-b-2 font-medium text-sm transition-colors"
+                hx-get="/api/tools/timeline?period={{ period|default('all') }}"
+                hx-target="#unified-timeline-container"
+                hx-swap="innerHTML"
+                hx-trigger="click once">
+                Unified Timeline
+            </button>
+        </nav>
     </div>
-</div>
 
-<!-- Tool Usage Table -->
-{% if features.tool_usage %}
-<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mt-8">
-    <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900">Tool Usage</h3>
-    </div>
-    <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tool Name</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Calls</th>
-                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tokens</th>
-                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost/Call</th>
-                    {% if features.has_trends %}
-                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Trend</th>
-                    {% endif %}
-                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Est. Cost</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                {% for tool in features.tool_usage[:20] %}
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-[#0770E3] bg-opacity-10 rounded-lg">
-                                <svg class="h-6 w-6 text-[#0770E3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                </svg>
-                            </div>
-                            <div class="ml-4">
-                                <div class="text-sm font-medium text-gray-900">{{ tool.name }}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ tool.category|default('Unknown') }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{{ tool.usage_count }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{{ tool.total_tokens|default(0)|int }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">${{ "%.4f"|format(tool.cost_per_call|default(0.0)|float) }}</td>
-                    {% if features.has_trends %}
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        {% if tool.trend %}
-                            {% if tool.trend.direction == 'down' %}
-                                <span class="text-green-600 font-medium" title="Previous: ${{ '%.4f'|format(tool.trend.prev_cost_per_call) }}">
-                                    &darr; {{ tool.trend.change_percent }}%
-                                </span>
-                            {% elif tool.trend.direction == 'up' %}
-                                <span class="text-red-600 font-medium" title="Previous: ${{ '%.4f'|format(tool.trend.prev_cost_per_call) }}">
-                                    &uarr; +{{ tool.trend.change_percent }}%
-                                </span>
-                            {% else %}
-                                <span class="text-gray-400">-</span>
-                            {% endif %}
-                        {% else %}
-                            <span class="text-gray-400" title="No data from previous period">-</span>
-                        {% endif %}
-                    </td>
-                    {% endif %}
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-[#0770E3]">${{ tool.cost|default(0.0)|float|round(2) }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+    <!-- Tools Overview Tab -->
+    <div x-show="activeView === 'tools'" class="mt-6">
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
+            {{ stat_card(
+                label="Total Tools Used",
+                value=(features.total_tools|default(0)|int)|string,
+                icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>'
+            ) }}
 
-<!-- Feature Categories -->
-{% if features.categories %}
-<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-8">
-    <h3 class="text-lg font-semibold text-gray-900 mb-4">Feature Categories</h3>
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {% for category, count in features.categories.items() %}
-        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 h-8 w-8 flex items-center justify-center bg-green-100 rounded">
-                    <svg class="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <div class="text-sm font-medium text-gray-900">{{ category.title() }}</div>
-                </div>
-            </div>
-            <div class="text-sm font-medium text-gray-900">{{ count }}</div>
+            {{ stat_card(
+                label="Total Calls",
+                value=(features.total_calls|default(0)|int)|string,
+                icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>'
+            ) }}
+
+            {{ stat_card(
+                label="Total Tokens",
+                value=(features.total_tokens|default(0)|format_compact),
+                icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>'
+            ) }}
+
+            {{ stat_card(
+                label="Total Cost",
+                value="$" + (features.total_cost|default(0.0)|float|round(2)|string),
+                icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
+            ) }}
+
+            {{ stat_card(
+                label="Sub-Agents Used",
+                value=(features.sub_agents_used|default(0)|int)|string,
+                icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>'
+            ) }}
         </div>
-        {% endfor %}
+
+        <!-- Pricing Disclaimer -->
+        <div class="mt-4 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div class="flex items-start gap-2">
+                <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p class="text-sm text-blue-700">
+                    <strong>Pricing note:</strong> Tool costs are estimated using Claude Sonnet 4.5 rates, as per-tool model tracking is not available.
+                </p>
+            </div>
+        </div>
+
+        <!-- Tool Usage Table -->
+        {% if features.tool_usage %}
+
+        <!-- Detail Panel (loaded via HTMX) -->
+        <div id="tool-detail-panel" class="mt-8"></div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mt-8">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Tool Usage</h3>
+                <p class="text-sm text-gray-500 mt-1">Click a row to see detailed token breakdown by conversation</p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tool Name</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Calls</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tokens</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost/Call</th>
+                            {% if features.has_trends %}
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Trend</th>
+                            {% endif %}
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Est. Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for tool in features.tool_usage[:20] %}
+                        <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
+                            hx-get="/api/tool/{{ tool.name }}?period={{ period|default('all') }}"
+                            hx-target="#tool-detail-panel"
+                            hx-swap="innerHTML"
+                            hx-indicator="this">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-[#0770E3] bg-opacity-10 rounded-lg">
+                                        <svg class="h-6 w-6 text-[#0770E3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">{{ tool.name }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ tool.category|default('Unknown') }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{{ tool.usage_count }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{{ tool.total_tokens|default(0)|int }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">${{ "%.4f"|format(tool.cost_per_call|default(0.0)|float) }}</td>
+                            {% if features.has_trends %}
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
+                                {% if tool.trend %}
+                                    {% if tool.trend.direction == 'down' %}
+                                        <span class="text-green-600 font-medium" title="Previous: ${{ '%.4f'|format(tool.trend.prev_cost_per_call) }}">
+                                            &darr; {{ tool.trend.change_percent }}%
+                                        </span>
+                                    {% elif tool.trend.direction == 'up' %}
+                                        <span class="text-red-600 font-medium" title="Previous: ${{ '%.4f'|format(tool.trend.prev_cost_per_call) }}">
+                                            &uarr; +{{ tool.trend.change_percent }}%
+                                        </span>
+                                    {% else %}
+                                        <span class="text-gray-400">-</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-gray-400" title="No data from previous period">-</span>
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-[#0770E3]">${{ tool.cost|default(0.0)|float|round(2) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Feature Categories -->
+        {% if features.categories %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-8">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Feature Categories</h3>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {% for category, count in features.categories.items() %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 h-8 w-8 flex items-center justify-center bg-green-100 rounded">
+                            <svg class="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <div class="text-sm font-medium text-gray-900">{{ category.title() }}</div>
+                        </div>
+                    </div>
+                    <div class="text-sm font-medium text-gray-900">{{ count }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mt-8">
+            <div class="px-6 py-12 text-center">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                </svg>
+                <p class="mt-2 text-gray-500">No feature usage data available</p>
+                <p class="text-sm text-gray-400 mt-1">Start using Claude Code tools and features to see usage statistics</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Unified Timeline Tab -->
+    <div x-show="activeView === 'timeline'" x-cloak class="mt-6">
+        <div id="unified-timeline-container">
+            <div class="text-center py-12 text-gray-500">
+                <svg class="animate-spin mx-auto h-8 w-8 text-[#0770E3]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-2">Loading timeline...</p>
+            </div>
+        </div>
     </div>
 </div>
-{% endif %}
-{% else %}
-<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mt-8">
-    <div class="px-6 py-12 text-center">
-        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-        </svg>
-        <p class="mt-2 text-gray-500">No feature usage data available</p>
-        <p class="text-sm text-gray-400 mt-1">Start using Claude Code tools and features to see usage statistics</p>
-    </div>
-</div>
-{% endif %}

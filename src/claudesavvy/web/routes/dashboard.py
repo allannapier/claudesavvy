@@ -88,13 +88,13 @@ def index() -> str:
             time_filter=time_filter
         )
         token_trend: Dict[str, Any] = service.get_daily_token_trend(
-            days=7, time_filter=time_filter
+            time_filter=time_filter
         )
         cost_trend: Dict[str, Any] = service.get_daily_cost_trend(
-            days=7, time_filter=time_filter
+            time_filter=time_filter
         )
         project_cost_trend: Dict[str, Any] = service.get_project_cost_trend(
-            days=7, max_projects=8, time_filter=time_filter
+            max_projects=8, time_filter=time_filter
         )
 
         logger.debug("Dashboard data fetched successfully")
@@ -552,16 +552,15 @@ def api_dashboard() -> str:
             time_filter=time_filter
         )
 
-        # For "All Time", show last 14 days on chart for better context
-        chart_days = 14 if period == "all" else 7
+        # For "All Time", the time_filter determines the date range for charts
         token_trend: Dict[str, Any] = service.get_daily_token_trend(
-            days=chart_days, time_filter=time_filter
+            time_filter=time_filter
         )
         cost_trend: Dict[str, Any] = service.get_daily_cost_trend(
-            days=chart_days, time_filter=time_filter
+            time_filter=time_filter
         )
         project_cost_trend: Dict[str, Any] = service.get_project_cost_trend(
-            days=chart_days, time_filter=time_filter, max_projects=8
+            time_filter=time_filter, max_projects=8
         )
 
         # Render partial template
@@ -795,7 +794,9 @@ def api_features() -> str:
             and prev_time_filter.start_time is not None,
         }
 
-        return render_template("partials/features_content.html", features=features_data)
+        return render_template(
+            "partials/features_content.html", features=features_data, period=period
+        )
 
     except Exception as e:
         logger.error(f"Error loading filtered features: {e}", exc_info=True)
@@ -1194,5 +1195,117 @@ def api_subagent_detail(agent_id: str) -> str:
         logger.error(f"Error loading subagent detail: {e}", exc_info=True)
         return (
             '<div class="text-red-600 p-4">Error loading exchange details.</div>',
+            500,
+        )
+
+
+@dashboard_bp.route("/api/tool/<path:tool_name>")
+def api_tool_detail(tool_name: str) -> str:
+    """API endpoint for HTMX to fetch tool invocation details."""
+    from flask import request
+
+    try:
+        service = current_app.dashboard_service
+        period = request.args.get("period", "all")
+
+        time_filter = get_time_filter_from_period(period)
+
+        tool_data = service.get_tool_invocations(
+            tool_name=tool_name,
+            time_filter=time_filter,
+            limit=100,
+        )
+
+        if not tool_data or tool_data.get("total_invocations", 0) == 0:
+            return (
+                '<div class="text-gray-500 p-4">No invocations found for this tool.</div>',
+                404,
+            )
+
+        # Get chart data for timeline
+        chart_data = service.get_tool_chart_data(
+            tool_name=tool_name,
+            time_filter=time_filter,
+            limit=100,
+        )
+
+        return render_template(
+            "partials/tool_detail.html",
+            tool=tool_data,
+            chart_data=chart_data,
+            period=period,
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading tool detail: {e}", exc_info=True)
+        return (
+            '<div class="text-red-600 p-4">Error loading tool details.</div>',
+            500,
+        )
+
+
+@dashboard_bp.route("/api/tool/<path:tool_name>/invocation/<path:invocation_id>")
+def api_tool_invocation_detail(tool_name: str, invocation_id: str) -> str:
+    """API endpoint for HTMX to fetch individual tool invocation details."""
+    from flask import request
+
+    try:
+        service = current_app.dashboard_service
+        period = request.args.get("period", "all")
+
+        time_filter = get_time_filter_from_period(period)
+
+        invocation = service.get_tool_invocation_detail(
+            tool_name=tool_name,
+            invocation_id=invocation_id,
+            time_filter=time_filter,
+        )
+
+        if not invocation:
+            return (
+                '<div class="text-gray-500 p-4">Invocation not found.</div>',
+                404,
+            )
+
+        return render_template(
+            "partials/tool_invocation_detail.html",
+            invocation=invocation,
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading tool invocation detail: {e}", exc_info=True)
+        return (
+            '<div class="text-red-600 p-4">Error loading invocation details.</div>',
+            500,
+        )
+
+
+@dashboard_bp.route("/api/tools/timeline")
+def api_tools_timeline() -> str:
+    """API endpoint for HTMX to fetch unified tools timeline."""
+    from flask import request
+
+    try:
+        service = current_app.dashboard_service
+        period = request.args.get("period", "all")
+        session_id = request.args.get("session_id", None)
+
+        time_filter = get_time_filter_from_period(period)
+
+        timeline_data = service.get_unified_timeline_data(
+            time_filter=time_filter,
+            session_id=session_id if session_id else None,
+        )
+
+        return render_template(
+            "partials/unified_tools_timeline.html",
+            timeline=timeline_data,
+            period=period,
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading tools timeline: {e}", exc_info=True)
+        return (
+            '<div class="text-red-600 p-4">Error loading timeline.</div>',
             500,
         )

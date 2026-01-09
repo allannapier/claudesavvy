@@ -452,8 +452,10 @@ class SessionParser:
             day = today - timedelta(days=i)
             date_keys.append(day.strftime("%Y-%m-%d"))
 
-        # Collect top project paths for efficient lookup
-        project_paths = [project_path for project_path, _ in top_projects]
+        # Collect top project paths for efficient lookup (filter out falsy values)
+        project_paths = [
+            project_path for project_path, _ in top_projects if project_path
+        ]
         project_paths_set = set(project_paths)
 
         # Prepare per-project, per-day stats for all top projects in a single pass

@@ -1,0 +1,21 @@
+Just shipped a major update to ClaudeSavvy 🔍
+
+You can now see EXACTLY what Claude Code is doing:
+
+→ Unified Timeline showing all tool calls across all tools
+→ Color-coded by type (Read, Write, Bash, Edit, etc.)
+→ Click any point to see the actual file path or command
+→ Zoomable date range slider for crowded timelines
+→ Filter by conversation to trace a specific session
+
+Ever wondered "what files did Claude read?" or "what commands did it run?"
+
+Now you know.
+
+Free & open source: pip install claudesavvy
+
+More deep-dive analytics coming to other pages soon 👀
+
+Read more: codebotiks.com/blog.html
+
+#ClaudeCode #DevTools #AI #OpenSource

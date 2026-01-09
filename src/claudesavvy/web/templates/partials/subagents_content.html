@@ -188,7 +188,8 @@
                 <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
                     hx-get="/api/subagent/{{ exchange.agent_id }}"
                     hx-target="#subagent-detail-panel"
-                    hx-swap="innerHTML">
+                    hx-swap="innerHTML"
+                    hx-indicator="this">
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div>{{ exchange.date }}</div>
                         <div class="text-xs text-gray-400">{{ exchange.time }}</div>

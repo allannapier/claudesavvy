@@ -1,0 +1,79 @@
+<!-- Individual Tool Invocation Detail -->
+<div class="bg-white rounded-lg shadow-sm border border-[#0770E3] overflow-hidden">
+    <!-- Header -->
+    <div class="px-4 py-3 bg-blue-50 border-b border-[#0770E3] flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-[#0770E3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <h4 class="font-medium text-gray-900">Invocation Details</h4>
+        </div>
+        <button 
+            onclick="document.getElementById('tool-invocation-detail').innerHTML = ''"
+            class="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Metadata -->
+    <div class="px-4 py-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm border-b border-gray-200">
+        <div>
+            <span class="text-gray-500 text-xs">Time</span>
+            <p class="font-medium text-gray-900">{{ invocation.date }} {{ invocation.time }}</p>
+        </div>
+        <div>
+            <span class="text-gray-500 text-xs">Project</span>
+            <p class="font-medium text-gray-900 truncate" title="{{ invocation.project }}">{{ invocation.project_name }}</p>
+        </div>
+        <div>
+            <span class="text-gray-500 text-xs">Total Tokens</span>
+            <p class="font-medium text-gray-900">{{ invocation.total_tokens|format_compact }}</p>
+        </div>
+        <div>
+            <span class="text-gray-500 text-xs">Est. Cost</span>
+            <p class="font-medium text-[#0770E3]">${{ "%.6f"|format(invocation.cost) }}</p>
+        </div>
+    </div>
+
+    <!-- Token Breakdown -->
+    <div class="px-4 py-3 border-b border-gray-200">
+        <div class="text-xs text-gray-500 mb-2">Token Breakdown</div>
+        <div class="grid grid-cols-4 gap-2">
+            <div class="text-center p-2 bg-blue-50 rounded">
+                <div class="text-xs text-gray-500">Input</div>
+                <div class="text-sm font-medium text-blue-700">{{ invocation.input_tokens|format_compact }}</div>
+            </div>
+            <div class="text-center p-2 bg-green-50 rounded">
+                <div class="text-xs text-gray-500">Output</div>
+                <div class="text-sm font-medium text-green-700">{{ invocation.output_tokens|format_compact }}</div>
+            </div>
+            <div class="text-center p-2 bg-purple-50 rounded">
+                <div class="text-xs text-gray-500">Cache Read</div>
+                <div class="text-sm font-medium text-purple-700">{{ invocation.cache_read_tokens|format_compact }}</div>
+            </div>
+            <div class="text-center p-2 bg-amber-50 rounded">
+                <div class="text-xs text-gray-500">Cache Write</div>
+                <div class="text-sm font-medium text-amber-700">{{ invocation.cache_write_tokens|format_compact }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tool Parameters -->
+    <div class="px-4 py-3">
+        <div class="text-xs text-gray-500 mb-2">Tool Parameters</div>
+        {% if invocation.input_params %}
+        <div class="bg-gray-50 rounded border border-gray-200 p-3 max-h-64 overflow-y-auto">
+            <pre class="text-xs text-gray-800 whitespace-pre-wrap font-mono">{{ invocation.input_params|tojson(indent=2) }}</pre>
+        </div>
+        {% else %}
+        <div class="text-sm text-gray-400 italic">No parameters</div>
+        {% endif %}
+    </div>
+
+    <!-- Footer -->
+    <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
+        <span>Session: {{ invocation.session_id[:16] }}...</span>
+    </div>
+</div>

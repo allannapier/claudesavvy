@@ -183,6 +183,83 @@ class DashboardService:
 
         return service
 
+    def _get_analyzer(
+        self, analyzer_name: str, time_filter: Optional[TimeFilter] = None
+    ):
+        """
+        Get an analyzer, optionally applying a time filter.
+
+        Args:
+            analyzer_name: Name of the analyzer attribute (e.g., 'usage_analyzer', 'token_analyzer')
+            time_filter: Optional time filter to apply
+
+        Returns:
+            The requested analyzer, either from self or from a time-filtered service
+        """
+        if not time_filter:
+            return getattr(self, f'_{analyzer_name}')
+        return getattr(self._create_time_filtered_service(time_filter), f'_{analyzer_name}')
+
+    def _build_project_dict(
+        self, project_path: str, project_data: dict, total_tokens: int, cost: float
+    ) -> dict:
+        """
+        Build standardized project data dictionary.
+
+        Args:
+            project_path: Path to the project
+            project_data: Project data from analyzer
+            total_tokens: Total tokens used
+            cost: Total cost
+
+        Returns:
+            Standardized dict with all project fields
+        """
+        return {
+            "path": project_path,
+            "name": project_data["name"],
+            "full_path": project_data["full_path"],
+            "command_count": project_data["commands"],
+            "session_count": project_data["sessions"],
+            "message_count": project_data["messages"],
+            "total_tokens": total_tokens,
+            "total_cost": cost,
+            "commands": project_data["commands"],  # backward compatibility
+            "sessions": project_data["sessions"],
+            "messages": project_data["messages"],
+        }
+
+    def _calculate_total_tokens(self, tokens) -> int:
+        """
+        Calculate total tokens from a token object.
+
+        Args:
+            tokens: Token object with input_tokens, output_tokens, cache_creation_input_tokens,
+                   and cache_read_input_tokens attributes
+
+        Returns:
+            Sum of all token types
+        """
+        return (
+            tokens.input_tokens
+            + tokens.output_tokens
+            + tokens.cache_creation_input_tokens
+            + tokens.cache_read_input_tokens
+        )
+
+    def _extract_mcp_server_name(self, tool_name: str) -> Optional[str]:
+        """
+        Extract MCP server name from tool name.
+
+        Args:
+            tool_name: Tool name in format "mcp__server_name__function_name"
+
+        Returns:
+            Server name if valid format, None otherwise
+        """
+        parts = tool_name.split("__")
+        return parts[1] if len(parts) >= 2 else None
+
     # ========== Public Methods for Usage Data ==========
 
     def get_usage_summary(
@@ -197,9 +274,7 @@ class DashboardService:
         Returns:
             Dict with usage statistics suitable for web rendering
         """
-        analyzer = self._usage_analyzer
-        if time_filter:
-            analyzer = self._create_time_filtered_service(time_filter)._usage_analyzer
+        analyzer = self._get_analyzer('usage_analyzer', time_filter)
 
         summary: UsageSummary = analyzer.get_summary()
 
@@ -240,18 +315,12 @@ class DashboardService:
         Returns:
             Dict mapping project paths to activity metrics
         """
-        analyzer = self._usage_analyzer
-        if time_filter:
-            analyzer = self._create_time_filtered_service(time_filter)._usage_analyzer
+        analyzer = self._get_analyzer('usage_analyzer', time_filter)
 
         breakdown = analyzer.get_project_breakdown()
 
         # Get token breakdown for cost and token data
-        token_analyzer = self._token_analyzer
-        if time_filter:
-            token_analyzer = self._create_time_filtered_service(
-                time_filter
-            )._token_analyzer
+        token_analyzer = self._get_analyzer('token_analyzer', time_filter)
         token_breakdown = token_analyzer.get_project_breakdown()
 
         # Convert to list of dicts with field names expected by template
@@ -267,12 +336,7 @@ class DashboardService:
             cost = 0.0
 
             if token_summary:
-                total_tokens = (
-                    token_summary.total_tokens.input_tokens
-                    + token_summary.total_tokens.output_tokens
-                    + token_summary.total_tokens.cache_creation_input_tokens
-                    + token_summary.total_tokens.cache_read_input_tokens
-                )
+                total_tokens = self._calculate_total_tokens(token_summary.total_tokens)
                 cost = token_summary.total_cost
                 total_cost += cost
 
@@ -282,21 +346,7 @@ class DashboardService:
                 most_active_project = project_data["name"]
 
             projects_data.append(
-                {
-                    "path": project_path,
-                    "name": project_data["name"],
-                    "full_path": project_data["full_path"],
-                    # Field names expected by template
-                    "command_count": project_data["commands"],
-                    "session_count": project_data["sessions"],
-                    "message_count": project_data["messages"],
-                    "total_tokens": total_tokens,
-                    "total_cost": cost,
-                    # Keep original names for backward compatibility
-                    "commands": project_data["commands"],
-                    "sessions": project_data["sessions"],
-                    "messages": project_data["messages"],
-                }
+                self._build_project_dict(project_path, project_data, total_tokens, cost)
             )
 
         # Sort by command count (descending)
@@ -330,12 +380,8 @@ class DashboardService:
         Returns:
             Dict with project data filtered to only show usage of the specified model
         """
-        analyzer = self._usage_analyzer
-        token_analyzer = self._token_analyzer
-        if time_filter:
-            filtered_service = self._create_time_filtered_service(time_filter)
-            analyzer = filtered_service._usage_analyzer
-            token_analyzer = filtered_service._token_analyzer
+        analyzer = self._get_analyzer('usage_analyzer', time_filter)
+        token_analyzer = self._get_analyzer('token_analyzer', time_filter)
 
         # Get base project breakdown for structure (commands, sessions, etc.)
         base_breakdown = analyzer.get_project_breakdown()
@@ -354,12 +400,7 @@ class DashboardService:
 
             if model_id in project_models:
                 tokens, cost = project_models[model_id]
-                total_tokens = (
-                    tokens.input_tokens
-                    + tokens.output_tokens
-                    + tokens.cache_creation_input_tokens
-                    + tokens.cache_read_input_tokens
-                )
+                total_tokens = self._calculate_total_tokens(tokens)
                 total_cost += cost
 
                 # Track most active by cost for model filter
@@ -368,19 +409,7 @@ class DashboardService:
                     most_active_project = project_data["name"]
 
                 projects_data.append(
-                    {
-                        "path": project_path,
-                        "name": project_data["name"],
-                        "full_path": project_data["full_path"],
-                        "command_count": project_data["commands"],
-                        "session_count": project_data["sessions"],
-                        "message_count": project_data["messages"],
-                        "total_tokens": total_tokens,
-                        "total_cost": cost,
-                        "commands": project_data["commands"],
-                        "sessions": project_data["sessions"],
-                        "messages": project_data["messages"],
-                    }
+                    self._build_project_dict(project_path, project_data, total_tokens, cost)
                 )
 
         # Sort by cost (descending) for model filter
@@ -414,9 +443,7 @@ class DashboardService:
         Returns:
             Dict with token statistics and costs (flattened for template use)
         """
-        analyzer = self._token_analyzer
-        if time_filter:
-            analyzer = self._create_time_filtered_service(time_filter)._token_analyzer
+        analyzer = self._get_analyzer('token_analyzer', time_filter)
 
         summary: TokenSummary = analyzer.get_summary()
 
@@ -447,9 +474,7 @@ class DashboardService:
         Returns:
             Dict mapping model names to token usage and costs
         """
-        analyzer = self._token_analyzer
-        if time_filter:
-            analyzer = self._create_time_filtered_service(time_filter)._token_analyzer
+        analyzer = self._get_analyzer('token_analyzer', time_filter)
 
         breakdown = analyzer.get_model_breakdown()
 
@@ -457,12 +482,7 @@ class DashboardService:
         total_cost = sum(cost for _, cost in breakdown.values())
 
         for model_id, (tokens, cost) in breakdown.items():
-            total_tokens = (
-                tokens.input_tokens
-                + tokens.output_tokens
-                + tokens.cache_creation_input_tokens
-                + tokens.cache_read_input_tokens
-            )
+            total_tokens = self._calculate_total_tokens(tokens)
             models_data.append(
                 {
                     "model_id": model_id,
@@ -504,21 +524,19 @@ class DashboardService:
         ]
 
     def get_daily_token_trend(
-        self, days: int = 7, time_filter: Optional[TimeFilter] = None
+        self, time_filter: Optional[TimeFilter] = None
     ) -> Dict[str, Any]:
         """
         Get daily token usage for trend chart.
 
         Args:
-            days: Number of days to include (default 7). Note: when time_filter
-                  is provided, days is calculated from the filter's start_time
-                  and this parameter is ignored.
-            time_filter: Optional time filter - if provided, overrides days parameter
+            time_filter: Optional time filter to apply (default 7 days if not provided)
 
         Returns:
             Dict with labels and data arrays for charting
         """
-        # If time filter is provided, calculate days from it (overrides days param)
+        # Calculate days from time filter or use default
+        days = 7
         if time_filter and time_filter.start_time:
             now = datetime.now()
             delta = now - time_filter.start_time
@@ -535,12 +553,7 @@ class DashboardService:
         for date_str in sorted(daily_stats.keys()):
             stats = daily_stats[date_str]
             # Calculate total tokens for this day
-            total = (
-                stats.total_tokens.input_tokens
-                + stats.total_tokens.output_tokens
-                + stats.total_tokens.cache_creation_input_tokens
-                + stats.total_tokens.cache_read_input_tokens
-            )
+            total = self._calculate_total_tokens(stats.total_tokens)
             data.append(total)
 
             # Create human-readable label based on how many days we're showing
@@ -565,19 +578,19 @@ class DashboardService:
         }
 
     def get_daily_cost_trend(
-        self, days: int = 7, time_filter: Optional[TimeFilter] = None
+        self, time_filter: Optional[TimeFilter] = None
     ) -> Dict[str, Any]:
         """
         Get daily cost trend for charts.
 
         Args:
-            days: Number of days to include (default 7)
-            time_filter: Optional time filter - if provided, overrides days parameter
+            time_filter: Optional time filter to apply (default 7 days if not provided)
 
         Returns:
             Dict with labels and datasets for Chart.js
         """
-        # If time filter is provided, calculate days from it
+        # Calculate days from time filter or use default
+        days = 7
         if time_filter and time_filter.start_time:
             now = datetime.now()
             delta = now - time_filter.start_time
@@ -630,7 +643,6 @@ class DashboardService:
 
     def get_project_cost_trend(
         self,
-        days: int = 7,
         time_filter: Optional[TimeFilter] = None,
         max_projects: int = 8,
     ) -> Dict[str, Any]:
@@ -638,14 +650,14 @@ class DashboardService:
         Get daily cost trend per project for charts.
 
         Args:
-            days: Number of days to include (default 7)
-            time_filter: Optional time filter - if provided, overrides days parameter
+            time_filter: Optional time filter to apply (default 7 days if not provided)
             max_projects: Maximum number of projects to include
 
         Returns:
             Dict with labels and datasets for Chart.js line chart
         """
-        # If time filter is provided, calculate days from it
+        # Calculate days from time filter or use default
+        days = 7
         if time_filter and time_filter.start_time:
             now = datetime.now()
             delta = now - time_filter.start_time
@@ -722,9 +734,7 @@ class DashboardService:
         Returns:
             Dict with token statistics for the specified model
         """
-        analyzer = self._token_analyzer
-        if time_filter:
-            analyzer = self._create_time_filtered_service(time_filter)._token_analyzer
+        analyzer = self._get_analyzer('token_analyzer', time_filter)
 
         breakdown = analyzer.get_model_breakdown()
 
@@ -785,9 +795,7 @@ class DashboardService:
         Returns:
             Dict mapping project names to token summaries
         """
-        analyzer = self._token_analyzer
-        if time_filter:
-            analyzer = self._create_time_filtered_service(time_filter)._token_analyzer
+        analyzer = self._get_analyzer('token_analyzer', time_filter)
 
         breakdown = analyzer.get_project_breakdown()
 
@@ -912,11 +920,7 @@ class DashboardService:
         Returns:
             Dict with all feature data
         """
-        analyzer = self._features_analyzer
-        if time_filter:
-            analyzer = self._create_time_filtered_service(
-                time_filter
-            )._features_analyzer
+        analyzer = self._get_analyzer('features_analyzer', time_filter)
 
         summary: FeaturesSummary = analyzer.get_summary()
 
@@ -1122,10 +1126,8 @@ class DashboardService:
         servers = {}
         for tool_name, stats in mcp_tools.items():
             # Extract server name from tool name: mcp__server_name__function_name
-            parts = tool_name.split("__")
-            if len(parts) >= 2:
-                server_name = parts[1]
-
+            server_name = self._extract_mcp_server_name(tool_name)
+            if server_name:
                 if server_name not in servers:
                     servers[server_name] = {
                         "server_name": server_name,
@@ -1827,4 +1829,483 @@ class DashboardService:
         return {
             "datasets": datasets,
             "total_points": sum(len(d["data"]) for d in datasets),
+        }
+
+    # ========== Tool Invocation Methods ==========
+
+    def get_tool_invocations(
+        self,
+        tool_name: str,
+        time_filter: Optional[TimeFilter] = None,
+        limit: int = 100,
+    ) -> Dict[str, Any]:
+        """
+        Get individual invocations for a specific tool grouped by session.
+
+        Args:
+            tool_name: The name of the tool to get invocations for
+            time_filter: Optional time filter to apply
+            limit: Maximum number of invocations to return
+
+        Returns:
+            Dict with tool details and invocations grouped by session
+        """
+        from ...analyzers.tokens import DEFAULT_PRICING
+
+        tool_parser = self._features_analyzer.tool_parser
+
+        # Collect all invocations for this tool
+        invocations = []
+        for inv in tool_parser.parse_all(time_filter=time_filter):
+            if inv.tool_name == tool_name:
+                invocations.append(inv)
+
+        # Sort by timestamp descending
+        invocations.sort(key=lambda x: x.timestamp, reverse=True)
+        invocations = invocations[:limit]
+
+        # Group by session
+        sessions_map: Dict[str, Dict[str, Any]] = {}
+        for inv in invocations:
+            session_id = inv.session_id
+            if session_id not in sessions_map:
+                sessions_map[session_id] = {
+                    "session_id": session_id,
+                    "project": inv.project,
+                    "project_name": Path(inv.project).name
+                    if inv.project
+                    else "Unknown",
+                    "invocations": [],
+                    "total_tokens": 0,
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "cache_read_tokens": 0,
+                    "cache_write_tokens": 0,
+                    "invocation_count": 0,
+                    "first_timestamp": inv.timestamp,
+                    "last_timestamp": inv.timestamp,
+                }
+
+            session = sessions_map[session_id]
+            session["invocations"].append(
+                {
+                    "timestamp": inv.timestamp,
+                    "date": inv.timestamp[:10] if inv.timestamp else "",
+                    "time": inv.timestamp[11:19] if len(inv.timestamp) > 19 else "",
+                    "input_params": inv.input_params,
+                    "input_tokens": inv.input_tokens,
+                    "output_tokens": inv.output_tokens,
+                    "cache_read_tokens": inv.cache_read_tokens,
+                    "cache_write_tokens": inv.cache_write_tokens,
+                    "total_tokens": inv.total_tokens,
+                }
+            )
+            session["total_tokens"] += inv.total_tokens
+            session["input_tokens"] += inv.input_tokens
+            session["output_tokens"] += inv.output_tokens
+            session["cache_read_tokens"] += inv.cache_read_tokens
+            session["cache_write_tokens"] += inv.cache_write_tokens
+            session["invocation_count"] += 1
+
+            # Track first/last timestamps
+            if inv.timestamp < session["first_timestamp"]:
+                session["first_timestamp"] = inv.timestamp
+            if inv.timestamp > session["last_timestamp"]:
+                session["last_timestamp"] = inv.timestamp
+
+        # Calculate costs for each session
+        pricing = DEFAULT_PRICING
+        for session in sessions_map.values():
+            input_cost = (session["input_tokens"] / 1_000_000) * pricing[
+                "input_per_mtok"
+            ]
+            output_cost = (session["output_tokens"] / 1_000_000) * pricing[
+                "output_per_mtok"
+            ]
+            cache_read_cost = (session["cache_read_tokens"] / 1_000_000) * pricing[
+                "cache_read_per_mtok"
+            ]
+            cache_write_cost = (session["cache_write_tokens"] / 1_000_000) * pricing[
+                "cache_write_per_mtok"
+            ]
+            session["cost"] = round(
+                input_cost + output_cost + cache_read_cost + cache_write_cost, 4
+            )
+
+        # Convert to list and sort by last_timestamp
+        sessions = list(sessions_map.values())
+        sessions.sort(key=lambda x: x["last_timestamp"], reverse=True)
+
+        # Calculate totals
+        total_tokens = sum(s["total_tokens"] for s in sessions)
+        total_invocations = sum(s["invocation_count"] for s in sessions)
+        total_cost = sum(s["cost"] for s in sessions)
+        total_input = sum(s["input_tokens"] for s in sessions)
+        total_output = sum(s["output_tokens"] for s in sessions)
+        total_cache_read = sum(s["cache_read_tokens"] for s in sessions)
+        total_cache_write = sum(s["cache_write_tokens"] for s in sessions)
+
+        return {
+            "tool_name": tool_name,
+            "sessions": sessions,
+            "session_count": len(sessions),
+            "total_invocations": total_invocations,
+            "total_tokens": total_tokens,
+            "total_cost": round(total_cost, 4),
+            "input_tokens": total_input,
+            "output_tokens": total_output,
+            "cache_read_tokens": total_cache_read,
+            "cache_write_tokens": total_cache_write,
+            "avg_tokens_per_call": round(total_tokens / total_invocations, 1)
+            if total_invocations > 0
+            else 0,
+        }
+
+    def get_tool_chart_data(
+        self,
+        tool_name: str,
+        time_filter: Optional[TimeFilter] = None,
+        limit: int = 100,
+    ) -> Dict[str, Any]:
+        """
+        Get tool invocation data formatted for Chart.js scatter/bubble chart.
+
+        Args:
+            tool_name: The name of the tool
+            time_filter: Optional time filter to apply
+            limit: Maximum number of invocations to return
+
+        Returns:
+            Dict with chart-ready data
+        """
+        from ...analyzers.tokens import DEFAULT_PRICING
+
+        tool_parser = self._features_analyzer.tool_parser
+        pricing = DEFAULT_PRICING
+
+        # Collect all invocations for this tool
+        invocations = []
+        for inv in tool_parser.parse_all(time_filter=time_filter):
+            if inv.tool_name == tool_name:
+                invocations.append(inv)
+
+        # Sort by timestamp descending and limit
+        invocations.sort(key=lambda x: x.timestamp, reverse=True)
+        invocations = invocations[:limit]
+
+        # Build chart data points
+        data_points = []
+        for idx, inv in enumerate(invocations):
+            # Calculate cost for this invocation
+            input_cost = (inv.input_tokens / 1_000_000) * pricing["input_per_mtok"]
+            output_cost = (inv.output_tokens / 1_000_000) * pricing["output_per_mtok"]
+            cache_read_cost = (inv.cache_read_tokens / 1_000_000) * pricing[
+                "cache_read_per_mtok"
+            ]
+            cache_write_cost = (inv.cache_write_tokens / 1_000_000) * pricing[
+                "cache_write_per_mtok"
+            ]
+            cost = input_cost + output_cost + cache_read_cost + cache_write_cost
+
+            # Generate a unique ID for this invocation
+            invocation_id = f"{inv.session_id}_{inv.timestamp}_{idx}"
+
+            # Get a preview of what the tool did
+            params_preview = self._get_tool_params_preview(
+                inv.tool_name, inv.input_params
+            )
+
+            data_points.append(
+                {
+                    "x": inv.timestamp,
+                    "y": inv.total_tokens,
+                    "r": min(15, max(4, inv.total_tokens / 1000)),  # Scale bubble size
+                    "invocation_id": invocation_id,
+                    "session_id": inv.session_id,
+                    "project": Path(inv.project).name if inv.project else "Unknown",
+                    "cost": round(cost, 6),
+                    "input_tokens": inv.input_tokens,
+                    "output_tokens": inv.output_tokens,
+                    "cache_read_tokens": inv.cache_read_tokens,
+                    "cache_write_tokens": inv.cache_write_tokens,
+                    "params_preview": params_preview,
+                }
+            )
+
+        return {
+            "tool_name": tool_name,
+            "datasets": [
+                {
+                    "label": tool_name,
+                    "data": data_points,
+                    "backgroundColor": "#0770E380",  # Brand blue with alpha
+                    "borderColor": "#0770E3",
+                }
+            ],
+            "total_points": len(data_points),
+        }
+
+    def _get_tool_params_preview(self, tool_name: str, params: dict) -> str:
+        """Get a human-readable preview of tool parameters."""
+        if not params:
+            return ""
+
+        # Tool-specific previews
+        if tool_name == "Read":
+            file_path = params.get("filePath", params.get("file_path", ""))
+            if file_path:
+                return Path(file_path).name
+        elif tool_name == "Write":
+            file_path = params.get("filePath", params.get("file_path", ""))
+            if file_path:
+                return f"Write: {Path(file_path).name}"
+        elif tool_name == "Edit":
+            file_path = params.get("filePath", params.get("file_path", ""))
+            if file_path:
+                return f"Edit: {Path(file_path).name}"
+        elif tool_name == "Bash":
+            command = params.get("command", "")
+            if command:
+                return command[:50] + ("..." if len(command) > 50 else "")
+        elif tool_name == "Glob":
+            pattern = params.get("pattern", "")
+            return pattern[:40] if pattern else ""
+        elif tool_name == "Grep":
+            pattern = params.get("pattern", "")
+            return f"/{pattern[:30]}/" if pattern else ""
+        elif tool_name == "Task":
+            desc = params.get("description", "")
+            return desc[:40] + ("..." if len(desc) > 40 else "")
+        elif tool_name == "WebFetch":
+            url = params.get("url", "")
+            if url:
+                # Extract domain from URL
+                try:
+                    from urllib.parse import urlparse
+
+                    parsed = urlparse(url)
+                    return parsed.netloc[:30]
+                except Exception:
+                    return url[:30]
+
+        # Generic fallback - show first key-value
+        for key, value in params.items():
+            if isinstance(value, str) and value:
+                return f"{key}: {value[:30]}..."
+            break
+
+        return ""
+
+    def get_tool_invocation_detail(
+        self,
+        tool_name: str,
+        invocation_id: str,
+        time_filter: Optional[TimeFilter] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get detailed information about a specific tool invocation.
+
+        Args:
+            tool_name: The name of the tool
+            invocation_id: The invocation ID (session_id_timestamp_idx format)
+            time_filter: Optional time filter
+
+        Returns:
+            Dict with invocation details or None if not found
+        """
+        from ...analyzers.tokens import DEFAULT_PRICING
+
+        tool_parser = self._features_analyzer.tool_parser
+        pricing = DEFAULT_PRICING
+
+        # Parse invocation_id to extract session_id and timestamp
+        parts = invocation_id.rsplit("_", 2)
+        if len(parts) < 2:
+            return None
+
+        target_session = parts[0]
+        target_timestamp = parts[1] if len(parts) >= 2 else ""
+
+        # Find the matching invocation
+        for inv in tool_parser.parse_all(time_filter=time_filter):
+            if inv.tool_name != tool_name:
+                continue
+
+            if inv.session_id == target_session and inv.timestamp == target_timestamp:
+                # Calculate cost
+                input_cost = (inv.input_tokens / 1_000_000) * pricing["input_per_mtok"]
+                output_cost = (inv.output_tokens / 1_000_000) * pricing[
+                    "output_per_mtok"
+                ]
+                cache_read_cost = (inv.cache_read_tokens / 1_000_000) * pricing[
+                    "cache_read_per_mtok"
+                ]
+                cache_write_cost = (inv.cache_write_tokens / 1_000_000) * pricing[
+                    "cache_write_per_mtok"
+                ]
+                cost = input_cost + output_cost + cache_read_cost + cache_write_cost
+
+                return {
+                    "tool_name": inv.tool_name,
+                    "timestamp": inv.timestamp,
+                    "date": inv.timestamp[:10] if inv.timestamp else "",
+                    "time": inv.timestamp[11:19] if len(inv.timestamp) > 19 else "",
+                    "session_id": inv.session_id,
+                    "project": inv.project,
+                    "project_name": Path(inv.project).name
+                    if inv.project
+                    else "Unknown",
+                    "input_params": inv.input_params,
+                    "input_tokens": inv.input_tokens,
+                    "output_tokens": inv.output_tokens,
+                    "cache_read_tokens": inv.cache_read_tokens,
+                    "cache_write_tokens": inv.cache_write_tokens,
+                    "total_tokens": inv.total_tokens,
+                    "cost": round(cost, 6),
+                    "params_preview": self._get_tool_params_preview(
+                        inv.tool_name, inv.input_params
+                    ),
+                }
+
+        return None
+
+    def get_unified_timeline_data(
+        self,
+        time_filter: Optional[TimeFilter] = None,
+        session_id: Optional[str] = None,
+        limit: int = 500,
+    ) -> Dict[str, Any]:
+        """
+        Get all tool invocations across all tools for a unified timeline view.
+
+        Args:
+            time_filter: Optional time filter to apply
+            session_id: Optional session ID to filter to a specific conversation
+            limit: Maximum number of invocations to return
+
+        Returns:
+            Dict with timeline data including chart data and session list
+        """
+        from ...analyzers.tokens import DEFAULT_PRICING
+
+        tool_parser = self._features_analyzer.tool_parser
+        pricing = DEFAULT_PRICING
+
+        # Collect all invocations across all tools
+        invocations = []
+        sessions_set = set()
+
+        for inv in tool_parser.parse_all(time_filter=time_filter):
+            # Filter by session if specified
+            if session_id and inv.session_id != session_id:
+                continue
+
+            invocations.append(inv)
+            sessions_set.add(
+                (
+                    inv.session_id,
+                    Path(inv.project).name if inv.project else "Unknown",
+                )
+            )
+
+        # Sort by timestamp ascending for timeline view
+        invocations.sort(key=lambda x: x.timestamp)
+        invocations = invocations[-limit:]  # Keep most recent
+
+        # Define colors for different tools
+        tool_colors = {
+            "Read": {"bg": "#3B82F680", "border": "#3B82F6"},  # Blue
+            "Write": {"bg": "#10B98180", "border": "#10B981"},  # Green
+            "Edit": {"bg": "#F59E0B80", "border": "#F59E0B"},  # Amber
+            "Bash": {"bg": "#6366F180", "border": "#6366F1"},  # Indigo
+            "Glob": {"bg": "#8B5CF680", "border": "#8B5CF6"},  # Violet
+            "Grep": {"bg": "#EC489980", "border": "#EC4899"},  # Pink
+            "Task": {"bg": "#EF444480", "border": "#EF4444"},  # Red
+            "WebFetch": {"bg": "#06B6D480", "border": "#06B6D4"},  # Cyan
+            "TodoWrite": {"bg": "#84CC1680", "border": "#84CC16"},  # Lime
+            "TodoRead": {"bg": "#22C55E80", "border": "#22C55E"},  # Green
+        }
+        default_color = {"bg": "#6B728080", "border": "#6B7280"}  # Gray
+
+        # Group invocations by tool for datasets
+        tools_data: Dict[str, list] = {}
+        all_points = []
+
+        for idx, inv in enumerate(invocations):
+            tool_name = inv.tool_name
+
+            if tool_name not in tools_data:
+                tools_data[tool_name] = []
+
+            # Calculate cost
+            input_cost = (inv.input_tokens / 1_000_000) * pricing["input_per_mtok"]
+            output_cost = (inv.output_tokens / 1_000_000) * pricing["output_per_mtok"]
+            cache_read_cost = (inv.cache_read_tokens / 1_000_000) * pricing[
+                "cache_read_per_mtok"
+            ]
+            cache_write_cost = (inv.cache_write_tokens / 1_000_000) * pricing[
+                "cache_write_per_mtok"
+            ]
+            cost = input_cost + output_cost + cache_read_cost + cache_write_cost
+
+            # Generate invocation ID
+            invocation_id = f"{inv.session_id}_{inv.timestamp}_{idx}"
+
+            # Get preview
+            params_preview = self._get_tool_params_preview(
+                inv.tool_name, inv.input_params
+            )
+
+            point = {
+                "x": inv.timestamp,
+                "y": inv.total_tokens,
+                "r": min(15, max(4, inv.total_tokens / 1000)),
+                "invocation_id": invocation_id,
+                "tool_name": tool_name,
+                "session_id": inv.session_id,
+                "project": Path(inv.project).name if inv.project else "Unknown",
+                "cost": round(cost, 6),
+                "input_tokens": inv.input_tokens,
+                "output_tokens": inv.output_tokens,
+                "cache_read_tokens": inv.cache_read_tokens,
+                "cache_write_tokens": inv.cache_write_tokens,
+                "params_preview": params_preview,
+            }
+
+            tools_data[tool_name].append(point)
+            all_points.append(point)
+
+        # Build datasets for Chart.js
+        datasets = []
+        for tool_name, points in sorted(tools_data.items()):
+            colors = tool_colors.get(tool_name, default_color)
+            datasets.append(
+                {
+                    "label": tool_name,
+                    "data": points,
+                    "backgroundColor": colors["bg"],
+                    "borderColor": colors["border"],
+                }
+            )
+
+        # Build sessions list for filter dropdown
+        sessions_list = [
+            {"session_id": sid, "project_name": proj}
+            for sid, proj in sorted(sessions_set, key=lambda x: x[1])
+        ]
+
+        # Calculate totals
+        total_tokens = sum(p["y"] for p in all_points)
+        total_cost = sum(p["cost"] for p in all_points)
+        tool_counts = {tool: len(points) for tool, points in tools_data.items()}
+
+        return {
+            "datasets": datasets,
+            "sessions": sessions_list,
+            "total_invocations": len(all_points),
+            "total_tokens": total_tokens,
+            "total_cost": round(total_cost, 4),
+            "tool_counts": tool_counts,
+            "selected_session": session_id,
+            "invocations": all_points,  # For table view
         }
