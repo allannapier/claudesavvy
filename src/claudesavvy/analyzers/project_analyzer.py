@@ -383,48 +383,6 @@ class ProjectAnalyzer:
         # Get the tool count for use in recommendations
         tool_count = len(project_mcp_tools)
 
-        # Check for too many MCP servers
-        if mcp_count >= self.MCP_SERVER_COUNT_HIGH:
-            recommendations.append(Recommendation(
-                category='mcp',
-                severity='high',
-                title='Too many MCP servers enabled',
-                description=(
-                    f'This project has {mcp_count} MCP servers enabled with {tool_count} tools used. '
-                    f'Each MCP server and its tools are included in the context, increasing token usage.'
-                ),
-                impact='Estimated 15-25% token overhead per request',
-                action_items=[
-                    f'Remove {mcp_count - self.MCP_SERVER_COUNT_WARN} or more unused MCP servers',
-                    'Consider using project-specific MCP configuration instead of global',
-                    'Review if all servers are necessary for this project',
-                ],
-                details={
-                    'mcp_count': mcp_count,
-                    'tool_count': tool_count,
-                    'threshold': self.MCP_SERVER_COUNT_HIGH,
-                }
-            ))
-        elif mcp_count >= self.MCP_SERVER_COUNT_WARN:
-            recommendations.append(Recommendation(
-                category='mcp',
-                severity='medium',
-                title='Moderate number of MCP servers',
-                description=(
-                    f'This project has {mcp_count} MCP servers with {tool_count} tools used. '
-                    'Consider reviewing if all are actively used.'
-                ),
-                impact='Potential 5-10% token overhead',
-                action_items=[
-                    'Review MCP server usage below',
-                    'Remove any servers that are not actively used',
-                ],
-                details={
-                    'mcp_count': mcp_count,
-                    'tool_count': tool_count,
-                }
-            ))
-
         # Check for unused MCPs
         if unused_mcps:
             recommendations.append(Recommendation(
@@ -443,26 +401,6 @@ class ProjectAnalyzer:
                 ],
                 details={
                     'unused_servers': unused_mcps,
-                }
-            ))
-
-        # Check for excessive tool count
-        if tool_count >= self.MCP_TOOL_COUNT_HIGH:
-            recommendations.append(Recommendation(
-                category='mcp',
-                severity='high',
-                title='Very high number of MCP tools available',
-                description=(
-                    f'This project has access to {tool_count} MCP tools. '
-                    'Each tool description adds to the system prompt context.'
-                ),
-                impact='High tool count significantly increases per-request token usage',
-                action_items=[
-                    'Consider disabling MCP servers with many unused tools',
-                    'Use project-level permissions to limit available tools',
-                ],
-                details={
-                    'tool_count': tool_count,
                 }
             ))
 
