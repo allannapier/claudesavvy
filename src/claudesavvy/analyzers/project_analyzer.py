@@ -380,9 +380,6 @@ class ProjectAnalyzer:
         metrics['mcp_total_tools'] = len(project_mcp_tools)
         metrics['mcp_total_calls'] = sum(s['calls'] for s in server_usage.values())
 
-        # Get the tool count for use in recommendations
-        tool_count = len(project_mcp_tools)
-
         # Check for unused MCPs
         if unused_mcps:
             recommendations.append(Recommendation(
