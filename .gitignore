@@ -35,3 +35,9 @@ env/
 # Ignore vscode AI rules
 .github/instructions/codacy.instructions.md
 .claude/
+
+# Development snapshots and temporary files
+*_snapshot.md
+*_test_*.md
+test_*.md
+threads_post.txt
