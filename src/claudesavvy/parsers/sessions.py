@@ -59,6 +59,7 @@ class SessionMessage:
     cwd: Optional[str] = None
     usage: Optional[TokenUsage] = None
     model: Optional[str] = None
+    team_name: Optional[str] = None
 
     @property
     def datetime(self) -> Optional[datetime]:
@@ -99,6 +100,9 @@ class SessionMessage:
         # Get model from message or top level
         model = message.get("model") or data.get("model")
 
+        # Get team name from top level (present when Teams feature is invoked)
+        team_name = data.get("teamName")
+
         return cls(
             role=role,
             timestamp=data.get("timestamp", ""),
@@ -106,6 +110,7 @@ class SessionMessage:
             cwd=data.get("cwd"),
             usage=usage,
             model=model,
+            team_name=team_name,
         )
 
 
@@ -120,6 +125,7 @@ class SessionStats:
     earliest_timestamp: Optional[datetime] = None
     latest_timestamp: Optional[datetime] = None
     model_usage: dict[str, TokenUsage] = field(default_factory=dict)  # Tokens per model
+    team_usage: dict[str, TokenUsage] = field(default_factory=dict)  # Tokens per team
 
     def add_message(self, message: SessionMessage):
         """Add a message to the statistics."""
@@ -131,6 +137,12 @@ class SessionStats:
                 if message.model not in self.model_usage:
                     self.model_usage[message.model] = TokenUsage()
                 self.model_usage[message.model] += message.usage
+
+            # Track tokens per team
+            if message.team_name:
+                if message.team_name not in self.team_usage:
+                    self.team_usage[message.team_name] = TokenUsage()
+                self.team_usage[message.team_name] += message.usage
 
         self.message_count += 1
         self.session_ids.add(message.session_id)
@@ -285,6 +297,39 @@ class SessionParser:
         return dict(
             sorted(
                 project_stats.items(),
+                key=lambda x: x[1].total_tokens.total_input_tokens
+                + x[1].total_tokens.output_tokens,
+                reverse=True,
+            )
+        )
+
+    def get_team_stats(
+        self, time_filter: Optional[TimeFilter] = None
+    ) -> dict[str, SessionStats]:
+        """
+        Get per-team statistics when Teams feature is invoked.
+
+        Args:
+            time_filter: Optional time filter
+
+        Returns:
+            Dict mapping team names to SessionStats
+        """
+        team_stats: dict[str, SessionStats] = {}
+
+        for message in self.parse_all(time_filter=time_filter):
+            if not message.team_name:
+                continue
+
+            if message.team_name not in team_stats:
+                team_stats[message.team_name] = SessionStats()
+
+            team_stats[message.team_name].add_message(message)
+
+        # Sort by total tokens (descending)
+        return dict(
+            sorted(
+                team_stats.items(),
                 key=lambda x: x[1].total_tokens.total_input_tokens
                 + x[1].total_tokens.output_tokens,
                 reverse=True,

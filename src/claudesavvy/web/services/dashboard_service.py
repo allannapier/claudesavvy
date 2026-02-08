@@ -2309,3 +2309,110 @@ class DashboardService:
             "selected_session": session_id,
             "invocations": all_points,  # For table view
         }
+
+    def get_team_summary(self, time_filter: Optional[TimeFilter] = None) -> Dict[str, Any]:
+        """
+        Get summary of team usage when Teams feature is invoked.
+
+        Args:
+            time_filter: Optional time filter to apply
+
+        Returns:
+            Dict with team usage statistics
+        """
+        team_stats = self._session_parser.get_team_stats(time_filter=time_filter)
+
+        teams_data = []
+        total_cost = 0.0
+        total_tokens = 0
+
+        # Use default pricing for team calculations (teams don't track specific models)
+        from ...analyzers.tokens import DEFAULT_PRICING
+
+        for team_name, stats in team_stats.items():
+            # Calculate cost using default pricing
+            input_cost = (
+                stats.total_tokens.input_tokens / 1_000_000
+            ) * DEFAULT_PRICING["input_per_mtok"]
+            output_cost = (
+                stats.total_tokens.output_tokens / 1_000_000
+            ) * DEFAULT_PRICING["output_per_mtok"]
+            cache_write_cost = (
+                stats.total_tokens.cache_creation_input_tokens / 1_000_000
+            ) * DEFAULT_PRICING["cache_write_per_mtok"]
+            cache_read_cost = (
+                stats.total_tokens.cache_read_input_tokens / 1_000_000
+            ) * DEFAULT_PRICING["cache_read_per_mtok"]
+            cost = input_cost + output_cost + cache_write_cost + cache_read_cost
+
+            total_cost += cost
+            total_tokens += (
+                stats.total_tokens.input_tokens
+                + stats.total_tokens.output_tokens
+                + stats.total_tokens.cache_creation_input_tokens
+                + stats.total_tokens.cache_read_input_tokens
+            )
+
+            teams_data.append({
+                "name": team_name,
+                "message_count": stats.message_count,
+                "session_count": stats.session_count,
+                "project_count": stats.project_count,
+                "input_tokens": stats.total_tokens.input_tokens,
+                "output_tokens": stats.total_tokens.output_tokens,
+                "cache_read_tokens": stats.total_tokens.cache_read_input_tokens,
+                "cache_write_tokens": stats.total_tokens.cache_creation_input_tokens,
+                "total_tokens": stats.total_tokens.total_input_tokens + stats.total_tokens.output_tokens,
+                "cost": round(cost, 2),
+            })
+
+        # Sort by total tokens (descending)
+        teams_data.sort(key=lambda x: x["total_tokens"], reverse=True)
+
+        return {
+            "teams": teams_data,
+            "total_teams": len(teams_data),
+            "total_cost": round(total_cost, 2),
+            "total_tokens": total_tokens,
+        }
+
+    def get_team_chart_data(self, time_filter: Optional[TimeFilter] = None) -> Dict[str, Any]:
+        """
+        Get chart data for team usage over time.
+
+        Args:
+            time_filter: Optional time filter to apply
+
+        Returns:
+            Dict with chart datasets for team usage
+        """
+        team_stats = self._session_parser.get_team_stats(time_filter=time_filter)
+
+        # Build datasets for each team
+        datasets = []
+        colors = [
+            {"bg": "rgba(59, 130, 246, 0.8)", "border": "rgb(59, 130, 246)"},  # Blue
+            {"bg": "rgba(16, 185, 129, 0.8)", "border": "rgb(16, 185, 129)"},  # Green
+            {"bg": "rgba(245, 158, 11, 0.8)", "border": "rgb(245, 158, 11)"},  # Amber
+            {"bg": "rgba(239, 68, 68, 0.8)", "border": "rgb(239, 68, 68)"},    # Red
+            {"bg": "rgba(139, 92, 246, 0.8)", "border": "rgb(139, 92, 246)"},  # Purple
+        ]
+
+        for idx, (team_name, stats) in enumerate(team_stats.items()):
+            color = colors[idx % len(colors)]
+            datasets.append({
+                "label": team_name,
+                "data": [
+                    stats.total_tokens.input_tokens,
+                    stats.total_tokens.output_tokens,
+                    stats.total_tokens.cache_read_input_tokens,
+                    stats.total_tokens.cache_creation_input_tokens,
+                ],
+                "backgroundColor": color["bg"],
+                "borderColor": color["border"],
+            })
+
+        return {
+            "labels": ["Input", "Output", "Cache Read", "Cache Write"],
+            "datasets": datasets,
+        }

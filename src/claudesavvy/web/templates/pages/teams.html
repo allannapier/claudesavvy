@@ -1,0 +1,93 @@
+{% extends "layouts/app.html" %}
+{% from "components/card.html" import stat_card %}
+
+{% block title %}Teams - ClaudeSavvy{% endblock %}
+
+{% block main_content %}
+<div class="space-y-8" x-data="{ selectedPeriod: '{{ period|default('all') }}' }">
+    <!-- Page Title and Time Filter -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Teams</h1>
+            <p class="mt-2 text-gray-600">Token usage analytics for Claude Code Teams feature</p>
+        </div>
+
+        <!-- Time Filter -->
+        <div class="flex gap-1 sm:gap-2 flex-nowrap items-center" role="group">
+            <button
+                hx-get="/api/teams?period=15min"
+                hx-target="#teams-content"
+                hx-swap="innerHTML"
+                @click="selectedPeriod = '15min'"
+                :class="selectedPeriod === '15min' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
+                class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
+            >
+                15m
+            </button>
+            <button
+                hx-get="/api/teams?period=1hour"
+                hx-target="#teams-content"
+                hx-swap="innerHTML"
+                @click="selectedPeriod = '1hour'"
+                :class="selectedPeriod === '1hour' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
+                class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
+            >
+                1h
+            </button>
+            <button
+                hx-get="/api/teams?period=today"
+                hx-target="#teams-content"
+                hx-swap="innerHTML"
+                @click="selectedPeriod = 'today'"
+                :class="selectedPeriod === 'today' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
+                class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
+            >
+                Today
+            </button>
+            <button
+                hx-get="/api/teams?period=week"
+                hx-target="#teams-content"
+                hx-swap="innerHTML"
+                @click="selectedPeriod = 'week'"
+                :class="selectedPeriod === 'week' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
+                class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
+            >
+                Week
+            </button>
+            <button
+                hx-get="/api/teams?period=month"
+                hx-target="#teams-content"
+                hx-swap="innerHTML"
+                @click="selectedPeriod = 'month'"
+                :class="selectedPeriod === 'month' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
+                class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
+            >
+                Month
+            </button>
+            <button
+                hx-get="/api/teams?period=all"
+                hx-target="#teams-content"
+                hx-swap="innerHTML"
+                @click="selectedPeriod = 'all'"
+                :class="selectedPeriod === 'all' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
+                class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap"
+            >
+                All
+            </button>
+
+            <!-- Loading Spinner -->
+            <div class="htmx-indicator ml-2">
+                <svg class="animate-spin h-5 w-5 text-[#0770E3]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teams Content (HTMX Target) -->
+    <div id="teams-content">
+        {% include 'partials/teams_content.html' %}
+    </div>
+</div>
+{% endblock %}

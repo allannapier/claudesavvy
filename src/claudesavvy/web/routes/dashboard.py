@@ -1282,13 +1282,14 @@ def api_tool_invocation_detail(tool_name: str, invocation_id: str) -> str:
 
 @dashboard_bp.route("/api/tools/timeline")
 def api_tools_timeline() -> str:
-    """API endpoint for HTMX to fetch unified tools timeline."""
+    """API endpoint for HTMX to fetch tools timeline data."""
     from flask import request
 
     try:
         service = current_app.dashboard_service
+
         period = request.args.get("period", "all")
-        session_id = request.args.get("session_id", None)
+        session_id = request.args.get("session_id", "")
 
         time_filter = get_time_filter_from_period(period)
 
@@ -1309,3 +1310,58 @@ def api_tools_timeline() -> str:
             '<div class="text-red-600 p-4">Error loading timeline.</div>',
             500,
         )
+
+
+@dashboard_bp.route("/teams")
+def teams() -> str:
+    """Render the teams page with team usage analytics."""
+    try:
+        service = current_app.dashboard_service
+        # Default to all time for teams (typically fewer events)
+        default_period = "all"
+        time_filter = get_time_filter_from_period(default_period)
+
+        # Get team summary stats
+        summary = service.get_team_summary(time_filter=time_filter)
+        chart_data = service.get_team_chart_data(time_filter=time_filter)
+
+        return render_template(
+            "pages/teams.html",
+            summary=summary,
+            chart_data=chart_data,
+            period=default_period,
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading teams page: {e}", exc_info=True)
+        return render_template(
+            "pages/teams.html",
+            summary={"teams": [], "total_teams": 0, "total_cost": 0, "total_tokens": 0},
+            chart_data={"labels": [], "datasets": []},
+            period="all",
+        )
+
+
+@dashboard_bp.route("/api/teams")
+def api_teams() -> str:
+    """API endpoint for HTMX to fetch filtered team data."""
+    from flask import request
+
+    try:
+        service = current_app.dashboard_service
+        period = request.args.get("period", "all")
+
+        time_filter = get_time_filter_from_period(period)
+
+        summary = service.get_team_summary(time_filter=time_filter)
+        chart_data = service.get_team_chart_data(time_filter=time_filter)
+
+        return render_template(
+            "partials/teams_content.html",
+            summary=summary,
+            chart_data=chart_data,
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading filtered teams: {e}", exc_info=True)
+        return '<div class="text-red-600 p-4">Error loading team data.</div>', 500
