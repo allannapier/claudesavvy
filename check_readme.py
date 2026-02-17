@@ -129,7 +129,7 @@ def check_project_structure():
     
     # Extract project structure section from README
     structure_match = re.search(
-        r'```\nclaudeǁ_monitor/(.*?)```',
+        r'```\nclaude_monitor/(.*?)```',
         readme_content,
         re.DOTALL
     )
