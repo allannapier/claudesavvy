@@ -1,5 +1,30 @@
 #!/usr/bin/env python3
-"""Check if README.md is up to date with the project."""
+"""Check if README.md is up to date with the project.
+
+This script performs several checks to ensure README.md stays synchronized
+with the project's configuration and codebase:
+
+1. Version Consistency: Verifies that pyproject.toml, setup.py, and 
+   CHANGELOG.md all have matching version numbers.
+
+2. Version Documentation: Ensures the README mentions the current version
+   and includes recent versions from the CHANGELOG.
+
+3. Directory Paths: Checks for outdated directory names (like 'claude_monitor'
+   instead of 'claudesavvy').
+
+4. Project Structure: Validates that key directories referenced in the README
+   actually exist.
+
+Usage:
+    python check_readme.py
+
+Exit codes:
+    0: All checks passed, README is up to date
+    1: One or more checks failed, README needs updating
+
+This script is run automatically in CI to catch inconsistencies.
+"""
 
 import re
 import sys
@@ -49,11 +74,18 @@ def check_versions():
             f"setup.py ({setup_version})"
         )
     
+    # Check if versions match CHANGELOG
+    if changelog_version and pyproject_version != changelog_version:
+        errors.append(
+            f"Version in pyproject.toml ({pyproject_version}) does not match "
+            f"latest CHANGELOG version ({changelog_version})"
+        )
+    
     # Check README mentions current version
     readme_content = Path("README.md").read_text()
-    if pyproject_version and pyproject_version not in readme_content:
+    if pyproject_version and f"v{pyproject_version}" not in readme_content:
         errors.append(
-            f"README.md does not mention current version {pyproject_version}"
+            f"README.md does not mention current version v{pyproject_version}"
         )
     
     return errors
@@ -70,6 +102,22 @@ def check_directory_paths():
             "README.md contains incorrect directory path 'claude_monitor' "
             "instead of 'claudesavvy'"
         )
+    
+    # Check for old package references in examples
+    if "claude-monitor" in readme_content.lower():
+        # Filter out historical references (like in version history or migration guides)
+        lines_with_old_name = []
+        for i, line in enumerate(readme_content.split('\n'), 1):
+            if "claude-monitor" in line.lower() and not any(x in line for x in [
+                "Migration", "Before", "v1.x", "upgrade", "uninstall"
+            ]):
+                lines_with_old_name.append(f"line {i}: {line.strip()}")
+        
+        if lines_with_old_name:
+            errors.append(
+                f"README.md contains old package name 'claude-monitor' in "
+                f"active content: {', '.join(lines_with_old_name[:3])}"
+            )
     
     return errors
 
@@ -111,6 +159,27 @@ def check_project_structure():
     return errors
 
 
+def check_changelog_in_readme():
+    """Check that recent CHANGELOG entries are reflected in README."""
+    errors = []
+    
+    changelog_content = Path("CHANGELOG.md").read_text()
+    readme_content = Path("README.md").read_text()
+    
+    # Extract top 3 versions from CHANGELOG
+    version_pattern = r'##\s+\[([^\]]+)\]'
+    versions = re.findall(version_pattern, changelog_content)[:3]
+    
+    # Check if these versions are in README version history
+    for version in versions:
+        if f"v{version}" not in readme_content:
+            errors.append(
+                f"Recent version v{version} from CHANGELOG is not in README version history"
+            )
+    
+    return errors
+
+
 def main():
     """Run all README checks."""
     print("Checking README.md consistency...\n")
@@ -121,15 +190,17 @@ def main():
     all_errors.extend(check_versions())
     all_errors.extend(check_directory_paths())
     all_errors.extend(check_project_structure())
+    all_errors.extend(check_changelog_in_readme())
     
     # Report results
+    print()
     if all_errors:
-        print("\n❌ README.md is NOT up to date:")
+        print("❌ README.md is NOT up to date:")
         for i, error in enumerate(all_errors, 1):
             print(f"  {i}. {error}")
         return 1
     else:
-        print("\n✅ README.md is up to date!")
+        print("✅ README.md is up to date!")
         return 0
 
 
