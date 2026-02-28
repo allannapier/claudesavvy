@@ -15,7 +15,7 @@ All notable changes to ClaudeSavvy will be documented in this file.
 - Improved HTMX integration with `hx-indicator` configuration for seamless loading states
 
 ### Technical Details
-- Added `htmx-indicator` class to time filter buttons
+- Added `htmx-indicator` class to indicator `<span>` elements inside time filter buttons
 - Configured buttons with `hx-indicator="this"` for inline spinner display
 - Updated programmatic HTMX calls to pass clicked button as indicator target
 - Leveraged existing CSS animations for spinner rotation and visibility
