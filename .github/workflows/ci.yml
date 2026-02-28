@@ -48,6 +48,10 @@ jobs:
         run: |
           claudesavvy --help
 
+      - name: Check README is up to date
+        run: |
+          python check_readme.py
+
   security:
     runs-on: ubuntu-latest
     steps:

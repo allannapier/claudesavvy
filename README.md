@@ -60,7 +60,7 @@ pip install claudesavvy
 ```bash
 # Clone the repository
 git clone https://github.com/allannapier/claudesavvy.git
-cd claude_monitor
+cd claudesavvy
 
 # Install the package
 pip install .
@@ -187,7 +187,7 @@ ClaudeSavvy reads data from your local Claude Code installation at `~/.claude/`:
 ## Project Structure
 
 ```
-claude_monitor/
+claudesavvy/
 ├── src/claudesavvy/
 │   ├── cli.py              # Entry point - launches web server
 │   ├── parsers/            # Data parsers for Claude files
@@ -280,6 +280,9 @@ claudesavvy
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
+- **v2.1.0** (2025-12-31): Customizable model pricing configuration
+- **v2.0.1** (2025-12-29): Fixed skills parser error handling
+- **v2.0.0** (2025-12-29): Major rebrand to ClaudeSavvy
 - **v1.0.0** (2025-12-20): Web-only release with production polish
 - **v0.1.0** (2025-12-19): Initial release with CLI dashboard
 
