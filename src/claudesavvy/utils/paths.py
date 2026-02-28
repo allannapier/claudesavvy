@@ -7,14 +7,16 @@ from typing import Optional
 class ClaudeDataPaths:
     """Manages paths to Claude Code local data storage."""
 
-    def __init__(self, base_dir: Optional[Path] = None):
+    def __init__(self, base_dir: Optional[Path] = None, clawdbot_dir: Optional[Path] = None):
         """
         Initialize Claude data paths.
 
         Args:
             base_dir: Optional custom base directory. Defaults to ~/.claude/
+            clawdbot_dir: Optional clawdbot data directory. Defaults to ~/.clawdbot/
         """
         self.base_dir = base_dir or Path.home() / ".claude"
+        self.clawdbot_dir = clawdbot_dir or Path.home() / ".clawdbot"
 
     def validate(self) -> bool:
         """Check if Claude data directory exists."""
@@ -57,18 +59,23 @@ class ClaudeDataPaths:
 
     def get_project_session_files(self) -> list[Path]:
         """
-        Get all session JSONL files from projects directory.
+        Get all session JSONL files from Claude projects directory.
 
         Returns:
             List of paths to .jsonl session files
         """
-        if not self.projects_dir.exists():
-            return []
-
         session_files = []
-        for project_dir in self.projects_dir.iterdir():
-            if project_dir.is_dir():
-                session_files.extend(project_dir.glob("*.jsonl"))
+
+        # Get sessions from ~/.claude/projects/*/*.jsonl
+        if self.projects_dir.exists():
+            for project_dir in self.projects_dir.iterdir():
+                if project_dir.is_dir():
+                    session_files.extend(project_dir.glob("*.jsonl"))
+
+        # Also get sessions from clawdbot if it exists
+        clawdbot_sessions = self.clawdbot_dir / "agents" / "main" / "sessions"
+        if clawdbot_sessions.exists():
+            session_files.extend(clawdbot_sessions.glob("*.jsonl"))
 
         return sorted(session_files, key=lambda p: p.stat().st_mtime, reverse=True)
 
