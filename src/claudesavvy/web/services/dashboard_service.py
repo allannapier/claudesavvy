@@ -105,6 +105,14 @@ class DashboardService:
             self._config_scanner,
         )
 
+    def refresh(self) -> None:
+        """Re-scan session files to pick up conversations started after server launch."""
+        session_files = self.paths.get_project_session_files()
+        self._session_parser.session_files = session_files
+        self._tool_parser.session_files = session_files
+        self._subagent_parser.session_files = session_files
+        self._file_parser.session_files = session_files
+
     def _build_project_map(self) -> Dict[str, str]:
         """
         Build a map of session IDs to project names.

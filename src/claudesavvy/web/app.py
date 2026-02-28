@@ -115,6 +115,11 @@ def create_app(claude_data_paths: Optional[ClaudeDataPaths] = None) -> Flask:
     # Store service in app context for routes to access
     app.dashboard_service = dashboard_service
 
+    @app.before_request
+    def refresh_data():
+        """Re-scan session files before each request to pick up new conversations."""
+        app.dashboard_service.refresh()
+
     # Register blueprints (if they exist)
     # These will be imported from routes submodule
     try:
