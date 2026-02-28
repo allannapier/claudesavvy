@@ -1831,6 +1831,209 @@ class DashboardService:
             "total_points": sum(len(d["data"]) for d in datasets),
         }
 
+    # ========== Conversation Analytics Methods ==========
+
+    def get_conversation_analytics(
+        self,
+        time_filter: Optional[TimeFilter] = None,
+        limit: int = 200,
+    ) -> Dict[str, Any]:
+        """
+        Get per-conversation analytics sorted by total cost.
+
+        Args:
+            time_filter: Optional time filter to apply
+            limit: Maximum number of conversations to return
+
+        Returns:
+            Dict with 'conversations' list and 'summary' dict
+        """
+        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING, get_model_display_name
+
+        raw = self._session_parser.get_conversation_stats(
+            time_filter=time_filter, limit=limit
+        )
+
+        def _calc_cost(model_usage: dict) -> float:
+            total = 0.0
+            for model_id, usage in model_usage.items():
+                pricing = MODEL_PRICING.get(model_id, DEFAULT_PRICING)
+                total += (usage.input_tokens / 1_000_000) * pricing["input_per_mtok"]
+                total += (usage.output_tokens / 1_000_000) * pricing["output_per_mtok"]
+                total += (usage.cache_creation_input_tokens / 1_000_000) * pricing["cache_write_per_mtok"]
+                total += (usage.cache_read_input_tokens / 1_000_000) * pricing["cache_read_per_mtok"]
+            return total
+
+        conversations = []
+        for c in raw:
+            model_usage = c["model_usage"]
+
+            # If no model_usage, fall back to total_tokens with default pricing
+            if model_usage:
+                cost = _calc_cost(model_usage)
+            else:
+                usage = c["total_tokens"]
+                p = DEFAULT_PRICING
+                cost = (
+                    (usage.input_tokens / 1_000_000) * p["input_per_mtok"]
+                    + (usage.output_tokens / 1_000_000) * p["output_per_mtok"]
+                    + (usage.cache_creation_input_tokens / 1_000_000) * p["cache_write_per_mtok"]
+                    + (usage.cache_read_input_tokens / 1_000_000) * p["cache_read_per_mtok"]
+                )
+
+            start = c["start_time"]
+            start_date = start.strftime("%b %d") if start else ""
+            start_time_str = start.strftime("%H:%M") if start else ""
+
+            dur = c["duration_minutes"]
+            if dur < 1:
+                duration_str = "<1m"
+            elif dur < 60:
+                duration_str = f"{int(dur)}m"
+            else:
+                hours = int(dur // 60)
+                mins = int(dur % 60)
+                duration_str = f"{hours}h {mins}m" if mins else f"{hours}h"
+
+            models_used = list(model_usage.keys()) if model_usage else []
+            model_badges = [get_model_display_name(m) for m in models_used]
+
+            total_tokens = c["total_tokens"]
+
+            conversations.append(
+                {
+                    "session_id": c["session_id"],
+                    "project": c["project"],
+                    "project_name": c["project_name"],
+                    "start_date": start_date,
+                    "start_time_str": start_time_str,
+                    "start_time": start,
+                    "duration_minutes": c["duration_minutes"],
+                    "duration_str": duration_str,
+                    "message_count": c["message_count"],
+                    "turn_count": c["turn_count"],
+                    "total_tokens": total_tokens.total_tokens,
+                    "input_tokens": total_tokens.input_tokens,
+                    "output_tokens": total_tokens.output_tokens,
+                    "cache_creation_tokens": total_tokens.cache_creation_input_tokens,
+                    "cache_read_tokens": total_tokens.cache_read_input_tokens,
+                    "peak_context_tokens": c["peak_context_tokens"],
+                    "cache_efficiency": c["cache_efficiency"],
+                    "total_cost": round(cost, 4),
+                    "model_badges": model_badges,
+                    "models_used": models_used,
+                }
+            )
+
+        # Sort by cost descending
+        conversations.sort(key=lambda x: x["total_cost"], reverse=True)
+
+        total_cost = sum(c["total_cost"] for c in conversations)
+        avg_cost = total_cost / len(conversations) if conversations else 0.0
+        max_cost = max((c["total_cost"] for c in conversations), default=0.0)
+        avg_messages = (
+            sum(c["message_count"] for c in conversations) / len(conversations)
+            if conversations
+            else 0.0
+        )
+
+        most_expensive = conversations[0] if conversations else None
+
+        return {
+            "conversations": conversations,
+            "summary": {
+                "total_conversations": len(conversations),
+                "total_cost": round(total_cost, 4),
+                "avg_cost": round(avg_cost, 4),
+                "max_cost": round(max_cost, 4),
+                "avg_messages": round(avg_messages, 1),
+                "most_expensive_session": most_expensive["session_id"][:8] if most_expensive else "",
+                "most_expensive_cost": most_expensive["total_cost"] if most_expensive else 0.0,
+            },
+        }
+
+    def get_conversation_detail(
+        self,
+        session_id: str,
+        time_filter: Optional[TimeFilter] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get detailed information for a single conversation.
+
+        Args:
+            session_id: The session ID to look up
+            time_filter: Optional time filter
+
+        Returns:
+            Dict with conversation details including context_per_turn, or None
+        """
+        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING, get_model_display_name
+
+        raw = self._session_parser.get_conversation_stats(time_filter=time_filter, limit=2000)
+
+        for c in raw:
+            if c["session_id"] != session_id:
+                continue
+
+            model_usage = c["model_usage"]
+            total_tokens = c["total_tokens"]
+
+            if model_usage:
+                cost = 0.0
+                for model_id, usage in model_usage.items():
+                    pricing = MODEL_PRICING.get(model_id, DEFAULT_PRICING)
+                    cost += (usage.input_tokens / 1_000_000) * pricing["input_per_mtok"]
+                    cost += (usage.output_tokens / 1_000_000) * pricing["output_per_mtok"]
+                    cost += (usage.cache_creation_input_tokens / 1_000_000) * pricing["cache_write_per_mtok"]
+                    cost += (usage.cache_read_input_tokens / 1_000_000) * pricing["cache_read_per_mtok"]
+            else:
+                p = DEFAULT_PRICING
+                cost = (
+                    (total_tokens.input_tokens / 1_000_000) * p["input_per_mtok"]
+                    + (total_tokens.output_tokens / 1_000_000) * p["output_per_mtok"]
+                    + (total_tokens.cache_creation_input_tokens / 1_000_000) * p["cache_write_per_mtok"]
+                    + (total_tokens.cache_read_input_tokens / 1_000_000) * p["cache_read_per_mtok"]
+                )
+
+            models_used = list(model_usage.keys()) if model_usage else []
+            model_badges = [get_model_display_name(m) for m in models_used]
+
+            start = c["start_time"]
+            dur = c["duration_minutes"]
+            if dur < 1:
+                duration_str = "<1m"
+            elif dur < 60:
+                duration_str = f"{int(dur)}m"
+            else:
+                hours = int(dur // 60)
+                mins = int(dur % 60)
+                duration_str = f"{hours}h {mins}m" if mins else f"{hours}h"
+
+            return {
+                "session_id": c["session_id"],
+                "project": c["project"],
+                "project_name": c["project_name"],
+                "start_time": start,
+                "start_date": start.strftime("%b %d, %Y %H:%M") if start else "",
+                "duration_str": duration_str,
+                "duration_minutes": c["duration_minutes"],
+                "message_count": c["message_count"],
+                "turn_count": c["turn_count"],
+                "input_tokens": total_tokens.input_tokens,
+                "output_tokens": total_tokens.output_tokens,
+                "cache_creation_tokens": total_tokens.cache_creation_input_tokens,
+                "cache_read_tokens": total_tokens.cache_read_input_tokens,
+                "total_tokens": total_tokens.total_tokens,
+                "peak_context_tokens": c["peak_context_tokens"],
+                "context_per_turn": c["context_per_turn"],
+                "cache_efficiency": c["cache_efficiency"],
+                "total_cost": round(cost, 4),
+                "model_badges": model_badges,
+                "models_used": models_used,
+            }
+
+        return None
+
     # ========== Tool Invocation Methods ==========
 
     def get_tool_invocations(

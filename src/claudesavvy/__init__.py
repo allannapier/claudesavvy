@@ -1,5 +1,5 @@
 """ClaudeSavvy - Web-based usage monitoring tool for Claude Code."""
 
-__version__ = "2.6.0"
+__version__ = "2.7.0"
 __author__ = "Allan Napier"
 __description__ = "Web-based usage monitoring tool for Claude Code"

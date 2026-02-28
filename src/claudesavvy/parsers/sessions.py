@@ -1,10 +1,11 @@
 """Parser for Claude Code session files containing token usage data."""
 
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, Optional, List
+from typing import Iterator, Optional, List, Set
 
 from ..utils.time_filter import TimeFilter
 
@@ -17,6 +18,7 @@ class TokenUsage:
     output_tokens: int = 0
     cache_creation_input_tokens: int = 0
     cache_read_input_tokens: int = 0
+    tool_output_tokens: int = 0  # Tokens from persisted tool outputs (Claude Code 2.1.0+)
 
     def __add__(self, other: "TokenUsage") -> "TokenUsage":
         """Add two TokenUsage instances together."""
@@ -27,15 +29,28 @@ class TokenUsage:
             + other.cache_creation_input_tokens,
             cache_read_input_tokens=self.cache_read_input_tokens
             + other.cache_read_input_tokens,
+            tool_output_tokens=self.tool_output_tokens + other.tool_output_tokens,
         )
 
     @property
     def total_input_tokens(self) -> int:
-        """Total input tokens including cache tokens."""
+        """Total input tokens including cache tokens and tool outputs."""
         return (
             self.input_tokens
             + self.cache_creation_input_tokens
             + self.cache_read_input_tokens
+            + self.tool_output_tokens
+        )
+
+    @property
+    def total_tokens(self) -> int:
+        """Total all token types."""
+        return (
+            self.input_tokens
+            + self.output_tokens
+            + self.cache_creation_input_tokens
+            + self.cache_read_input_tokens
+            + self.tool_output_tokens
         )
 
     @property
@@ -426,6 +441,320 @@ class SessionParser:
             }
 
         return daily_costs
+
+    def get_tool_output_files(
+        self,
+        time_filter: Optional[TimeFilter] = None,
+    ) -> dict[str, Set[str]]:
+        """
+        Extract file paths from tool_result messages for Claude Code 2.1.0+.
+
+        In Claude Code 2.1.0+, large tool outputs are saved to disk and referenced
+        by file path in the session JSONL. This method extracts those file paths
+        so we can count their tokens separately.
+
+        Args:
+            time_filter: Optional time filter
+
+        Returns:
+            Dict mapping project paths to set of tool output file paths
+        """
+        project_files: dict[str, Set[str]] = {}
+
+        for session_file in self.session_files:
+            if not session_file.exists():
+                continue
+
+            with open(session_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    try:
+                        data = json.loads(line)
+                        timestamp = data.get("timestamp", "")
+
+                        # Apply time filter
+                        if time_filter and timestamp:
+                            if not time_filter.matches_iso_string(timestamp):
+                                continue
+
+                        # Get project path
+                        cwd = data.get("cwd")
+
+                        # Look for tool_result messages with file references
+                        message = data.get("message", {})
+                        content = message.get("content", [])
+
+                        if isinstance(content, list):
+                            for item in content:
+                                if isinstance(item, dict) and item.get("type") == "tool_result":
+                                    # Get the text content which may contain file paths
+                                    result_content = item.get("content", [])
+                                    if isinstance(result_content, list):
+                                        for sub_item in result_content:
+                                            if isinstance(sub_item, dict) and sub_item.get("type") == "text":
+                                                text = sub_item.get("text", "")
+                                                # Look for file paths in tool-results directories
+                                                if "tool-results" in text:
+                                                    # Extract file paths using regex
+                                                    file_paths = re.findall(r'/[^ \n]+tool-results/[^ \n]+\.txt', text)
+                                                    if file_paths:
+                                                        if cwd not in project_files:
+                                                            project_files[cwd] = set()
+                                                        project_files[cwd].update(file_paths)
+
+                    except (json.JSONDecodeError, ValueError):
+                        continue
+
+        return project_files
+
+    def scan_tool_output_files(
+        self,
+        time_filter: Optional[TimeFilter] = None,
+        base_dir: Optional[Path] = None,
+    ) -> int:
+        """
+        Scan tool-results directories and count tokens from persisted tool outputs.
+
+        Claude Code 2.1.0+ stores large tool outputs in separate files in the
+        tool-results directories. This method scans those directories and counts
+        tokens based on file modification dates.
+
+        Args:
+            time_filter: Optional time filter (filters by file modification date)
+            base_dir: Base directory to scan (defaults to ~/.claude)
+
+        Returns:
+            Total token count from tool output files
+        """
+        base = base_dir or Path.home() / ".claude"
+        cutoff_time = 0
+
+        if time_filter and time_filter.start_time:
+            cutoff_time = int(time_filter.start_time.timestamp())
+
+        total_tokens = 0
+        processed_dirs = set()
+
+        # Find all tool-results directories
+        for tool_dir in base.rglob("tool-results"):
+            if str(tool_dir) in processed_dirs:
+                continue
+            processed_dirs.add(str(tool_dir))
+
+            for txt_file in tool_dir.glob("*.txt"):
+                try:
+                    mtime = int(txt_file.stat().st_mtime)
+
+                    # Apply time filter based on file modification time
+                    if cutoff_time and mtime < cutoff_time:
+                        continue
+
+                    # Count tokens: ~4 characters per token
+                    file_tokens = txt_file.stat().st_size // 4
+                    total_tokens += file_tokens
+
+                except (OSError, IOError):
+                    continue
+
+        return total_tokens
+
+    def count_tool_output_tokens(
+        self,
+        time_filter: Optional[TimeFilter] = None,
+    ) -> int:
+        """
+        Count tokens from persisted tool output files (Claude Code 2.1.0+).
+
+        Since Claude Code 2.1.0, large tool outputs are stored in separate files
+        rather than in the session JSON. This method counts tokens from those files
+        using a rough approximation (4 chars per token).
+
+        Args:
+            time_filter: Optional time filter
+
+        Returns:
+            Total token count from tool output files
+        """
+        # First try to extract from session files
+        project_files = self.get_tool_output_files(time_filter=time_filter)
+
+        total_chars = 0
+        processed_files: Set[str] = set()
+
+        for project_path, files in project_files.items():
+            for file_path in files:
+                if file_path in processed_files:
+                    continue
+                processed_files.add(file_path)
+
+                try:
+                    file_path_obj = Path(file_path)
+                    if file_path_obj.exists():
+                        file_size = file_path_obj.stat().st_size
+                        # Rough approximation: 4 characters per token
+                        total_chars += file_size
+                except (OSError, IOError):
+                    continue
+
+        # If no file references found in sessions, scan directories directly
+        if total_chars == 0:
+            return self.scan_tool_output_files(time_filter=time_filter)
+
+        return total_chars // 4
+
+    def get_stats_with_tool_outputs(
+        self,
+        time_filter: Optional[TimeFilter] = None,
+        project_filter: Optional[str] = None,
+    ) -> SessionStats:
+        """
+        Get aggregated statistics including persisted tool outputs (Claude Code 2.1.0+).
+
+        This is the main method to use for accurate token counting with Claude Code 2.1.0+.
+
+        Args:
+            time_filter: Optional time filter
+            project_filter: Optional project path to filter by
+
+        Returns:
+            SessionStats with tool output tokens included
+        """
+        stats = self.get_stats(time_filter=time_filter, project_filter=project_filter)
+
+        # Add tool output tokens
+        tool_output_tokens = self.count_tool_output_tokens(time_filter=time_filter)
+        if tool_output_tokens > 0:
+            stats.total_tokens.tool_output_tokens = tool_output_tokens
+
+        return stats
+
+    def get_conversation_stats(
+        self,
+        time_filter: Optional[TimeFilter] = None,
+        limit: int = 200,
+    ) -> list[dict]:
+        """
+        Get per-conversation statistics grouped by session_id.
+
+        Args:
+            time_filter: Optional time filter
+            limit: Maximum number of conversations to return (sorted by cost desc)
+
+        Returns:
+            List of dicts with per-conversation stats, sorted by total_tokens desc
+        """
+        from pathlib import Path as _Path
+
+        # Map: session_id -> accumulated data
+        conv: dict[str, dict] = {}
+
+        for message in self.parse_all(time_filter=time_filter):
+            sid = message.session_id
+            if not sid:
+                continue
+
+            if sid not in conv:
+                conv[sid] = {
+                    "session_id": sid,
+                    "project": message.cwd or "",
+                    "start_time": None,
+                    "end_time": None,
+                    "message_count": 0,
+                    "turn_count": 0,
+                    "total_tokens": TokenUsage(),
+                    "model_usage": {},
+                    "peak_context_tokens": 0,
+                    "context_per_turn": [],
+                }
+
+            c = conv[sid]
+
+            # Update project (use last seen cwd)
+            if message.cwd:
+                c["project"] = message.cwd
+
+            # Update timestamps
+            msg_dt = message.datetime
+            if msg_dt is not None:
+                if c["start_time"] is None or msg_dt < c["start_time"]:
+                    c["start_time"] = msg_dt
+                if c["end_time"] is None or msg_dt > c["end_time"]:
+                    c["end_time"] = msg_dt
+
+            c["message_count"] += 1
+
+            if message.role == "user":
+                c["turn_count"] += 1
+
+            if message.usage:
+                c["total_tokens"] += message.usage
+
+                # Per-model tracking
+                if message.model:
+                    if message.model not in c["model_usage"]:
+                        c["model_usage"][message.model] = TokenUsage()
+                    c["model_usage"][message.model] += message.usage
+
+                # Track context growth on assistant messages.
+                # total_input_tokens = input + cache_creation + cache_read
+                # which equals the full context window size sent to the model.
+                if message.role == "assistant":
+                    ctx_size = message.usage.total_input_tokens
+                    if ctx_size > 0:
+                        c["context_per_turn"].append(ctx_size)
+                        if ctx_size > c["peak_context_tokens"]:
+                            c["peak_context_tokens"] = ctx_size
+
+        # Build final list with derived fields
+        result = []
+        for c in conv.values():
+            start = c["start_time"]
+            end = c["end_time"]
+            if start and end:
+                duration_minutes = (end - start).total_seconds() / 60.0
+            else:
+                duration_minutes = 0.0
+
+            total_tokens: TokenUsage = c["total_tokens"]
+            total_cacheable = (
+                total_tokens.cache_creation_input_tokens
+                + total_tokens.cache_read_input_tokens
+            )
+            cache_efficiency = (
+                (total_tokens.cache_read_input_tokens / total_cacheable * 100)
+                if total_cacheable > 0
+                else 0.0
+            )
+
+            project = c["project"]
+            result.append(
+                {
+                    "session_id": c["session_id"],
+                    "project": project,
+                    "project_name": _Path(project).name if project else "Unknown",
+                    "start_time": start,
+                    "end_time": end,
+                    "duration_minutes": round(duration_minutes, 1),
+                    "message_count": c["message_count"],
+                    "turn_count": c["turn_count"],
+                    "total_tokens": total_tokens,
+                    "model_usage": c["model_usage"],
+                    "peak_context_tokens": c["peak_context_tokens"],
+                    "context_per_turn": c["context_per_turn"],
+                    "cache_efficiency": round(cache_efficiency, 1),
+                }
+            )
+
+        # Sort by total tokens (descending) — cost ordering done in service layer
+        result.sort(
+            key=lambda x: x["total_tokens"].total_tokens,
+            reverse=True,
+        )
+
+        return result[:limit]
 
     def get_project_daily_stats(
         self,

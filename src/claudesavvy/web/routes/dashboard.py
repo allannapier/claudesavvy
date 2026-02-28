@@ -1280,6 +1280,63 @@ def api_tool_invocation_detail(tool_name: str, invocation_id: str) -> str:
         )
 
 
+@dashboard_bp.route("/conversations")
+def conversations() -> str:
+    """Render the conversations analytics page."""
+    try:
+        service = current_app.dashboard_service
+        default_period = "week"
+        time_filter = get_time_filter_from_period(default_period)
+        data = service.get_conversation_analytics(time_filter=time_filter)
+        return render_template(
+            "pages/conversations.html",
+            period=default_period,
+            **data,
+        )
+    except Exception as e:
+        logger.error(f"Error loading conversations page: {e}", exc_info=True)
+        return render_template(
+            "pages/conversations.html",
+            period="week",
+            conversations=[],
+            summary={},
+        )
+
+
+@dashboard_bp.route("/api/conversations")
+def api_conversations() -> str:
+    """HTMX endpoint to refresh conversations content."""
+    from flask import request
+
+    try:
+        service = current_app.dashboard_service
+        period = request.args.get("period", "week")
+        time_filter = get_time_filter_from_period(period)
+        data = service.get_conversation_analytics(time_filter=time_filter)
+        return render_template("partials/conversations_content.html", **data)
+    except Exception as e:
+        logger.error(f"Error loading conversations data: {e}", exc_info=True)
+        return '<div class="text-red-600 p-4">Error loading conversation data.</div>', 500
+
+
+@dashboard_bp.route("/api/conversation/<session_id>")
+def api_conversation_detail(session_id: str) -> str:
+    """HTMX endpoint to load conversation detail panel."""
+    from flask import request
+
+    try:
+        service = current_app.dashboard_service
+        period = request.args.get("period", "all")
+        time_filter = get_time_filter_from_period(period)
+        detail = service.get_conversation_detail(session_id, time_filter=time_filter)
+        if not detail:
+            return '<div class="text-gray-500 p-4">Conversation not found.</div>', 404
+        return render_template("partials/conversation_detail.html", conv=detail)
+    except Exception as e:
+        logger.error(f"Error loading conversation detail: {e}", exc_info=True)
+        return '<div class="text-red-600 p-4">Error loading conversation details.</div>', 500
+
+
 @dashboard_bp.route("/api/tools/timeline")
 def api_tools_timeline() -> str:
     """API endpoint for HTMX to fetch tools timeline data."""

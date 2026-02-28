@@ -1,6 +1,6 @@
 [project]
 name = "claudesavvy"
-version = "2.6.0"
+version = "2.7.0"
 description = "Web-based usage monitoring tool for Claude Code"
 authors = [{name = "Allan Napier"}]
 readme = "README.md"
@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-claudesavvy = "claudesavvy.cli:main"
+claudesavvy = "claudesavvy.cli:cli"
 
 [build-system]
 requires = ["setuptools>=61.0"]
