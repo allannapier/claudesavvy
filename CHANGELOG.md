@@ -2,6 +2,24 @@
 
 All notable changes to ClaudeSavvy will be documented in this file.
 
+## [2.6.0] - 2026-02-28
+
+### Added
+- **New**: Progress indicators on time filter buttons across all pages
+- **New**: Inline spinner icons for better visual feedback during data loading
+- **Enhancement**: Improved UX with immediate feedback when switching time ranges (15m, 1h, Today, Week, Month, All)
+
+### Changed
+- Updated all 7 metric pages with loading indicators (tokens, projects, files, integrations, features, subagents, teams)
+- Enhanced button layout with proper spinner positioning using flexbox
+- Improved HTMX integration with `hx-indicator` configuration for seamless loading states
+
+### Technical Details
+- Added `htmx-indicator` class to indicator `<span>` elements inside time filter buttons
+- Configured buttons with `hx-indicator="this"` for inline spinner display
+- Updated programmatic HTMX calls to pass clicked button as indicator target
+- Leveraged existing CSS animations for spinner rotation and visibility
+
 ## [2.1.0] - 2025-12-31
 
 ### Added
