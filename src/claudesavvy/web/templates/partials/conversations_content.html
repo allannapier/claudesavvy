@@ -61,7 +61,7 @@
                 {% set bar_filled = [((peak_pct / 100 * 8) | round(0) | int), 8] | min %}
                 {% set bar_empty = 8 - bar_filled %}
                 <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
-                    hx-get="/api/conversation/{{ conv.session_id }}"
+                    hx-get="/api/conversation/{{ conv.session_id }}?period={{ period }}"
                     hx-target="#conversation-detail-panel"
                     hx-swap="innerHTML">
                     <td class="px-4 py-3 text-sm text-gray-900 max-w-[140px]">

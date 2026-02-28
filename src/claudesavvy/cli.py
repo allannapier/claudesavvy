@@ -47,10 +47,12 @@ def calculate_cost_from_tokens(total_tokens: int, tool_output_tokens: int = 0) -
     return ((llm_tokens / 1_000_000) * 10.0) + ((tool_output_tokens / 1_000_000) * 10.0)
 
 
-@click.group()
-def cli():
+@click.group(invoke_without_command=True)
+@click.pass_context
+def cli(ctx):
     """ClaudeSavvy - Usage tracking for Claude Code."""
-    pass
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(serve)
 
 
 @cli.command(name='serve')

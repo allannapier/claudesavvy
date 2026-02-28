@@ -1851,7 +1851,7 @@ class DashboardService:
         from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING, get_model_display_name
 
         raw = self._session_parser.get_conversation_stats(
-            time_filter=time_filter, limit=limit
+            time_filter=time_filter, limit=None
         )
 
         def _calc_cost(model_usage: dict) -> float:
@@ -1925,8 +1925,9 @@ class DashboardService:
                 }
             )
 
-        # Sort by cost descending
+        # Sort by cost descending, then apply limit
         conversations.sort(key=lambda x: x["total_cost"], reverse=True)
+        conversations = conversations[:limit]
 
         total_cost = sum(c["total_cost"] for c in conversations)
         avg_cost = total_cost / len(conversations) if conversations else 0.0
@@ -1969,7 +1970,7 @@ class DashboardService:
         """
         from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING, get_model_display_name
 
-        raw = self._session_parser.get_conversation_stats(time_filter=time_filter, limit=2000)
+        raw = self._session_parser.get_conversation_stats(time_filter=time_filter, limit=None)
 
         for c in raw:
             if c["session_id"] != session_id:

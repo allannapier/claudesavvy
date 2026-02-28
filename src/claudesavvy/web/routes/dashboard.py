@@ -1313,7 +1313,7 @@ def api_conversations() -> str:
         period = request.args.get("period", "week")
         time_filter = get_time_filter_from_period(period)
         data = service.get_conversation_analytics(time_filter=time_filter)
-        return render_template("partials/conversations_content.html", **data)
+        return render_template("partials/conversations_content.html", period=period, **data)
     except Exception as e:
         logger.error(f"Error loading conversations data: {e}", exc_info=True)
         return '<div class="text-red-600 p-4">Error loading conversation data.</div>', 500
@@ -1326,12 +1326,12 @@ def api_conversation_detail(session_id: str) -> str:
 
     try:
         service = current_app.dashboard_service
-        period = request.args.get("period", "all")
+        period = request.args.get("period", "week")
         time_filter = get_time_filter_from_period(period)
         detail = service.get_conversation_detail(session_id, time_filter=time_filter)
         if not detail:
             return '<div class="text-gray-500 p-4">Conversation not found.</div>', 404
-        return render_template("partials/conversation_detail.html", conv=detail)
+        return render_template("partials/conversation_detail.html", conv=detail, period=period)
     except Exception as e:
         logger.error(f"Error loading conversation detail: {e}", exc_info=True)
         return '<div class="text-red-600 p-4">Error loading conversation details.</div>', 500

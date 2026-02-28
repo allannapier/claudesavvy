@@ -482,6 +482,8 @@ class SessionParser:
 
                         # Get project path
                         cwd = data.get("cwd")
+                        if not cwd:
+                            continue
 
                         # Look for tool_result messages with file references
                         message = data.get("message", {})
@@ -641,7 +643,7 @@ class SessionParser:
 
         Args:
             time_filter: Optional time filter
-            limit: Maximum number of conversations to return (sorted by cost desc)
+            limit: Maximum number of conversations to return (sorted by total_tokens desc; cost ordering is done in the service layer)
 
         Returns:
             List of dicts with per-conversation stats, sorted by total_tokens desc
