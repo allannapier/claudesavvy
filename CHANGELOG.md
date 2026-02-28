@@ -2,7 +2,7 @@
 
 All notable changes to ClaudeSavvy will be documented in this file.
 
-## [2.2.0] - 2026-02-28
+## [2.6.0] - 2026-02-28
 
 ### Added
 - **New**: Progress indicators on time filter buttons across all pages
