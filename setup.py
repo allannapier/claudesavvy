@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="claudesavvy",
-    version="2.7.0",
+    version="2.8.0",
     description="Web-based usage monitoring tool for Claude Code",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
