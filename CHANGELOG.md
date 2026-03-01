@@ -2,6 +2,38 @@
 
 All notable changes to ClaudeSavvy will be documented in this file.
 
+## [2.8.0] - 2026-03-01
+
+### Changed
+- **Major Enhancement**: Redesigned dashboard into a comprehensive navigation hub
+- Dashboard now serves as an entry point to all insight pages rather than a standalone data dump
+- Every section now links to deeper analysis for better user navigation
+
+### Added
+- **New**: Cache Hit Rate % stat card (links to /tokens page)
+- **New**: Top Conversation Cost stat card (links to /conversations page)
+- **New**: All 4 stat cards are now clickable navigation links
+- **New**: "View details" links added to all chart panel headers
+- **New**: Cost Over Time chart replacing Token Usage Over Time (more actionable metric)
+- **New**: Recent Conversations mini-feed with context utilization bars
+- **New**: "Explore Your Usage" navigation hub grid covering all 6 sub-pages:
+  - Tools & Features
+  - Sub-Agents
+  - Files
+  - Integrations
+  - Conversations
+  - Projects
+- **New**: Preview data for conversations, subagents, files, integrations, and features exposed in dashboard routes
+
+### Changed
+- Moved Top Projects by Cost inline with project trend chart for better layout
+- Changed default dashboard period from 1 hour to today for more relevant initial view
+- stat_card macro now accepts optional link parameter for navigation
+
+### Removed
+- Removed redundant Usage Overview table (data now in stat cards)
+- Removed redundant Token Summary table (moved to dedicated tokens page)
+
 ## [2.6.0] - 2026-02-28
 
 ### Added
