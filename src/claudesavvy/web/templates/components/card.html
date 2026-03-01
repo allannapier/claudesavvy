@@ -38,8 +38,9 @@
 
 
 {# Card Grid - Stat Card variant for displaying key metrics #}
-{% macro stat_card(label, value, trend=None, trend_label=None, subtitle=None, icon=None, class="", truncate_value=False) %}
-<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 {{ class }}">
+{% macro stat_card(label, value, trend=None, trend_label=None, subtitle=None, icon=None, class="", truncate_value=False, link=None) %}
+{% if link %}<a href="{{ link }}" class="block">{% endif %}
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 {{ 'hover:shadow-md hover:border-[#0770E3] transition-all duration-200 cursor-pointer' if link else '' }} {{ class }}">
     <div class="flex items-start justify-between">
         <div class="flex-1 min-w-0">
             <p class="text-sm font-medium text-gray-600">{{ label }}</p>
@@ -61,6 +62,7 @@
         {% endif %}
     </div>
 </div>
+{% if link %}</a>{% endif %}
 {% endmacro %}
 
 

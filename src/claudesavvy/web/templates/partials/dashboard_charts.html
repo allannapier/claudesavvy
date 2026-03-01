@@ -1,6 +1,12 @@
-<!-- Token Usage Trend Chart -->
+<!-- Cost Over Time Trend Chart -->
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-    <h3 class="text-lg font-semibold text-gray-900 mb-4">Token Usage Over Time</h3>
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">Cost Over Time</h3>
+        <a href="/tokens" class="text-sm text-[#0770E3] hover:underline flex items-center gap-1">
+            View breakdown
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </a>
+    </div>
     <div style="height: 250px;">
         <canvas id="tokenTrendChart"></canvas>
     </div>
@@ -8,7 +14,13 @@
 
 <!-- Cost Breakdown Pie Chart -->
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-    <h3 class="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">Cost Breakdown</h3>
+        <a href="/tokens" class="text-sm text-[#0770E3] hover:underline flex items-center gap-1">
+            View breakdown
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </a>
+    </div>
     <div class="flex justify-center" style="height: 250px;">
         <canvas id="costPieChart"></canvas>
     </div>
@@ -32,65 +44,91 @@
         const existingPieChart = Chart.getChart('costPieChart');
         if (existingPieChart) existingPieChart.destroy();
 
-        // Token Trend Chart
+        // Cost Trend Chart (top-left panel)
         const tokenCtx = document.getElementById('tokenTrendChart');
         if (tokenCtx) {
-            const trendLabels = {{ token_trend.labels|default([])|tojson }};
-            const trendData = {{ token_trend.data|default([])|tojson }};
+            const costLabels = {{ cost_trend.labels|default([])|tojson }};
+            const costDatasets = {{ cost_trend.datasets|default({})|tojson }};
 
-            new Chart(tokenCtx, {
-                type: 'line',
-                data: {
-                    labels: trendLabels,
-                    datasets: [{
-                        label: 'Total Tokens',
-                        data: trendData,
-                        borderColor: '#0770E3',
-                        backgroundColor: 'rgba(7, 112, 227, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                label: function(context) {
-                                    let value = context.parsed.y;
-                                    if (value >= 1000000) {
-                                        return 'Tokens: ' + (value / 1000000).toFixed(2) + 'M';
-                                    } else if (value >= 1000) {
-                                        return 'Tokens: ' + (value / 1000).toFixed(1) + 'K';
+            if (costLabels && costLabels.length > 0) {
+                new Chart(tokenCtx, {
+                    type: 'line',
+                    data: {
+                        labels: costLabels,
+                        datasets: [
+                            {
+                                label: 'Total Cost',
+                                data: costDatasets.total || [],
+                                borderColor: '#0770E3',
+                                backgroundColor: 'rgba(7, 112, 227, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Input',
+                                data: costDatasets.input || [],
+                                borderColor: '#34D399',
+                                backgroundColor: 'transparent',
+                                tension: 0.4,
+                                fill: false,
+                                borderWidth: 1.5,
+                                borderDash: [5, 5]
+                            },
+                            {
+                                label: 'Output',
+                                data: costDatasets.output || [],
+                                borderColor: '#F59E0B',
+                                backgroundColor: 'transparent',
+                                tension: 0.4,
+                                fill: false,
+                                borderWidth: 1.5,
+                                borderDash: [5, 5]
+                            },
+                            {
+                                label: 'Cache',
+                                data: costDatasets.cache || [],
+                                borderColor: '#8B5CF6',
+                                backgroundColor: 'transparent',
+                                tension: 0.4,
+                                fill: false,
+                                borderWidth: 1.5,
+                                borderDash: [5, 5]
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: { padding: 12, usePointStyle: true, font: { size: 11 } }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        let value = context.parsed.y;
+                                        return value > 0 ? label + '$' + value.toFixed(4) : null;
                                     }
-                                    return 'Tokens: ' + value.toLocaleString();
                                 }
                             }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    if (value >= 1000000) {
-                                        return (value / 1000000).toFixed(1) + 'M';
-                                    } else if (value >= 1000) {
-                                        return (value / 1000).toFixed(0) + 'K';
-                                    }
-                                    return value.toLocaleString();
-                                }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { callback: function(value) { return '$' + value.toFixed(2); } }
                             }
                         }
                     }
-                }
-            });
+                });
+            }
         }
 
         // Cost Pie Chart
