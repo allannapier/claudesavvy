@@ -1,8 +1,10 @@
 """Integration analyzer for MCP server usage."""
 
 from dataclasses import dataclass
+from typing import Optional
 
 from ..parsers.debug import DebugLogParser, MCPServerStats
+from ..utils.time_filter import TimeFilter
 
 
 @dataclass
@@ -33,12 +35,18 @@ class IntegrationAnalyzer:
         """
         self.debug_parser = debug_parser
 
-    def get_summary(self, limit: int = 10) -> IntegrationSummary:
+    def get_summary(
+        self, limit: int = 10, time_filter: Optional[TimeFilter] = None
+    ) -> IntegrationSummary:
         """
         Get summary of MCP integration usage.
 
         Args:
             limit: Maximum number of top servers to include
+            time_filter: Optional time filter (note: debug logs lack per-event
+                timestamps, so this parameter is accepted but not applied at
+                the log-parsing level; MCP tool-call filtering by time is
+                handled via the session tool parser instead)
 
         Returns:
             IntegrationSummary with aggregated data
@@ -49,7 +57,6 @@ class IntegrationAnalyzer:
         total_connections = sum(s.connection_count for s in all_stats.values())
         total_errors = sum(s.error_count for s in all_stats.values())
 
-        # Get top servers by tool call count
         top_servers = list(all_stats.items())[:limit]
 
         return IntegrationSummary(
@@ -57,12 +64,17 @@ class IntegrationAnalyzer:
             total_tool_calls=total_tool_calls,
             total_connections=total_connections,
             total_errors=total_errors,
-            top_servers=top_servers
+            top_servers=top_servers,
         )
 
-    def get_server_details(self) -> dict[str, MCPServerStats]:
+    def get_server_details(
+        self, time_filter: Optional[TimeFilter] = None
+    ) -> dict[str, MCPServerStats]:
         """
         Get detailed statistics for all MCP servers.
+
+        Args:
+            time_filter: Optional time filter (see get_summary docstring)
 
         Returns:
             Dict mapping server names to MCPServerStats

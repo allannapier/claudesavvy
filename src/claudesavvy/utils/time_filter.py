@@ -1,8 +1,31 @@
 """Utilities for filtering data by time ranges."""
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 from dateutil import parser as date_parser
+
+
+def _local_midnight() -> datetime:
+    """Return today's local midnight as a UTC-aware datetime."""
+    now_local = datetime.now().astimezone()
+    midnight_local = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    return midnight_local.astimezone(timezone.utc)
+
+
+def _last_monday_midnight() -> datetime:
+    """Return the most recent Monday's local midnight as a UTC-aware datetime."""
+    now_local = datetime.now().astimezone()
+    days_since_monday = now_local.weekday()  # 0=Mon, 6=Sun
+    monday_local = now_local - timedelta(days=days_since_monday)
+    monday_midnight = monday_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    return monday_midnight.astimezone(timezone.utc)
+
+
+def _this_month_start() -> datetime:
+    """Return the 1st of the current month at local midnight as a UTC-aware datetime."""
+    now_local = datetime.now().astimezone()
+    first_of_month = now_local.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    return first_of_month.astimezone(timezone.utc)
 
 
 class TimeFilter:
@@ -11,17 +34,18 @@ class TimeFilter:
     def __init__(
         self,
         start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None
+        end_time: Optional[datetime] = None,
     ):
         """
         Initialize time filter.
 
         Args:
-            start_time: Start of time range (inclusive)
-            end_time: End of time range (inclusive)
+            start_time: Start of time range (inclusive), UTC-aware
+            end_time: End of time range (inclusive), UTC-aware
         """
         self.start_time = start_time
-        self.end_time = end_time or datetime.now()
+        self.end_time = end_time or datetime.now(timezone.utc)
+        self._preset: Optional[str] = None  # set by from_preset for accurate descriptions
 
     @classmethod
     def from_preset(cls, preset: str) -> "TimeFilter":
@@ -29,36 +53,42 @@ class TimeFilter:
         Create a TimeFilter from a preset string.
 
         Args:
-            preset: One of 'today', 'week', 'month', 'quarter', 'year', or 'all'
+            preset: One of '15min', 'today', 'this_week', '7days', 'this_month',
+                    '3months', 'quarter', 'year', or 'all'
 
         Returns:
             TimeFilter instance
         """
-        now = datetime.now()
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        now = datetime.now(timezone.utc)
 
-        if preset == "today":
-            return cls(start_time=today_start, end_time=now)
-        elif preset == "week":
-            week_start = today_start - timedelta(days=7)
-            return cls(start_time=week_start, end_time=now)
-        elif preset == "month":
-            month_start = today_start - timedelta(days=30)
-            return cls(start_time=month_start, end_time=now)
+        instance: "TimeFilter"
+        if preset == "15min":
+            instance = cls(start_time=now - timedelta(minutes=15), end_time=now)
+        elif preset == "today":
+            instance = cls(start_time=_local_midnight(), end_time=now)
+        elif preset == "this_week":
+            instance = cls(start_time=_last_monday_midnight(), end_time=now)
+        elif preset == "7days":
+            instance = cls(start_time=now - timedelta(days=7), end_time=now)
+        elif preset == "this_month":
+            instance = cls(start_time=_this_month_start(), end_time=now)
+        elif preset == "3months":
+            instance = cls(start_time=now - timedelta(days=91), end_time=now)
         elif preset == "quarter":
-            # Calculate start of current quarter
-            # Q1: Jan-Mar (1-3), Q2: Apr-Jun (4-6), Q3: Jul-Sep (7-9), Q4: Oct-Dec (10-12)
-            current_month = now.month
-            quarter_start_month = ((current_month - 1) // 3) * 3 + 1
-            quarter_start = now.replace(month=quarter_start_month, day=1, hour=0, minute=0, second=0, microsecond=0)
-            return cls(start_time=quarter_start, end_time=now)
+            now_local = datetime.now().astimezone()
+            quarter_start_month = ((now_local.month - 1) // 3) * 3 + 1
+            quarter_start_local = now_local.replace(
+                month=quarter_start_month, day=1, hour=0, minute=0, second=0, microsecond=0
+            )
+            instance = cls(start_time=quarter_start_local.astimezone(timezone.utc), end_time=now)
         elif preset == "year":
-            year_start = today_start - timedelta(days=365)
-            return cls(start_time=year_start, end_time=now)
+            instance = cls(start_time=now - timedelta(days=365), end_time=now)
         elif preset == "all":
-            return cls(start_time=None, end_time=now)
+            instance = cls(start_time=None, end_time=now)
         else:
             raise ValueError(f"Unknown preset: {preset}")
+        instance._preset = preset
+        return instance
 
     @classmethod
     def from_since(cls, since_str: str) -> "TimeFilter":
@@ -71,8 +101,37 @@ class TimeFilter:
         Returns:
             TimeFilter instance
         """
+        now = datetime.now(timezone.utc)
         start_time = date_parser.parse(since_str)
-        return cls(start_time=start_time, end_time=datetime.now())
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=timezone.utc)
+        return cls(start_time=start_time, end_time=now)
+
+    @classmethod
+    def from_range(cls, start: date, end: date) -> "TimeFilter":
+        """
+        Create a TimeFilter from an explicit date range.
+
+        Args:
+            start: Start date (inclusive)
+            end: End date (inclusive, extended to end of day)
+
+        Returns:
+            TimeFilter instance
+
+        Raises:
+            ValueError: If end is before start or range exceeds 2 years
+        """
+        if end < start:
+            raise ValueError("end date must be on or after start date")
+        if (end - start).days > 730:
+            raise ValueError("date range cannot exceed 2 years")
+
+        # Start of start day in UTC; end of end day in UTC (23:59:59.999999, inclusive)
+        start_dt = datetime(start.year, start.month, start.day, tzinfo=timezone.utc)
+        end_dt = datetime(end.year, end.month, end.day, 23, 59, 59, 999999, tzinfo=timezone.utc)
+
+        return cls(start_time=start_dt, end_time=end_dt)
 
     def matches_timestamp_ms(self, timestamp_ms: int) -> bool:
         """
@@ -84,7 +143,7 @@ class TimeFilter:
         Returns:
             True if timestamp is within range
         """
-        dt = datetime.fromtimestamp(timestamp_ms / 1000)
+        dt = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
         return self.matches_datetime(dt)
 
     def matches_datetime(self, dt: datetime) -> bool:
@@ -92,14 +151,15 @@ class TimeFilter:
         Check if a datetime falls within the filter range.
 
         Args:
-            dt: Datetime to check
+            dt: Datetime to check (naive datetimes are assumed to be UTC)
 
         Returns:
             True if datetime is within range
         """
-        # Convert to naive datetime for comparison (remove timezone info)
-        if dt.tzinfo is not None:
-            dt = dt.replace(tzinfo=None)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = dt.astimezone(timezone.utc)
 
         if self.start_time and dt < self.start_time:
             return False
@@ -124,21 +184,13 @@ class TimeFilter:
         """
         Get a TimeFilter for the equivalent previous period.
 
-        For example, if this filter covers "last 7 days", the previous period
-        would cover the 7 days before that.
-
         Returns:
             TimeFilter for the previous period
         """
         if self.start_time is None:
-            # "All time" doesn't have a meaningful previous period
-            # Return an empty filter (will match nothing)
             return TimeFilter(start_time=None, end_time=None)
 
-        # Calculate the duration of the current period
         duration = self.end_time - self.start_time
-
-        # Previous period ends where current period starts
         prev_end = self.start_time
         prev_start = prev_end - duration
 
@@ -149,24 +201,23 @@ class TimeFilter:
         if self.start_time is None:
             return "All time"
 
-        now = datetime.now()
-        delta = now - self.start_time
+        _preset_labels = {
+            "15min": "Last 15 minutes",
+            "today": "Today",
+            "this_week": "This week",
+            "7days": "Last 7 days",
+            "this_month": "This month",
+            "3months": "Last 3 months",
+            "quarter": "This quarter",
+            "year": "Last year",
+            "all": "All time",
+        }
+        if self._preset and self._preset in _preset_labels:
+            return _preset_labels[self._preset]
 
-        # Check if it's current quarter
-        current_month = now.month
-        quarter_start_month = ((current_month - 1) // 3) * 3 + 1
-        quarter_start = now.replace(month=quarter_start_month, day=1, hour=0, minute=0, second=0, microsecond=0)
-
-        if self.start_time == quarter_start:
-            quarter_num = (quarter_start_month - 1) // 3 + 1
-            return f"Q{quarter_num} {now.year}"
-        elif delta.days == 0:
-            return "Today"
-        elif delta.days == 7:
-            return "Last 7 days"
-        elif delta.days == 30:
-            return "Last 30 days"
-        elif delta.days == 365:
-            return "Last year"
-        else:
-            return f"Since {self.start_time.strftime('%Y-%m-%d')}"
+        # Custom date range: use actual date strings
+        start_str = self.start_time.strftime('%Y-%m-%d')
+        end_str = self.end_time.strftime('%Y-%m-%d')
+        if start_str == end_str:
+            return f"Since {start_str}"
+        return f"{start_str} – {end_str}"

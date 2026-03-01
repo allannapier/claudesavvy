@@ -8,7 +8,7 @@
         </a>
     </div>
     <div style="height: 250px;">
-        <canvas id="tokenTrendChart"></canvas>
+        <canvas id="costTrendChart"></canvas>
     </div>
 </div>
 
@@ -39,13 +39,13 @@
     function initCharts() {
         // Destroy existing charts if they exist (for HTMX reloads)
         // Must be done right before creating new charts to avoid race conditions
-        const existingTokenChart = Chart.getChart('tokenTrendChart');
+        const existingTokenChart = Chart.getChart('costTrendChart');
         if (existingTokenChart) existingTokenChart.destroy();
         const existingPieChart = Chart.getChart('costPieChart');
         if (existingPieChart) existingPieChart.destroy();
 
         // Cost Trend Chart (top-left panel)
-        const tokenCtx = document.getElementById('tokenTrendChart');
+        const tokenCtx = document.getElementById('costTrendChart');
         if (tokenCtx) {
             const costLabels = {{ cost_trend.labels|default([])|tojson }};
             const costDatasets = {{ cost_trend.datasets|default({})|tojson }};

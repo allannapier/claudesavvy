@@ -5,7 +5,57 @@
 {% block title %}Token Usage - Claude Monitor{% endblock %}
 
 {% block main_content %}
-<div class="space-y-8" x-data="{ selectedPeriod: '{{ period|default('1hour') }}', selectedModel: '{{ selected_model|default('') }}' }">
+<div class="space-y-8" x-data="{
+    selectedPeriod: '{{ period|default('today') }}',
+    selectedModel: '{{ selected_model|default('') }}',
+    showCustom: false,
+    customStart: '',
+    customEnd: '',
+    init() {
+        const legacyMap = { week: '7days', month: 'this_month', '1hour': '15min' };
+        const raw = localStorage.getItem('cs_period_tokens');
+        const stored = raw && legacyMap[raw] ? legacyMap[raw] : raw;
+        const validPeriods = ['15min','today','this_week','7days','this_month','3months','all','custom'];
+        if (stored && validPeriods.includes(stored)) {
+            this.selectedPeriod = stored;
+            if (stored === 'custom') {
+                this.customStart = localStorage.getItem('cs_period_tokens_start') || '';
+                this.customEnd   = localStorage.getItem('cs_period_tokens_end')   || '';
+                if (this.customStart && this.customEnd) {
+                    this.showCustom = true;
+                } else {
+                    this.selectedPeriod = '{{ period|default('today') }}';
+                }
+            }
+            const canReload = stored !== 'custom' || (this.customStart && this.customEnd);
+            if (canReload && stored !== '{{ period|default('today') }}') {
+                this.$nextTick(() => this._reload(this.selectedPeriod));
+            }
+        }
+    },
+    _url(period) {
+        let url = '/api/tokens?period=' + period + '&model=' + this.selectedModel;
+        if (period === 'custom' && this.customStart && this.customEnd) {
+            url += '&start=' + this.customStart + '&end=' + this.customEnd;
+        }
+        return url;
+    },
+    _reload(period) {
+        htmx.ajax('GET', this._url(period), {target: '#tokens-content', swap: 'innerHTML'});
+    },
+    select(period) {
+        this.selectedPeriod = period;
+        this.showCustom = (period === 'custom');
+        localStorage.setItem('cs_period_tokens', period);
+        if (period !== 'custom') { this._reload(period); }
+    },
+    applyCustom() {
+        if (!this.customStart || !this.customEnd) return;
+        localStorage.setItem('cs_period_tokens_start', this.customStart);
+        localStorage.setItem('cs_period_tokens_end',   this.customEnd);
+        this._reload('custom');
+    }
+}">
     <!-- Page Title and Filters -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -20,7 +70,7 @@
                 <select
                     id="model-filter"
                     name="model"
-                    @change="selectedModel = $event.target.value; htmx.ajax('GET', '/api/tokens?period=' + selectedPeriod + '&model=' + $event.target.value, {target: '#tokens-content', swap: 'innerHTML'})"
+                    @change="selectedModel = $event.target.value; _reload(selectedPeriod)"
                     class="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]"
                 >
                     <option value="">All Models</option>
@@ -31,63 +81,37 @@
             </div>
 
             <!-- Time Filter -->
-            <div class="flex gap-1 sm:gap-2 flex-nowrap items-center" role="group">
-                <button
-                    @click="selectedPeriod = '15min'; htmx.ajax('GET', '/api/tokens?period=15min&model=' + selectedModel, {target: '#tokens-content', swap: 'innerHTML', indicator: $event.target})"
-                    :class="selectedPeriod === '15min' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
-                    class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap flex items-center gap-1"
+            <div class="flex flex-wrap items-center gap-2">
+                <select
+                    @change="select($event.target.value)"
+                    :value="selectedPeriod"
+                    class="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3] cursor-pointer"
                 >
-                    <span class="htmx-indicator"><svg class="w-3 h-3 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg></span>
-                    15m
-                </button>
-                <button
-                    @click="selectedPeriod = '1hour'; htmx.ajax('GET', '/api/tokens?period=1hour&model=' + selectedModel, {target: '#tokens-content', swap: 'innerHTML', indicator: $event.target})"
-                    :class="selectedPeriod === '1hour' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
-                    class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap flex items-center gap-1"
-                >
-                    <span class="htmx-indicator"><svg class="w-3 h-3 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg></span>
-                    1h
-                </button>
-                <button
-                    @click="selectedPeriod = 'today'; htmx.ajax('GET', '/api/tokens?period=today&model=' + selectedModel, {target: '#tokens-content', swap: 'innerHTML', indicator: $event.target})"
-                    :class="selectedPeriod === 'today' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
-                    class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap flex items-center gap-1"
-                >
-                    <span class="htmx-indicator"><svg class="w-3 h-3 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg></span>
-                    Today
-                </button>
-                <button
-                    @click="selectedPeriod = 'week'; htmx.ajax('GET', '/api/tokens?period=week&model=' + selectedModel, {target: '#tokens-content', swap: 'innerHTML', indicator: $event.target})"
-                    :class="selectedPeriod === 'week' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
-                    class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap flex items-center gap-1"
-                >
-                    <span class="htmx-indicator"><svg class="w-3 h-3 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg></span>
-                    Week
-                </button>
-                <button
-                    @click="selectedPeriod = 'month'; htmx.ajax('GET', '/api/tokens?period=month&model=' + selectedModel, {target: '#tokens-content', swap: 'innerHTML', indicator: $event.target})"
-                    :class="selectedPeriod === 'month' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
-                    class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap flex items-center gap-1"
-                >
-                    <span class="htmx-indicator"><svg class="w-3 h-3 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg></span>
-                    Month
-                </button>
-                <button
-                    @click="selectedPeriod = 'all'; htmx.ajax('GET', '/api/tokens?period=all&model=' + selectedModel, {target: '#tokens-content', swap: 'innerHTML', indicator: $event.target})"
-                    :class="selectedPeriod === 'all' ? 'bg-[#0770E3] text-white border-[#0770E3]' : 'bg-white text-gray-700 border-gray-300'"
-                    class="px-2 sm:px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2 whitespace-nowrap flex items-center gap-1"
-                >
-                    <span class="htmx-indicator"><svg class="w-3 h-3 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg></span>
-                    All
-                </button>
+                    <option value="15min">Last 15 min</option>
+                    <option value="today">Today</option>
+                    <option value="this_week">This week</option>
+                    <option value="7days">Last 7 days</option>
+                    <option value="this_month">This month</option>
+                    <option value="3months">Last 3 months</option>
+                    <option value="all">All time</option>
+                    <option value="custom">Custom range…</option>
+                </select>
+
+                <!-- Custom date inputs -->
+                <div x-show="showCustom" x-transition class="flex items-center gap-2">
+                    <input type="date" x-model="customStart" :max="customEnd||undefined" class="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0770E3]" />
+                    <span class="text-gray-400 text-sm">–</span>
+                    <input type="date" x-model="customEnd" :min="customStart||undefined" @change="applyCustom()" class="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0770E3]" />
+                    <button @click="applyCustom()" :disabled="!customStart||!customEnd" class="px-3 py-2 text-sm font-medium rounded-lg bg-[#0770E3] text-white disabled:opacity-40 disabled:cursor-not-allowed">Apply</button>
+                </div>
 
                 <!-- Loading Spinner -->
-                <div class="htmx-indicator ml-2">
-                    <svg class="animate-spin h-5 w-5 text-[#0770E3]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <span class="htmx-indicator text-[#0770E3]">
+                    <svg class="w-5 h-5 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
                     </svg>
-                </div>
+                </span>
             </div>
         </div>
     </div>

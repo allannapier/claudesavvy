@@ -5,7 +5,7 @@ by wrapping existing parsers and analyzers. It reuses all existing business logi
 while returning data as dicts/dataclasses suitable for web rendering.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Dict, List, Any
 
@@ -546,7 +546,7 @@ class DashboardService:
         # Calculate days from time filter or use default
         days = 7
         if time_filter and time_filter.start_time:
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             delta = now - time_filter.start_time
             days = max(1, delta.days + 1)  # Include current partial day, at least 1 day
 
@@ -556,7 +556,7 @@ class DashboardService:
 
         labels = []
         data = []
-        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today = datetime.now(timezone.utc).date()
 
         for date_str in sorted(daily_stats.keys()):
             stats = daily_stats[date_str]
@@ -565,7 +565,7 @@ class DashboardService:
             data.append(total)
 
             # Create human-readable label based on how many days we're showing
-            date = datetime.strptime(date_str, "%Y-%m-%d")
+            date = datetime.strptime(date_str, "%Y-%m-%d").date()
             days_ago = (today - date).days
 
             if days <= 7:
@@ -600,7 +600,7 @@ class DashboardService:
         # Calculate days from time filter or use default
         days = 7
         if time_filter and time_filter.start_time:
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             delta = now - time_filter.start_time
             days = max(1, delta.days + 1)
 
@@ -614,7 +614,7 @@ class DashboardService:
         output_costs = []
         cache_costs = []
 
-        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today = datetime.now(timezone.utc).date()
 
         for date_str in sorted(daily_costs.keys()):
             costs = daily_costs[date_str]
@@ -624,7 +624,7 @@ class DashboardService:
             cache_costs.append(costs["cache_write_cost"] + costs["cache_read_cost"])
 
             # Create human-readable label based on how many days we're showing
-            date = datetime.strptime(date_str, "%Y-%m-%d")
+            date = datetime.strptime(date_str, "%Y-%m-%d").date()
             days_ago = (today - date).days
 
             if days <= 7:
@@ -667,7 +667,7 @@ class DashboardService:
         # Calculate days from time filter or use default
         days = 7
         if time_filter and time_filter.start_time:
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             delta = now - time_filter.start_time
             days = max(1, delta.days + 1)
 
@@ -679,11 +679,11 @@ class DashboardService:
         labels = []
         if project_daily_stats:
             first_project = list(project_daily_stats.values())[0]
-            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            today = datetime.now(timezone.utc).date()
 
             for date_str in sorted(first_project.keys()):
                 # Create human-readable label
-                date = datetime.strptime(date_str, "%Y-%m-%d")
+                date = datetime.strptime(date_str, "%Y-%m-%d").date()
                 days_ago = (today - date).days
 
                 if days <= 7:

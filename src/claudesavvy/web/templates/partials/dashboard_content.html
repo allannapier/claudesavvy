@@ -65,10 +65,13 @@
         </thead>
         <tbody class="divide-y divide-gray-200">
             {% for conv in conversations_preview.recent %}
-            {% set ctx_pct = (conv.peak_context_tokens / 200000 * 100) | round(0) | int %}
+            {% set _peak_ctx = conv.peak_context_tokens|default(0)|int %}
+            {% set ctx_pct = (_peak_ctx / 200000 * 100) | round(0) | int %}
             {% set ctx_blocks = (ctx_pct / 10) | round(0, 'floor') | int %}
-            <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="window.location='/conversations'">
-                <td class="px-6 py-3 text-sm text-gray-900 font-medium truncate max-w-[160px]" title="{{ conv.project_name }}">{{ conv.project_name }}</td>
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-3 text-sm font-medium truncate max-w-[160px]" title="{{ conv.project_name }}">
+                    <a href="/conversations" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">{{ conv.project_name }}</a>
+                </td>
                 <td class="px-6 py-3 text-sm text-gray-500 hidden md:table-cell whitespace-nowrap">
                     {{ conv.start_date }} {{ conv.start_time_str }}
                 </td>
