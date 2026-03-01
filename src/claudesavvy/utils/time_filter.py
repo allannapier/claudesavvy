@@ -45,6 +45,7 @@ class TimeFilter:
         """
         self.start_time = start_time
         self.end_time = end_time or datetime.now(timezone.utc)
+        self._preset: Optional[str] = None  # set by from_preset for accurate descriptions
 
     @classmethod
     def from_preset(cls, preset: str) -> "TimeFilter":
@@ -60,31 +61,34 @@ class TimeFilter:
         """
         now = datetime.now(timezone.utc)
 
+        instance: "TimeFilter"
         if preset == "15min":
-            return cls(start_time=now - timedelta(minutes=15), end_time=now)
+            instance = cls(start_time=now - timedelta(minutes=15), end_time=now)
         elif preset == "today":
-            return cls(start_time=_local_midnight(), end_time=now)
+            instance = cls(start_time=_local_midnight(), end_time=now)
         elif preset == "this_week":
-            return cls(start_time=_last_monday_midnight(), end_time=now)
+            instance = cls(start_time=_last_monday_midnight(), end_time=now)
         elif preset == "7days":
-            return cls(start_time=now - timedelta(days=7), end_time=now)
+            instance = cls(start_time=now - timedelta(days=7), end_time=now)
         elif preset == "this_month":
-            return cls(start_time=_this_month_start(), end_time=now)
+            instance = cls(start_time=_this_month_start(), end_time=now)
         elif preset == "3months":
-            return cls(start_time=now - timedelta(days=91), end_time=now)
+            instance = cls(start_time=now - timedelta(days=91), end_time=now)
         elif preset == "quarter":
             now_local = datetime.now().astimezone()
             quarter_start_month = ((now_local.month - 1) // 3) * 3 + 1
             quarter_start_local = now_local.replace(
                 month=quarter_start_month, day=1, hour=0, minute=0, second=0, microsecond=0
             )
-            return cls(start_time=quarter_start_local.astimezone(timezone.utc), end_time=now)
+            instance = cls(start_time=quarter_start_local.astimezone(timezone.utc), end_time=now)
         elif preset == "year":
-            return cls(start_time=now - timedelta(days=365), end_time=now)
+            instance = cls(start_time=now - timedelta(days=365), end_time=now)
         elif preset == "all":
-            return cls(start_time=None, end_time=now)
+            instance = cls(start_time=None, end_time=now)
         else:
             raise ValueError(f"Unknown preset: {preset}")
+        instance._preset = preset
+        return instance
 
     @classmethod
     def from_since(cls, since_str: str) -> "TimeFilter":
@@ -123,9 +127,9 @@ class TimeFilter:
         if (end - start).days > 730:
             raise ValueError("date range cannot exceed 2 years")
 
-        # Start of start day in UTC; end of end day in UTC (midnight next day)
+        # Start of start day in UTC; end of end day in UTC (23:59:59.999999, inclusive)
         start_dt = datetime(start.year, start.month, start.day, tzinfo=timezone.utc)
-        end_dt = datetime(end.year, end.month, end.day, 23, 59, 59, tzinfo=timezone.utc)
+        end_dt = datetime(end.year, end.month, end.day, 23, 59, 59, 999999, tzinfo=timezone.utc)
 
         return cls(start_time=start_dt, end_time=end_dt)
 
@@ -197,20 +201,21 @@ class TimeFilter:
         if self.start_time is None:
             return "All time"
 
-        now = datetime.now(timezone.utc)
-        duration_seconds = (now - self.start_time).total_seconds()
+        _preset_labels = {
+            "15min": "Last 15 minutes",
+            "today": "Today",
+            "this_week": "This week",
+            "7days": "Last 7 days",
+            "this_month": "This month",
+            "3months": "Last 3 months",
+            "quarter": "This quarter",
+            "year": "Last year",
+            "all": "All time",
+        }
+        if self._preset and self._preset in _preset_labels:
+            return _preset_labels[self._preset]
 
-        if duration_seconds < 1800:
-            return "Last 15 minutes"
-        if duration_seconds < 3600 * 25:
-            return "Today"
-        if duration_seconds < 3600 * 24 * 8:
-            return "Last 7 days"
-        if duration_seconds < 3600 * 24 * 35:
-            return "This month"
-        if duration_seconds < 3600 * 24 * 100:
-            return "Last 3 months"
-
+        # Custom date range: use actual date strings
         start_str = self.start_time.strftime('%Y-%m-%d')
         end_str = self.end_time.strftime('%Y-%m-%d')
         if start_str == end_str:

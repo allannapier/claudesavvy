@@ -13,17 +13,24 @@
     init() {
         window.selectedPeriod = this.selectedPeriod;
         this.$watch('selectedPeriod', v => window.selectedPeriod = v);
-        const stored = localStorage.getItem('cs_period_projects');
+        const legacyMap = { week: '7days', month: 'this_month', '1hour': '15min' };
+        const raw = localStorage.getItem('cs_period_projects');
+        const stored = raw && legacyMap[raw] ? legacyMap[raw] : raw;
         const validPeriods = ['15min','today','this_week','7days','this_month','3months','all','custom'];
         if (stored && validPeriods.includes(stored)) {
             this.selectedPeriod = stored;
             if (stored === 'custom') {
-                this.showCustom = true;
                 this.customStart = localStorage.getItem('cs_period_projects_start') || '';
                 this.customEnd   = localStorage.getItem('cs_period_projects_end')   || '';
+                if (this.customStart && this.customEnd) {
+                    this.showCustom = true;
+                } else {
+                    this.selectedPeriod = '{{ period|default('today') }}';
+                }
             }
-            if (stored !== '{{ period|default('today') }}') {
-                this.$nextTick(() => this._reload(stored));
+            const canReload = stored !== 'custom' || (this.customStart && this.customEnd);
+            if (canReload && stored !== '{{ period|default('today') }}') {
+                this.$nextTick(() => this._reload(this.selectedPeriod));
             }
         }
     },

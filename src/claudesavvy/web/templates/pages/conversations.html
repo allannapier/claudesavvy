@@ -12,7 +12,8 @@
             <p class="mt-2 text-gray-600">Per-conversation token spend, context growth, and cost analytics</p>
         </div>
 
-        {% with current_url='/api/conversations', target_id='conversations-content', show_realtime=true, storage_key='cs_period_conversations', default_period=period|default('today') %}
+        {% set _conv_period = 'today' if period in ('week', 'month', '1hour') else period|default('today') %}
+        {% with current_url='/api/conversations', target_id='conversations-content', show_realtime=true, storage_key='cs_period_conversations', default_period=_conv_period %}
             {% include 'partials/time_filter.html' %}
         {% endwith %}
     </div>

@@ -82,11 +82,11 @@ class UsageAnalyzer:
         if self.time_filter:
             if self.time_filter.start_time:
                 if earliest and earliest.tzinfo is None:
-                    earliest = earliest.replace(tzinfo=timezone.utc)
+                    earliest = datetime.fromtimestamp(earliest.timestamp(), tz=timezone.utc)
                 earliest = max(earliest, self.time_filter.start_time) if earliest else self.time_filter.start_time
             if self.time_filter.end_time:
                 if latest and latest.tzinfo is None:
-                    latest = latest.replace(tzinfo=timezone.utc)
+                    latest = datetime.fromtimestamp(latest.timestamp(), tz=timezone.utc)
                 latest = min(latest, self.time_filter.end_time) if latest else self.time_filter.end_time
 
         # Get session statistics

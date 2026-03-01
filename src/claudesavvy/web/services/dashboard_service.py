@@ -556,7 +556,7 @@ class DashboardService:
 
         labels = []
         data = []
-        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today = datetime.now(timezone.utc).date()
 
         for date_str in sorted(daily_stats.keys()):
             stats = daily_stats[date_str]
@@ -565,7 +565,7 @@ class DashboardService:
             data.append(total)
 
             # Create human-readable label based on how many days we're showing
-            date = datetime.strptime(date_str, "%Y-%m-%d")
+            date = datetime.strptime(date_str, "%Y-%m-%d").date()
             days_ago = (today - date).days
 
             if days <= 7:
@@ -614,7 +614,7 @@ class DashboardService:
         output_costs = []
         cache_costs = []
 
-        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today = datetime.now(timezone.utc).date()
 
         for date_str in sorted(daily_costs.keys()):
             costs = daily_costs[date_str]
@@ -624,7 +624,7 @@ class DashboardService:
             cache_costs.append(costs["cache_write_cost"] + costs["cache_read_cost"])
 
             # Create human-readable label based on how many days we're showing
-            date = datetime.strptime(date_str, "%Y-%m-%d")
+            date = datetime.strptime(date_str, "%Y-%m-%d").date()
             days_ago = (today - date).days
 
             if days <= 7:
@@ -679,11 +679,11 @@ class DashboardService:
         labels = []
         if project_daily_stats:
             first_project = list(project_daily_stats.values())[0]
-            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            today = datetime.now(timezone.utc).date()
 
             for date_str in sorted(first_project.keys()):
                 # Create human-readable label
-                date = datetime.strptime(date_str, "%Y-%m-%d")
+                date = datetime.strptime(date_str, "%Y-%m-%d").date()
                 days_ago = (today - date).days
 
                 if days <= 7:

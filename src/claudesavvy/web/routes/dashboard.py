@@ -1,6 +1,6 @@
 """Dashboard route handler for Claude Monitor web application."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any, Dict, Optional
 from flask import Blueprint, render_template, current_app
 import logging
@@ -46,10 +46,9 @@ def get_time_filter_from_period(
             end_date = date.fromisoformat(end)
             return TimeFilter.from_range(start_date, end_date)
         except (ValueError, TypeError):
-            # Fall through to default (today) on bad input
             period = "today"
 
-    # Named presets
+    # Named presets (including legacy aliases for bookmarked URLs)
     preset_map = {
         "15min": "15min",
         "today": "today",
@@ -57,17 +56,19 @@ def get_time_filter_from_period(
         "7days": "7days",
         "this_month": "this_month",
         "3months": "3months",
-        # legacy aliases
         "week": "7days",
         "month": "this_month",
-        "1hour": "today",
+        "1hour": "15min",  # closest supported preset to the old 1-hour window
     }
 
     preset = preset_map.get(period)
     if preset:
         return TimeFilter.from_preset(preset)
 
-    return None
+    # Unknown period: fall back to "today" rather than silently returning all-time
+    if period not in _VALID_PERIODS:
+        logger.warning("Unknown period %r requested, defaulting to 'today'", period)
+    return TimeFilter.from_preset("today")
 
 
 def _build_preview_data(service: Any, time_filter: Optional[TimeFilter]) -> Dict[str, Any]:
@@ -78,7 +79,7 @@ def _build_preview_data(service: Any, time_filter: Optional[TimeFilter]) -> Dict
     convs = conv_analytics.get("conversations", [])
     recent_conversations = sorted(
         convs,
-        key=lambda x: x.get("start_time") or datetime.min,
+        key=lambda x: x.get("start_time") or datetime.min.replace(tzinfo=timezone.utc),
         reverse=True,
     )[:5]
     conversations_preview: Dict[str, Any] = {
