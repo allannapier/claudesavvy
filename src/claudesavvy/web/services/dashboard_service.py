@@ -5,7 +5,7 @@ by wrapping existing parsers and analyzers. It reuses all existing business logi
 while returning data as dicts/dataclasses suitable for web rendering.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Dict, List, Any
 
@@ -546,7 +546,7 @@ class DashboardService:
         # Calculate days from time filter or use default
         days = 7
         if time_filter and time_filter.start_time:
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             delta = now - time_filter.start_time
             days = max(1, delta.days + 1)  # Include current partial day, at least 1 day
 
@@ -600,7 +600,7 @@ class DashboardService:
         # Calculate days from time filter or use default
         days = 7
         if time_filter and time_filter.start_time:
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             delta = now - time_filter.start_time
             days = max(1, delta.days + 1)
 
@@ -667,7 +667,7 @@ class DashboardService:
         # Calculate days from time filter or use default
         days = 7
         if time_filter and time_filter.start_time:
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             delta = now - time_filter.start_time
             days = max(1, delta.days + 1)
 

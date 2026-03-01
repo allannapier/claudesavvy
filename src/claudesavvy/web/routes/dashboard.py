@@ -1,6 +1,6 @@
 """Dashboard route handler for Claude Monitor web application."""
 
-from datetime import datetime, timedelta
+from datetime import date, datetime
 from typing import Any, Dict, Optional
 from flask import Blueprint, render_template, current_app
 import logging
@@ -11,13 +11,27 @@ logger = logging.getLogger(__name__)
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
+# Valid period preset names for validation
+_VALID_PERIODS = frozenset({
+    "15min", "today", "this_week", "7days", "this_month", "3months", "all",
+    # legacy aliases kept for bookmarked URLs
+    "week", "month", "1hour",
+})
 
-def get_time_filter_from_period(period: str) -> Optional[TimeFilter]:
+
+def get_time_filter_from_period(
+    period: str,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+) -> Optional[TimeFilter]:
     """
     Create a TimeFilter from a period string.
 
     Args:
-        period: One of '15min', '1hour', 'today', 'week', 'month', or 'all'
+        period: One of '15min', 'today', 'this_week', '7days', 'this_month',
+                '3months', 'all', or 'custom'
+        start: ISO date string (YYYY-MM-DD) used when period='custom'
+        end: ISO date string (YYYY-MM-DD) used when period='custom'
 
     Returns:
         TimeFilter instance or None for 'all'
@@ -25,23 +39,85 @@ def get_time_filter_from_period(period: str) -> Optional[TimeFilter]:
     if period == "all":
         return None
 
-    now = datetime.now()
-    start_time = None
+    # Custom date range
+    if period == "custom" and start and end:
+        try:
+            start_date = date.fromisoformat(start)
+            end_date = date.fromisoformat(end)
+            return TimeFilter.from_range(start_date, end_date)
+        except (ValueError, TypeError):
+            # Fall through to default (today) on bad input
+            period = "today"
 
-    if period == "15min":
-        start_time = now - timedelta(minutes=15)
-    elif period == "1hour":
-        start_time = now - timedelta(hours=1)
-    elif period == "today":
-        start_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    elif period == "week":
-        start_time = now - timedelta(days=7)
-    elif period == "month":
-        start_time = now - timedelta(days=30)
+    # Named presets
+    preset_map = {
+        "15min": "15min",
+        "today": "today",
+        "this_week": "this_week",
+        "7days": "7days",
+        "this_month": "this_month",
+        "3months": "3months",
+        # legacy aliases
+        "week": "7days",
+        "month": "this_month",
+        "1hour": "today",
+    }
 
-    if start_time:
-        return TimeFilter(start_time=start_time, end_time=now)
+    preset = preset_map.get(period)
+    if preset:
+        return TimeFilter.from_preset(preset)
+
     return None
+
+
+def _build_preview_data(service: Any, time_filter: Optional[TimeFilter]) -> Dict[str, Any]:
+    """Build preview data for the dashboard navigation hub cards."""
+    conv_analytics: Dict[str, Any] = service.get_conversation_analytics(
+        time_filter=time_filter, limit=200
+    )
+    convs = conv_analytics.get("conversations", [])
+    recent_conversations = sorted(
+        convs,
+        key=lambda x: x.get("start_time") or datetime.min,
+        reverse=True,
+    )[:5]
+    conversations_preview: Dict[str, Any] = {
+        "recent": recent_conversations,
+        "total_count": conv_analytics.get("summary", {}).get("total_conversations", 0),
+        "most_expensive_cost": conv_analytics.get("summary", {}).get("most_expensive_cost", 0),
+        "most_expensive_project": convs[0].get("project_name", "") if convs else "",
+    }
+
+    subagents_preview: Dict[str, Any] = service.get_subagent_summary(
+        time_filter=time_filter
+    )
+
+    file_data: Dict[str, Any] = service.get_file_statistics(
+        limit=3, time_filter=time_filter
+    )
+    files_preview: Dict[str, Any] = {
+        "total_files": file_data.get("total_files", 0),
+        "most_edited_file": file_data.get("most_edited_file", ""),
+        "total_operations": file_data.get("total_operations", 0),
+    }
+
+    integrations_preview: Dict[str, Any] = service.get_integration_summary(
+        time_filter=time_filter
+    )
+
+    top_tools: Dict[str, Any] = service.get_top_tools(limit=1, time_filter=time_filter)
+    features_preview: Dict[str, Any] = {
+        "top_tool": top_tools["tools"][0] if top_tools.get("tools") else None,
+        "total_tool_calls": top_tools.get("total_calls", 0),
+    }
+
+    return {
+        "conversations_preview": conversations_preview,
+        "subagents_preview": subagents_preview,
+        "files_preview": files_preview,
+        "integrations_preview": integrations_preview,
+        "features_preview": features_preview,
+    }
 
 
 @dashboard_bp.route("/")
@@ -95,46 +171,7 @@ def index() -> str:
         )
 
         # Preview data for navigation hub cards
-        conv_analytics: Dict[str, Any] = service.get_conversation_analytics(
-            time_filter=time_filter, limit=200
-        )
-        convs = conv_analytics.get("conversations", [])
-        recent_conversations = sorted(
-            convs,
-            key=lambda x: x.get("start_time") or datetime.min,
-            reverse=True,
-        )[:5]
-        conversations_preview: Dict[str, Any] = {
-            "recent": recent_conversations,
-            "total_count": conv_analytics["summary"]["total_conversations"],
-            "most_expensive_cost": conv_analytics["summary"]["most_expensive_cost"],
-            "most_expensive_project": convs[0]["project_name"] if convs else "",
-        }
-
-        subagents_preview: Dict[str, Any] = service.get_subagent_summary(
-            time_filter=time_filter
-        )
-
-        file_data: Dict[str, Any] = service.get_file_statistics(
-            limit=3, time_filter=time_filter
-        )
-        files_preview: Dict[str, Any] = {
-            "total_files": file_data.get("total_files", 0),
-            "most_edited_file": file_data.get("most_edited_file", ""),
-            "total_operations": file_data.get("total_operations", 0),
-        }
-
-        integrations_preview: Dict[str, Any] = service.get_integration_summary(
-            time_filter=time_filter
-        )
-
-        top_tools: Dict[str, Any] = service.get_top_tools(
-            limit=1, time_filter=time_filter
-        )
-        features_preview: Dict[str, Any] = {
-            "top_tool": top_tools["tools"][0] if top_tools.get("tools") else None,
-            "total_tool_calls": top_tools.get("total_calls", 0),
-        }
+        previews = _build_preview_data(service, time_filter)
 
         logger.debug("Dashboard data fetched successfully")
 
@@ -147,12 +184,8 @@ def index() -> str:
             models=model_breakdown,
             cost_trend=cost_trend,
             project_cost_trend=project_cost_trend,
-            conversations_preview=conversations_preview,
-            subagents_preview=subagents_preview,
-            files_preview=files_preview,
-            integrations_preview=integrations_preview,
-            features_preview=features_preview,
             period="today",
+            **previews,
         )
 
     except ValueError as e:
@@ -200,7 +233,7 @@ def tokens() -> str:
     try:
         service = current_app.dashboard_service
         # Default to 1hour filter on initial page load
-        default_period = "1hour"
+        default_period = "today"
         time_filter = get_time_filter_from_period(default_period)
         token_summary: Dict[str, Any] = service.get_token_summary(
             time_filter=time_filter
@@ -249,7 +282,7 @@ def projects() -> str:
     try:
         service = current_app.dashboard_service
         # Default to 1hour filter on initial page load
-        default_period = "1hour"
+        default_period = "today"
         time_filter = get_time_filter_from_period(default_period)
         project_breakdown: Dict[str, Any] = service.get_project_breakdown(
             time_filter=time_filter
@@ -289,7 +322,7 @@ def files() -> str:
     try:
         service = current_app.dashboard_service
         # Default to 1hour filter on initial page load
-        default_period = "1hour"
+        default_period = "today"
         time_filter = get_time_filter_from_period(default_period)
 
         # Get file statistics
@@ -310,7 +343,7 @@ def integrations() -> str:
     try:
         service = current_app.dashboard_service
         # Default to 1hour filter on initial page load
-        default_period = "1hour"
+        default_period = "today"
         time_filter = get_time_filter_from_period(default_period)
 
         # Get MCP integration data
@@ -350,7 +383,7 @@ def features() -> str:
     try:
         service = current_app.dashboard_service
         # Default to 1hour filter on initial page load
-        default_period = "1hour"
+        default_period = "today"
         time_filter = get_time_filter_from_period(default_period)
 
         # Get tool usage data
@@ -580,7 +613,7 @@ def api_dashboard() -> str:
         period = request.args.get("period", "all")
 
         # Create time filter based on period
-        time_filter = get_time_filter_from_period(period)
+        time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
         # Fetch filtered data
         usage_summary: Dict[str, Any] = service.get_usage_summary(
@@ -603,46 +636,7 @@ def api_dashboard() -> str:
             time_filter=time_filter, max_projects=8
         )
 
-        conv_analytics: Dict[str, Any] = service.get_conversation_analytics(
-            time_filter=time_filter, limit=200
-        )
-        convs = conv_analytics.get("conversations", [])
-        recent_conversations = sorted(
-            convs,
-            key=lambda x: x.get("start_time") or datetime.min,
-            reverse=True,
-        )[:5]
-        conversations_preview: Dict[str, Any] = {
-            "recent": recent_conversations,
-            "total_count": conv_analytics["summary"]["total_conversations"],
-            "most_expensive_cost": conv_analytics["summary"]["most_expensive_cost"],
-            "most_expensive_project": convs[0]["project_name"] if convs else "",
-        }
-
-        subagents_preview: Dict[str, Any] = service.get_subagent_summary(
-            time_filter=time_filter
-        )
-
-        file_data: Dict[str, Any] = service.get_file_statistics(
-            limit=3, time_filter=time_filter
-        )
-        files_preview: Dict[str, Any] = {
-            "total_files": file_data.get("total_files", 0),
-            "most_edited_file": file_data.get("most_edited_file", ""),
-            "total_operations": file_data.get("total_operations", 0),
-        }
-
-        integrations_preview: Dict[str, Any] = service.get_integration_summary(
-            time_filter=time_filter
-        )
-
-        top_tools: Dict[str, Any] = service.get_top_tools(
-            limit=1, time_filter=time_filter
-        )
-        features_preview: Dict[str, Any] = {
-            "top_tool": top_tools["tools"][0] if top_tools.get("tools") else None,
-            "total_tool_calls": top_tools.get("total_calls", 0),
-        }
+        previews = _build_preview_data(service, time_filter)
 
         # Render partial template
         return render_template(
@@ -653,12 +647,8 @@ def api_dashboard() -> str:
             models=model_breakdown,
             cost_trend=cost_trend,
             project_cost_trend=project_cost_trend,
-            conversations_preview=conversations_preview,
-            subagents_preview=subagents_preview,
-            files_preview=files_preview,
-            integrations_preview=integrations_preview,
-            features_preview=features_preview,
             period=period,
+            **previews,
         )
 
     except Exception as e:
@@ -686,7 +676,7 @@ def api_projects() -> str:
         model = request.args.get("model", "")
 
         # Create time filter based on period
-        time_filter = get_time_filter_from_period(period)
+        time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
         # Fetch data - filtered by model if specified
         if model:
@@ -723,7 +713,7 @@ def api_files() -> str:
         service = current_app.dashboard_service
         period = request.args.get("period", "all")
 
-        time_filter = get_time_filter_from_period(period)
+        time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
         file_data = service.get_file_statistics(limit=20, time_filter=time_filter)
         return render_template("partials/files_content.html", files=file_data)
@@ -742,7 +732,7 @@ def api_integrations() -> str:
         service = current_app.dashboard_service
         period = request.args.get("period", "all")
 
-        time_filter = get_time_filter_from_period(period)
+        time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
         mcp_data = service.get_mcp_integrations(time_filter=time_filter)
         integrations_data = {
@@ -774,7 +764,7 @@ def api_tokens() -> str:
         period = request.args.get("period", "all")
         model = request.args.get("model", "")
 
-        time_filter = get_time_filter_from_period(period)
+        time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
         # Get token data - filtered by model if specified
         if model:
@@ -812,7 +802,7 @@ def api_features() -> str:
         service = current_app.dashboard_service
         period = request.args.get("period", "all")
 
-        time_filter = get_time_filter_from_period(period)
+        time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
         prev_time_filter = time_filter.get_previous_period() if time_filter else None
 
         # Get tool usage data for current period
@@ -919,7 +909,7 @@ def api_project_analyze() -> Any:
             project_path = unquote(project_path)
 
         # Create time filter based on period
-        time_filter = get_time_filter_from_period(period)
+        time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
         # Get project analysis
         analysis = service.get_project_analysis(
@@ -1211,7 +1201,7 @@ def subagents() -> str:
     try:
         service = current_app.dashboard_service
         # Default to 1hour filter on initial page load
-        default_period = "1hour"
+        default_period = "today"
         time_filter = get_time_filter_from_period(default_period)
 
         # Get summary stats
@@ -1246,7 +1236,7 @@ def api_subagents() -> str:
         service = current_app.dashboard_service
         period = request.args.get("period", "all")
 
-        time_filter = get_time_filter_from_period(period)
+        time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
         summary = service.get_subagent_summary(time_filter=time_filter)
         exchanges = service.get_subagent_exchanges(time_filter=time_filter, limit=50)
@@ -1294,7 +1284,7 @@ def api_tool_detail(tool_name: str) -> str:
         service = current_app.dashboard_service
         period = request.args.get("period", "all")
 
-        time_filter = get_time_filter_from_period(period)
+        time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
         tool_data = service.get_tool_invocations(
             tool_name=tool_name,
@@ -1339,7 +1329,7 @@ def api_tool_invocation_detail(tool_name: str, invocation_id: str) -> str:
         service = current_app.dashboard_service
         period = request.args.get("period", "all")
 
-        time_filter = get_time_filter_from_period(period)
+        time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
         invocation = service.get_tool_invocation_detail(
             tool_name=tool_name,
@@ -1397,7 +1387,7 @@ def api_conversations() -> str:
     try:
         service = current_app.dashboard_service
         period = request.args.get("period", "week")
-        time_filter = get_time_filter_from_period(period)
+        time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
         data = service.get_conversation_analytics(time_filter=time_filter)
         return render_template("partials/conversations_content.html", period=period, **data)
     except Exception as e:
@@ -1413,7 +1403,7 @@ def api_conversation_detail(session_id: str) -> str:
     try:
         service = current_app.dashboard_service
         period = request.args.get("period", "week")
-        time_filter = get_time_filter_from_period(period)
+        time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
         detail = service.get_conversation_detail(session_id, time_filter=time_filter)
         if not detail:
             return '<div class="text-gray-500 p-4">Conversation not found.</div>', 404
@@ -1434,7 +1424,7 @@ def api_tools_timeline() -> str:
         period = request.args.get("period", "all")
         session_id = request.args.get("session_id", "")
 
-        time_filter = get_time_filter_from_period(period)
+        time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
         timeline_data = service.get_unified_timeline_data(
             time_filter=time_filter,
@@ -1494,7 +1484,7 @@ def api_teams() -> str:
         service = current_app.dashboard_service
         period = request.args.get("period", "all")
 
-        time_filter = get_time_filter_from_period(period)
+        time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
         summary = service.get_team_summary(time_filter=time_filter)
         chart_data = service.get_team_chart_data(time_filter=time_filter)

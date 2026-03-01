@@ -1,7 +1,7 @@
 """Usage analyzer for Claude Code activity metrics."""
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from ..parsers.history import HistoryParser
@@ -81,8 +81,12 @@ class UsageAnalyzer:
         # If time filter is applied, adjust date range
         if self.time_filter:
             if self.time_filter.start_time:
+                if earliest and earliest.tzinfo is None:
+                    earliest = earliest.replace(tzinfo=timezone.utc)
                 earliest = max(earliest, self.time_filter.start_time) if earliest else self.time_filter.start_time
             if self.time_filter.end_time:
+                if latest and latest.tzinfo is None:
+                    latest = latest.replace(tzinfo=timezone.utc)
                 latest = min(latest, self.time_filter.end_time) if latest else self.time_filter.end_time
 
         # Get session statistics

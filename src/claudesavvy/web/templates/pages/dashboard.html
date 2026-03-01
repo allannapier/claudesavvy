@@ -3,7 +3,7 @@
 {% block title %}Dashboard - Claude Monitor{% endblock %}
 
 {% block main_content %}
-<div class="space-y-8" x-data="{ selectedPeriod: '1hour' }">
+<div class="space-y-8">
     <!-- Page Title and Time Filter -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -11,17 +11,10 @@
             <p class="mt-2 text-gray-600">Overview of your Claude Code usage and analytics</p>
         </div>
 
-        <!-- Time Filter Pills -->
-        <div class="flex gap-2 items-center" role="group">
-            {% include 'partials/time_filter.html' with context %}
-
-            <!-- Loading Spinner -->
-            <div class="htmx-indicator ml-2">
-                <svg class="animate-spin h-5 w-5 text-[#0770E3]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            </div>
+        <div class="flex gap-2 items-center">
+            {% with current_url='/api/dashboard', target_id='dashboard-content', storage_key='cs_period_dashboard', default_period=period|default('today') %}
+                {% include 'partials/time_filter.html' %}
+            {% endwith %}
 
             <!-- Export Dropdown -->
             <div class="relative ml-4" x-data="{ open: false }">
