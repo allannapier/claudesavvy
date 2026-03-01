@@ -2,6 +2,44 @@
 
 All notable changes to ClaudeSavvy will be documented in this file.
 
+## [2.8.0] - 2026-03-01
+
+### Added
+- **New**: Complete time filtering overhaul with new presets: this_week, 7days, this_month, 3months
+- **New**: Custom date range support via period=custom&start=YYYY-MM-DD&end=YYYY-MM-DD on all API endpoints
+- **New**: Shared time_filter.html partial component across all pages
+- **New**: Per-page localStorage persistence for selected time period
+- **New**: Dashboard redesigned as navigation hub with full page coverage
+- **New**: Cost Over Time chart replacing Token Usage Over Time
+- **New**: Recent Conversations mini-feed with context utilization bars
+- **New**: 'Explore Your Usage' navigation grid covering all 6 sub-pages
+- **New**: Cache Hit Rate % stat card linking to /tokens
+- **New**: Top Conversation Cost stat card linking to /conversations
+
+### Changed
+- Dashboard now serves as entry point to all insight pages rather than standalone data dump
+- All 4 dashboard stat cards are now clickable links
+- Default dashboard period changed from 1hour to today
+- Replaced inline filter buttons with select dropdown and custom date inputs
+- Legacy 1hour preset mapped to 15min (closest semantic match)
+- Improved navigation hub grid for Tools & Features, Sub-Agents, Files, Integrations, Conversations, Projects
+
+### Fixed
+- **Critical**: Fixed UTC-aware datetime handling throughout time filtering to prevent naive/aware comparison crashes
+- Fixed end_dt to 23:59:59.999999 to include fractional seconds in day ranges
+- Fixed day label generation to use UTC date objects, eliminating timezone mismatches
+- Fixed dashboard to use UTC-aware datetime.min fallback in sort operations
+- Fixed usage.py to correctly convert local naive datetimes to UTC-aware using fromtimestamp()
+- Guard custom range requests against incomplete date inputs
+- Normalize legacy stored periods (week, month, 1hour) to new presets on restore
+- Guard peak_context_tokens display against None values
+- Improved accessibility with aria-labels on time filter controls
+- Replaced onclick table rows with accessible anchor links
+
+### Removed
+- Removed redundant Usage Overview and Token Summary tables from dashboard
+- Removed 1hour preset (mapped to 15min for backward compatibility)
+
 ## [2.6.0] - 2026-02-28
 
 ### Added
