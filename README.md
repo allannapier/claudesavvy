@@ -16,7 +16,7 @@
 
 ## Overview
 
-ClaudeSavvy provides comprehensive analytics for your Claude Code usage by reading local data files and presenting insights through a clean web interface. No API keys required, no data sent externally—everything runs locally on your machine.
+ClaudeSavvy provides comprehensive analytics for your Claude Code usage by reading local data files and presenting insights through a clean web interface. No API keys required, no data sent externally—everything runs locally on your machine. Learn more at [codebotiks.com](https://codebotiks.com).
 
 **Key Benefits:**
 - 📊 **Visual Analytics**: Modern web dashboard with detailed metrics
