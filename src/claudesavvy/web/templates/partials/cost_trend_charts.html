@@ -1,17 +1,48 @@
-<!-- Cost Trend Chart -->
-<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-    <h3 class="text-lg font-semibold text-gray-900 mb-4">Cost Over Time</h3>
-    <div style="height: 250px;">
-        <canvas id="costTrendChart"></canvas>
-    </div>
-</div>
-
 <!-- Project Cost Trend Chart -->
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-    <h3 class="text-lg font-semibold text-gray-900 mb-4">Project Costs Over Time</h3>
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">Project Costs Over Time</h3>
+        <a href="/projects" class="text-sm text-[#0770E3] hover:underline flex items-center gap-1">
+            View all projects
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </a>
+    </div>
     <div style="height: 300px;">
         <canvas id="projectCostTrendChart"></canvas>
     </div>
+</div>
+
+<!-- Top Projects by Cost -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-gray-900">Top Projects by Cost</h3>
+        <a href="/projects" class="text-sm text-[#0770E3] hover:underline flex items-center gap-1">
+            View all
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </a>
+    </div>
+    {% if projects and projects.projects %}
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Project</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Cost</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Sessions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+            {% for project in (projects.projects | sort(attribute='total_cost', reverse=True))[:5] %}
+            <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="window.location='/projects'">
+                <td class="px-6 py-3 text-sm text-gray-900 font-medium truncate max-w-[160px]" title="{{ project.name }}">{{ project.name }}</td>
+                <td class="px-6 py-3 text-sm text-gray-900 text-right font-semibold">${{ project.total_cost|default(0)|float|round(2) }}</td>
+                <td class="px-6 py-3 text-sm text-gray-500 text-right">{{ project.sessions|default(0)|int }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="px-6 py-8 text-center text-sm text-gray-500">No project data for this period</div>
+    {% endif %}
 </div>
 
 <script>
@@ -25,119 +56,8 @@
 
     function initCostCharts() {
         // Destroy existing charts if they exist (for HTMX reloads)
-        // Must be done right before creating new charts to avoid race conditions
-        const existingCostChart = Chart.getChart('costTrendChart');
-        if (existingCostChart) existingCostChart.destroy();
         const existingProjectCostChart = Chart.getChart('projectCostTrendChart');
         if (existingProjectCostChart) existingProjectCostChart.destroy();
-
-        // Cost Trend Chart
-        const costCtx = document.getElementById('costTrendChart');
-        if (costCtx) {
-            const costLabels = {{ cost_trend.labels|default([])|tojson }};
-            const costDatasets = {{ cost_trend.datasets|default({})|tojson }};
-
-            // Only create chart if we have data
-            if (costLabels && costLabels.length > 0) {
-                new Chart(costCtx, {
-                    type: 'line',
-                    data: {
-                        labels: costLabels,
-                        datasets: [
-                            {
-                                label: 'Total Cost',
-                                data: costDatasets.total || [],
-                                borderColor: '#0770E3',
-                                backgroundColor: 'rgba(7, 112, 227, 0.1)',
-                                tension: 0.4,
-                                fill: true,
-                                borderWidth: 2
-                            },
-                            {
-                                label: 'Input',
-                                data: costDatasets.input || [],
-                                borderColor: '#34D399',
-                                backgroundColor: 'transparent',
-                                tension: 0.4,
-                                fill: false,
-                                borderWidth: 1.5,
-                                borderDash: [5, 5]
-                            },
-                            {
-                                label: 'Output',
-                                data: costDatasets.output || [],
-                                borderColor: '#F59E0B',
-                                backgroundColor: 'transparent',
-                                tension: 0.4,
-                                fill: false,
-                                borderWidth: 1.5,
-                                borderDash: [5, 5]
-                            },
-                            {
-                                label: 'Cache',
-                                data: costDatasets.cache || [],
-                                borderColor: '#8B5CF6',
-                                backgroundColor: 'transparent',
-                                tension: 0.4,
-                                fill: false,
-                                borderWidth: 1.5,
-                                borderDash: [5, 5]
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: {
-                            mode: 'index',
-                            intersect: false,
-                        },
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'bottom',
-                                labels: {
-                                    padding: 15,
-                                    usePointStyle: true,
-                                    font: {
-                                        size: 11
-                                    }
-                                }
-                            },
-                            tooltip: {
-                                mode: 'index',
-                                intersect: false,
-                                callbacks: {
-                                    label: function(context) {
-                                        let label = context.dataset.label || '';
-                                        if (label) {
-                                            label += ': ';
-                                        }
-                                        let value = context.parsed.y;
-                                        if (value > 0) {
-                                            label += '$' + value.toFixed(2);
-                                        } else {
-                                            return null;
-                                        }
-                                        return label;
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: function(value) {
-                                        return '$' + value.toFixed(2);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        }
 
         // Project Cost Trend Chart
         const projectCostCtx = document.getElementById('projectCostTrendChart');

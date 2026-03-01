@@ -71,8 +71,8 @@ def index() -> str:
 
         service = current_app.dashboard_service
 
-        # Default to 1 hour filter for faster initial load
-        time_filter = get_time_filter_from_period("1hour")
+        # Default to today for a meaningful overview
+        time_filter = get_time_filter_from_period("today")
 
         # Fetch all dashboard data with error handling
         usage_summary: Dict[str, Any] = service.get_usage_summary(
@@ -87,15 +87,54 @@ def index() -> str:
         model_breakdown: Dict[str, Any] = service.get_model_breakdown(
             time_filter=time_filter
         )
-        token_trend: Dict[str, Any] = service.get_daily_token_trend(
-            time_filter=time_filter
-        )
         cost_trend: Dict[str, Any] = service.get_daily_cost_trend(
             time_filter=time_filter
         )
         project_cost_trend: Dict[str, Any] = service.get_project_cost_trend(
             max_projects=8, time_filter=time_filter
         )
+
+        # Preview data for navigation hub cards
+        conv_analytics: Dict[str, Any] = service.get_conversation_analytics(
+            time_filter=time_filter, limit=200
+        )
+        convs = conv_analytics.get("conversations", [])
+        recent_conversations = sorted(
+            convs,
+            key=lambda x: x.get("start_time") or datetime.min,
+            reverse=True,
+        )[:5]
+        conversations_preview: Dict[str, Any] = {
+            "recent": recent_conversations,
+            "total_count": conv_analytics["summary"]["total_conversations"],
+            "most_expensive_cost": conv_analytics["summary"]["most_expensive_cost"],
+            "most_expensive_project": convs[0]["project_name"] if convs else "",
+        }
+
+        subagents_preview: Dict[str, Any] = service.get_subagent_summary(
+            time_filter=time_filter
+        )
+
+        file_data: Dict[str, Any] = service.get_file_statistics(
+            limit=3, time_filter=time_filter
+        )
+        files_preview: Dict[str, Any] = {
+            "total_files": file_data.get("total_files", 0),
+            "most_edited_file": file_data.get("most_edited_file", ""),
+            "total_operations": file_data.get("total_operations", 0),
+        }
+
+        integrations_preview: Dict[str, Any] = service.get_integration_summary(
+            time_filter=time_filter
+        )
+
+        top_tools: Dict[str, Any] = service.get_top_tools(
+            limit=1, time_filter=time_filter
+        )
+        features_preview: Dict[str, Any] = {
+            "top_tool": top_tools["tools"][0] if top_tools.get("tools") else None,
+            "total_tool_calls": top_tools.get("total_calls", 0),
+        }
 
         logger.debug("Dashboard data fetched successfully")
 
@@ -106,9 +145,14 @@ def index() -> str:
             tokens=token_summary,
             projects=project_breakdown,
             models=model_breakdown,
-            token_trend=token_trend,
             cost_trend=cost_trend,
             project_cost_trend=project_cost_trend,
+            conversations_preview=conversations_preview,
+            subagents_preview=subagents_preview,
+            files_preview=files_preview,
+            integrations_preview=integrations_preview,
+            features_preview=features_preview,
+            period="today",
         )
 
     except ValueError as e:
@@ -552,16 +596,53 @@ def api_dashboard() -> str:
             time_filter=time_filter
         )
 
-        # For "All Time", the time_filter determines the date range for charts
-        token_trend: Dict[str, Any] = service.get_daily_token_trend(
-            time_filter=time_filter
-        )
         cost_trend: Dict[str, Any] = service.get_daily_cost_trend(
             time_filter=time_filter
         )
         project_cost_trend: Dict[str, Any] = service.get_project_cost_trend(
             time_filter=time_filter, max_projects=8
         )
+
+        conv_analytics: Dict[str, Any] = service.get_conversation_analytics(
+            time_filter=time_filter, limit=200
+        )
+        convs = conv_analytics.get("conversations", [])
+        recent_conversations = sorted(
+            convs,
+            key=lambda x: x.get("start_time") or datetime.min,
+            reverse=True,
+        )[:5]
+        conversations_preview: Dict[str, Any] = {
+            "recent": recent_conversations,
+            "total_count": conv_analytics["summary"]["total_conversations"],
+            "most_expensive_cost": conv_analytics["summary"]["most_expensive_cost"],
+            "most_expensive_project": convs[0]["project_name"] if convs else "",
+        }
+
+        subagents_preview: Dict[str, Any] = service.get_subagent_summary(
+            time_filter=time_filter
+        )
+
+        file_data: Dict[str, Any] = service.get_file_statistics(
+            limit=3, time_filter=time_filter
+        )
+        files_preview: Dict[str, Any] = {
+            "total_files": file_data.get("total_files", 0),
+            "most_edited_file": file_data.get("most_edited_file", ""),
+            "total_operations": file_data.get("total_operations", 0),
+        }
+
+        integrations_preview: Dict[str, Any] = service.get_integration_summary(
+            time_filter=time_filter
+        )
+
+        top_tools: Dict[str, Any] = service.get_top_tools(
+            limit=1, time_filter=time_filter
+        )
+        features_preview: Dict[str, Any] = {
+            "top_tool": top_tools["tools"][0] if top_tools.get("tools") else None,
+            "total_tool_calls": top_tools.get("total_calls", 0),
+        }
 
         # Render partial template
         return render_template(
@@ -570,9 +651,14 @@ def api_dashboard() -> str:
             tokens=token_summary,
             projects=project_breakdown,
             models=model_breakdown,
-            token_trend=token_trend,
             cost_trend=cost_trend,
             project_cost_trend=project_cost_trend,
+            conversations_preview=conversations_preview,
+            subagents_preview=subagents_preview,
+            files_preview=files_preview,
+            integrations_preview=integrations_preview,
+            features_preview=features_preview,
+            period=period,
         )
 
     except Exception as e:
