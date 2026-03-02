@@ -176,6 +176,7 @@
                 <tr>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tokens</th>
                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tools</th>
@@ -195,12 +196,25 @@
                         <div class="text-xs text-gray-400">{{ exchange.time }}</div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                             {% if exchange.subagent_type == 'explore' or exchange.subagent_type == 'Explore' %}bg-blue-100 text-blue-800
                             {% elif exchange.subagent_type == 'general' %}bg-green-100 text-green-800
                             {% else %}bg-purple-100 text-purple-800{% endif %}">
                             {{ exchange.subagent_type }}
                         </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if exchange.model %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                            {% if 'opus' in exchange.model %}bg-amber-100 text-amber-800
+                            {% elif 'haiku' in exchange.model %}bg-emerald-100 text-emerald-800
+                            {% else %}bg-indigo-100 text-indigo-800{% endif %}"
+                            title="{{ exchange.model }}">
+                            {{ exchange.model_display }}
+                        </span>
+                        {% else %}
+                        <span class="text-xs text-gray-400">—</span>
+                        {% endif %}
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title="{{ exchange.description }}">
                         {{ exchange.description or exchange.prompt_preview[:50] }}

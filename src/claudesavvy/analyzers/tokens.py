@@ -12,6 +12,9 @@ if TYPE_CHECKING:
 
 # Friendly display names for models
 MODEL_DISPLAY_NAMES = {
+    'claude-opus-4-6': 'Claude Opus 4.6',
+    'claude-sonnet-4-6': 'Claude Sonnet 4.6',
+    'claude-haiku-4-6': 'Claude Haiku 4.6',
     'claude-opus-4-5-20251101': 'Claude Opus 4.5',
     'claude-opus-4-20250514': 'Claude Opus 4',
     'claude-sonnet-4-5-20250929': 'Claude Sonnet 4.5',
@@ -43,6 +46,25 @@ def get_model_display_name(model_id: str) -> str:
 # Claude API pricing by model (as of 2025)
 # https://www.anthropic.com/pricing
 MODEL_PRICING = {
+    # Short-form model IDs used by Claude Code CLI (subagents, fast mode)
+    'claude-opus-4-6': {
+        'input_per_mtok': 15.00,
+        'output_per_mtok': 75.00,
+        'cache_write_per_mtok': 18.75,
+        'cache_read_per_mtok': 1.50,
+    },
+    'claude-sonnet-4-6': {
+        'input_per_mtok': 3.00,
+        'output_per_mtok': 15.00,
+        'cache_write_per_mtok': 3.75,
+        'cache_read_per_mtok': 0.30,
+    },
+    'claude-haiku-4-6': {
+        'input_per_mtok': 1.00,
+        'output_per_mtok': 5.00,
+        'cache_write_per_mtok': 1.25,
+        'cache_read_per_mtok': 0.10,
+    },
     # Opus 4.5
     'claude-opus-4-5-20251101': {
         'input_per_mtok': 15.00,

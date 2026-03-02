@@ -63,8 +63,11 @@ class DashboardService:
         self._skills_parser = SkillsParser(self.paths.base_dir / "skills")
         self._config_parser = ConfigurationParser(self.paths.base_dir)
 
-        # Initialize sub-agent parser
-        self._subagent_parser = SubAgentParser(self.paths.get_project_session_files())
+        # Initialize sub-agent parser with subagent file map for model attribution
+        self._subagent_parser = SubAgentParser(
+            self.paths.get_project_session_files(),
+            subagent_file_map=self.paths.get_subagent_file_map(),
+        )
 
         # Build project map for debug logs
         project_map = self._build_project_map()
@@ -111,6 +114,7 @@ class DashboardService:
         self._session_parser.session_files = session_files
         self._tool_parser.session_files = session_files
         self._subagent_parser.session_files = session_files
+        self._subagent_parser.subagent_file_map = self.paths.get_subagent_file_map()
         self._file_parser.session_files = session_files
 
     def _build_project_map(self) -> Dict[str, str]:
@@ -1605,9 +1609,20 @@ class DashboardService:
         # Limit results
         exchanges = exchanges[:limit]
 
+        from ...analyzers.tokens import get_model_display_name
+
         # Convert to serializable format
         exchanges_data = []
         for e in exchanges:
+            model_breakdown = [
+                {
+                    "model": model_id,
+                    "display": get_model_display_name(model_id),
+                    "tokens": u.total_tokens,
+                    "output_tokens": u.output_tokens,
+                }
+                for model_id, u in e.model_usage.items()
+            ]
             exchanges_data.append(
                 {
                     "agent_id": e.agent_id,
@@ -1633,6 +1648,9 @@ class DashboardService:
                     "total_tool_use_count": e.total_tool_use_count,
                     "cost": round(e.subagent_cost, 4),
                     "status": e.status,
+                    "model": e.model or "",
+                    "model_display": get_model_display_name(e.model) if e.model else "Unknown",
+                    "model_breakdown": model_breakdown,
                     "subagent_usage": {
                         "input_tokens": e.subagent_usage.input_tokens
                         if e.subagent_usage
@@ -1721,10 +1739,21 @@ class DashboardService:
         Returns:
             Dict with exchange details or None if not found
         """
+        from ...analyzers.tokens import get_model_display_name
+
         exchanges = self._subagent_parser.parse_exchanges(time_filter=time_filter)
 
         for e in exchanges:
             if e.agent_id == agent_id:
+                model_breakdown = [
+                    {
+                        "model": model_id,
+                        "display": get_model_display_name(model_id),
+                        "tokens": u.total_tokens,
+                        "output_tokens": u.output_tokens,
+                    }
+                    for model_id, u in e.model_usage.items()
+                ]
                 return {
                     "agent_id": e.agent_id,
                     "session_id": e.session_id,
@@ -1741,6 +1770,9 @@ class DashboardService:
                     "total_tool_use_count": e.total_tool_use_count,
                     "cost": round(e.subagent_cost, 4),
                     "status": e.status,
+                    "model": e.model or "",
+                    "model_display": get_model_display_name(e.model) if e.model else "Unknown",
+                    "model_breakdown": model_breakdown,
                     "subagent_usage": {
                         "input_tokens": e.subagent_usage.input_tokens
                         if e.subagent_usage
@@ -2538,24 +2570,27 @@ class DashboardService:
         total_cost = 0.0
         total_tokens = 0
 
-        # Use default pricing for team calculations (teams don't track specific models)
-        from ...analyzers.tokens import DEFAULT_PRICING
+        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING, get_model_display_name
 
         for team_name, stats in team_stats.items():
-            # Calculate cost using default pricing
-            input_cost = (
-                stats.total_tokens.input_tokens / 1_000_000
-            ) * DEFAULT_PRICING["input_per_mtok"]
-            output_cost = (
-                stats.total_tokens.output_tokens / 1_000_000
-            ) * DEFAULT_PRICING["output_per_mtok"]
-            cache_write_cost = (
-                stats.total_tokens.cache_creation_input_tokens / 1_000_000
-            ) * DEFAULT_PRICING["cache_write_per_mtok"]
-            cache_read_cost = (
-                stats.total_tokens.cache_read_input_tokens / 1_000_000
-            ) * DEFAULT_PRICING["cache_read_per_mtok"]
-            cost = input_cost + output_cost + cache_write_cost + cache_read_cost
+            # Calculate cost using per-model pricing for accuracy
+            cost = 0.0
+            if stats.model_usage:
+                for model_id, usage in stats.model_usage.items():
+                    rates = MODEL_PRICING.get(model_id, DEFAULT_PRICING)
+                    cost += (
+                        (usage.input_tokens / 1_000_000) * rates["input_per_mtok"]
+                        + (usage.output_tokens / 1_000_000) * rates["output_per_mtok"]
+                        + (usage.cache_creation_input_tokens / 1_000_000) * rates["cache_write_per_mtok"]
+                        + (usage.cache_read_input_tokens / 1_000_000) * rates["cache_read_per_mtok"]
+                    )
+            else:
+                cost = (
+                    (stats.total_tokens.input_tokens / 1_000_000) * DEFAULT_PRICING["input_per_mtok"]
+                    + (stats.total_tokens.output_tokens / 1_000_000) * DEFAULT_PRICING["output_per_mtok"]
+                    + (stats.total_tokens.cache_creation_input_tokens / 1_000_000) * DEFAULT_PRICING["cache_write_per_mtok"]
+                    + (stats.total_tokens.cache_read_input_tokens / 1_000_000) * DEFAULT_PRICING["cache_read_per_mtok"]
+                )
 
             total_cost += cost
             total_tokens += (
@@ -2563,6 +2598,21 @@ class DashboardService:
                 + stats.total_tokens.output_tokens
                 + stats.total_tokens.cache_creation_input_tokens
                 + stats.total_tokens.cache_read_input_tokens
+            )
+
+            # Build model breakdown for this team
+            model_breakdown = sorted(
+                [
+                    {
+                        "model": model_id,
+                        "display": get_model_display_name(model_id),
+                        "tokens": u.total_tokens,
+                        "output_tokens": u.output_tokens,
+                    }
+                    for model_id, u in stats.model_usage.items()
+                ],
+                key=lambda x: x["tokens"],
+                reverse=True,
             )
 
             teams_data.append({
@@ -2576,6 +2626,7 @@ class DashboardService:
                 "cache_write_tokens": stats.total_tokens.cache_creation_input_tokens,
                 "total_tokens": stats.total_tokens.total_input_tokens + stats.total_tokens.output_tokens,
                 "cost": round(cost, 2),
+                "model_breakdown": model_breakdown,
             })
 
         # Sort by total tokens (descending)
