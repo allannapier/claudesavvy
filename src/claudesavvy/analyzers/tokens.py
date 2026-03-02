@@ -48,10 +48,10 @@ def get_model_display_name(model_id: str) -> str:
 MODEL_PRICING = {
     # Short-form model IDs used by Claude Code CLI (subagents, fast mode)
     'claude-opus-4-6': {
-        'input_per_mtok': 15.00,
-        'output_per_mtok': 75.00,
-        'cache_write_per_mtok': 18.75,
-        'cache_read_per_mtok': 1.50,
+        'input_per_mtok': 5.00,
+        'output_per_mtok': 25.00,
+        'cache_write_per_mtok': 6.25,
+        'cache_read_per_mtok': 0.50,
     },
     'claude-sonnet-4-6': {
         'input_per_mtok': 3.00,
@@ -67,10 +67,10 @@ MODEL_PRICING = {
     },
     # Opus 4.5
     'claude-opus-4-5-20251101': {
-        'input_per_mtok': 15.00,
-        'output_per_mtok': 75.00,
-        'cache_write_per_mtok': 18.75,
-        'cache_read_per_mtok': 1.50,
+        'input_per_mtok': 5.00,
+        'output_per_mtok': 25.00,
+        'cache_write_per_mtok': 6.25,
+        'cache_read_per_mtok': 0.50,
     },
     # Sonnet 4.5
     'claude-sonnet-4-5-20250929': {
