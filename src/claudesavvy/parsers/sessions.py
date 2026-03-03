@@ -1039,6 +1039,30 @@ class SubAgentParser:
         exchanges.sort(key=lambda x: x.timestamp, reverse=True)
         return exchanges
 
+    def get_exchange_detail(self, agent_id: str) -> Optional[SubAgentExchange]:
+        """
+        Return a single SubAgentExchange for the given agent_id without scanning
+        all session files. Reads only the one subagent JSONL file if available,
+        otherwise falls back to a full scan.
+
+        Args:
+            agent_id: The agent ID to look up
+
+        Returns:
+            SubAgentExchange or None if not found
+        """
+        if agent_id in self.subagent_file_map:
+            return self._parse_subagent_file_directly(agent_id)
+
+        # Fall back to full scan for agents captured via parent session
+        for session_file in self.session_files:
+            if session_file.name.startswith("agent-"):
+                continue
+            for exchange in self._parse_file(session_file):
+                if exchange.agent_id == agent_id:
+                    return exchange
+        return None
+
     def _parse_file(
         self,
         session_file: Path,

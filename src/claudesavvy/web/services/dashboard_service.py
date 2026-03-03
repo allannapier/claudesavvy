@@ -1609,8 +1609,6 @@ class DashboardService:
         # Limit results
         exchanges = exchanges[:limit]
 
-        from ...analyzers.tokens import get_model_display_name
-
         # Convert to serializable format
         exchanges_data = []
         for e in exchanges:
@@ -1739,71 +1737,51 @@ class DashboardService:
         Returns:
             Dict with exchange details or None if not found
         """
-        from ...analyzers.tokens import get_model_display_name
+        e = self._subagent_parser.get_exchange_detail(agent_id=agent_id)
+        if e is None:
+            return None
 
-        exchanges = self._subagent_parser.parse_exchanges(time_filter=time_filter)
-
-        for e in exchanges:
-            if e.agent_id == agent_id:
-                model_breakdown = [
-                    {
-                        "model": model_id,
-                        "display": get_model_display_name(model_id),
-                        "tokens": u.total_tokens,
-                        "output_tokens": u.output_tokens,
-                    }
-                    for model_id, u in e.model_usage.items()
-                ]
-                return {
-                    "agent_id": e.agent_id,
-                    "session_id": e.session_id,
-                    "project": e.project,
-                    "project_name": Path(e.project).name if e.project else "Unknown",
-                    "timestamp": e.timestamp,
-                    "duration_ms": e.duration_ms,
-                    "duration_seconds": round(e.duration_seconds, 1),
-                    "subagent_type": e.subagent_type or "unknown",
-                    "description": e.description,
-                    "prompt": e.prompt,
-                    "result_text": e.result_text,
-                    "total_tokens": e.total_tokens,
-                    "total_tool_use_count": e.total_tool_use_count,
-                    "cost": round(e.subagent_cost, 4),
-                    "status": e.status,
-                    "model": e.model or "",
-                    "model_display": get_model_display_name(e.model) if e.model else "Unknown",
-                    "model_breakdown": model_breakdown,
-                    "subagent_usage": {
-                        "input_tokens": e.subagent_usage.input_tokens
-                        if e.subagent_usage
-                        else 0,
-                        "output_tokens": e.subagent_usage.output_tokens
-                        if e.subagent_usage
-                        else 0,
-                        "cache_creation_tokens": e.subagent_usage.cache_creation_input_tokens
-                        if e.subagent_usage
-                        else 0,
-                        "cache_read_tokens": e.subagent_usage.cache_read_input_tokens
-                        if e.subagent_usage
-                        else 0,
-                    },
-                    "parent_usage": {
-                        "input_tokens": e.parent_usage.input_tokens
-                        if e.parent_usage
-                        else 0,
-                        "output_tokens": e.parent_usage.output_tokens
-                        if e.parent_usage
-                        else 0,
-                        "cache_creation_tokens": e.parent_usage.cache_creation_input_tokens
-                        if e.parent_usage
-                        else 0,
-                        "cache_read_tokens": e.parent_usage.cache_read_input_tokens
-                        if e.parent_usage
-                        else 0,
-                    },
-                }
-
-        return None
+        model_breakdown = [
+            {
+                "model": model_id,
+                "display": get_model_display_name(model_id),
+                "tokens": u.total_tokens,
+                "output_tokens": u.output_tokens,
+            }
+            for model_id, u in e.model_usage.items()
+        ]
+        return {
+            "agent_id": e.agent_id,
+            "session_id": e.session_id,
+            "project": e.project,
+            "project_name": Path(e.project).name if e.project else "Unknown",
+            "timestamp": e.timestamp,
+            "duration_ms": e.duration_ms,
+            "duration_seconds": round(e.duration_seconds, 1),
+            "subagent_type": e.subagent_type or "unknown",
+            "description": e.description,
+            "prompt": e.prompt,
+            "result_text": e.result_text,
+            "total_tokens": e.total_tokens,
+            "total_tool_use_count": e.total_tool_use_count,
+            "cost": round(e.subagent_cost, 4),
+            "status": e.status,
+            "model": e.model or "",
+            "model_display": get_model_display_name(e.model) if e.model else "Unknown",
+            "model_breakdown": model_breakdown,
+            "subagent_usage": {
+                "input_tokens": e.subagent_usage.input_tokens if e.subagent_usage else 0,
+                "output_tokens": e.subagent_usage.output_tokens if e.subagent_usage else 0,
+                "cache_creation_tokens": e.subagent_usage.cache_creation_input_tokens if e.subagent_usage else 0,
+                "cache_read_tokens": e.subagent_usage.cache_read_input_tokens if e.subagent_usage else 0,
+            },
+            "parent_usage": {
+                "input_tokens": e.parent_usage.input_tokens if e.parent_usage else 0,
+                "output_tokens": e.parent_usage.output_tokens if e.parent_usage else 0,
+                "cache_creation_tokens": e.parent_usage.cache_creation_input_tokens if e.parent_usage else 0,
+                "cache_read_tokens": e.parent_usage.cache_read_input_tokens if e.parent_usage else 0,
+            },
+        }
 
     def get_subagent_chart_data(
         self, time_filter: Optional[TimeFilter] = None, limit: int = 100
