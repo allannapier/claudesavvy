@@ -79,6 +79,38 @@ class ClaudeDataPaths:
 
         return sorted(session_files, key=lambda p: p.stat().st_mtime, reverse=True)
 
+    def get_subagent_file_map(self) -> dict[str, Path]:
+        """
+        Build a map of agent_id -> Path for all subagent JSONL files.
+
+        Subagent files live at:
+            ~/.claude/projects/<project-slug>/<session-id>/subagents/agent-<id>.jsonl
+
+        Returns:
+            Dict mapping agent_id (hex string) to the subagent JSONL file path
+        """
+        agent_map: dict[str, Path] = {}
+
+        if not self.projects_dir.exists():
+            return agent_map
+
+        for project_dir in self.projects_dir.iterdir():
+            if not project_dir.is_dir():
+                continue
+            # Each session directory sits alongside the session JSONL file
+            for session_dir in project_dir.iterdir():
+                if not session_dir.is_dir():
+                    continue
+                subagents_dir = session_dir / "subagents"
+                if not subagents_dir.exists():
+                    continue
+                for agent_file in subagents_dir.glob("agent-*.jsonl"):
+                    # Filename is agent-<hex-id>.jsonl; extract the ID
+                    agent_id = agent_file.stem[len("agent-"):]
+                    agent_map[agent_id] = agent_file
+
+        return agent_map
+
     def get_debug_log_files(self) -> list[Path]:
         """
         Get all debug log files.

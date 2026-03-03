@@ -63,8 +63,11 @@ class DashboardService:
         self._skills_parser = SkillsParser(self.paths.base_dir / "skills")
         self._config_parser = ConfigurationParser(self.paths.base_dir)
 
-        # Initialize sub-agent parser
-        self._subagent_parser = SubAgentParser(self.paths.get_project_session_files())
+        # Initialize sub-agent parser with subagent file map for model attribution
+        self._subagent_parser = SubAgentParser(
+            self.paths.get_project_session_files(),
+            subagent_file_map=self.paths.get_subagent_file_map(),
+        )
 
         # Build project map for debug logs
         project_map = self._build_project_map()
@@ -111,6 +114,7 @@ class DashboardService:
         self._session_parser.session_files = session_files
         self._tool_parser.session_files = session_files
         self._subagent_parser.session_files = session_files
+        self._subagent_parser.subagent_file_map = self.paths.get_subagent_file_map()
         self._file_parser.session_files = session_files
 
     def _build_project_map(self) -> Dict[str, str]:
@@ -1608,6 +1612,15 @@ class DashboardService:
         # Convert to serializable format
         exchanges_data = []
         for e in exchanges:
+            model_breakdown = [
+                {
+                    "model": model_id,
+                    "display": get_model_display_name(model_id),
+                    "tokens": u.total_tokens,
+                    "output_tokens": u.output_tokens,
+                }
+                for model_id, u in e.model_usage.items()
+            ]
             exchanges_data.append(
                 {
                     "agent_id": e.agent_id,
@@ -1633,6 +1646,9 @@ class DashboardService:
                     "total_tool_use_count": e.total_tool_use_count,
                     "cost": round(e.subagent_cost, 4),
                     "status": e.status,
+                    "model": e.model or "",
+                    "model_display": get_model_display_name(e.model) if e.model else "Unknown",
+                    "model_breakdown": model_breakdown,
                     "subagent_usage": {
                         "input_tokens": e.subagent_usage.input_tokens
                         if e.subagent_usage
@@ -1721,57 +1737,51 @@ class DashboardService:
         Returns:
             Dict with exchange details or None if not found
         """
-        exchanges = self._subagent_parser.parse_exchanges(time_filter=time_filter)
+        e = self._subagent_parser.get_exchange_detail(agent_id=agent_id)
+        if e is None:
+            return None
 
-        for e in exchanges:
-            if e.agent_id == agent_id:
-                return {
-                    "agent_id": e.agent_id,
-                    "session_id": e.session_id,
-                    "project": e.project,
-                    "project_name": Path(e.project).name if e.project else "Unknown",
-                    "timestamp": e.timestamp,
-                    "duration_ms": e.duration_ms,
-                    "duration_seconds": round(e.duration_seconds, 1),
-                    "subagent_type": e.subagent_type or "unknown",
-                    "description": e.description,
-                    "prompt": e.prompt,
-                    "result_text": e.result_text,
-                    "total_tokens": e.total_tokens,
-                    "total_tool_use_count": e.total_tool_use_count,
-                    "cost": round(e.subagent_cost, 4),
-                    "status": e.status,
-                    "subagent_usage": {
-                        "input_tokens": e.subagent_usage.input_tokens
-                        if e.subagent_usage
-                        else 0,
-                        "output_tokens": e.subagent_usage.output_tokens
-                        if e.subagent_usage
-                        else 0,
-                        "cache_creation_tokens": e.subagent_usage.cache_creation_input_tokens
-                        if e.subagent_usage
-                        else 0,
-                        "cache_read_tokens": e.subagent_usage.cache_read_input_tokens
-                        if e.subagent_usage
-                        else 0,
-                    },
-                    "parent_usage": {
-                        "input_tokens": e.parent_usage.input_tokens
-                        if e.parent_usage
-                        else 0,
-                        "output_tokens": e.parent_usage.output_tokens
-                        if e.parent_usage
-                        else 0,
-                        "cache_creation_tokens": e.parent_usage.cache_creation_input_tokens
-                        if e.parent_usage
-                        else 0,
-                        "cache_read_tokens": e.parent_usage.cache_read_input_tokens
-                        if e.parent_usage
-                        else 0,
-                    },
-                }
-
-        return None
+        model_breakdown = [
+            {
+                "model": model_id,
+                "display": get_model_display_name(model_id),
+                "tokens": u.total_tokens,
+                "output_tokens": u.output_tokens,
+            }
+            for model_id, u in e.model_usage.items()
+        ]
+        return {
+            "agent_id": e.agent_id,
+            "session_id": e.session_id,
+            "project": e.project,
+            "project_name": Path(e.project).name if e.project else "Unknown",
+            "timestamp": e.timestamp,
+            "duration_ms": e.duration_ms,
+            "duration_seconds": round(e.duration_seconds, 1),
+            "subagent_type": e.subagent_type or "unknown",
+            "description": e.description,
+            "prompt": e.prompt,
+            "result_text": e.result_text,
+            "total_tokens": e.total_tokens,
+            "total_tool_use_count": e.total_tool_use_count,
+            "cost": round(e.subagent_cost, 4),
+            "status": e.status,
+            "model": e.model or "",
+            "model_display": get_model_display_name(e.model) if e.model else "Unknown",
+            "model_breakdown": model_breakdown,
+            "subagent_usage": {
+                "input_tokens": e.subagent_usage.input_tokens if e.subagent_usage else 0,
+                "output_tokens": e.subagent_usage.output_tokens if e.subagent_usage else 0,
+                "cache_creation_tokens": e.subagent_usage.cache_creation_input_tokens if e.subagent_usage else 0,
+                "cache_read_tokens": e.subagent_usage.cache_read_input_tokens if e.subagent_usage else 0,
+            },
+            "parent_usage": {
+                "input_tokens": e.parent_usage.input_tokens if e.parent_usage else 0,
+                "output_tokens": e.parent_usage.output_tokens if e.parent_usage else 0,
+                "cache_creation_tokens": e.parent_usage.cache_creation_input_tokens if e.parent_usage else 0,
+                "cache_read_tokens": e.parent_usage.cache_read_input_tokens if e.parent_usage else 0,
+            },
+        }
 
     def get_subagent_chart_data(
         self, time_filter: Optional[TimeFilter] = None, limit: int = 100
@@ -2526,59 +2536,112 @@ class DashboardService:
         """
         Get summary of team usage when Teams feature is invoked.
 
+        Groups teammate sub-agent exchanges by (project, session_id) — each group
+        represents one team run. Token/cost data comes from the agent JSONL files,
+        not from parent session messages (which don't contain teamName).
+
         Args:
             time_filter: Optional time filter to apply
 
         Returns:
             Dict with team usage statistics
         """
-        team_stats = self._session_parser.get_team_stats(time_filter=time_filter)
+        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING
+
+        exchanges = self._subagent_parser.parse_exchanges(time_filter=time_filter)
+        teammate_exchanges = [e for e in exchanges if e.is_teammate]
+
+        # Group by (project, session_id) — all members in one team run share these
+        groups: Dict[str, list] = {}
+        for e in teammate_exchanges:
+            key = f"{e.project or ''}::{e.session_id}"
+            groups.setdefault(key, []).append(e)
+
+        def _calc_cost(model_usage: dict) -> float:
+            cost = 0.0
+            for model_id, usage in model_usage.items():
+                rates = MODEL_PRICING.get(model_id, DEFAULT_PRICING)
+                cost += (
+                    (usage.input_tokens / 1_000_000) * rates["input_per_mtok"]
+                    + (usage.output_tokens / 1_000_000) * rates["output_per_mtok"]
+                    + (usage.cache_creation_input_tokens / 1_000_000) * rates["cache_write_per_mtok"]
+                    + (usage.cache_read_input_tokens / 1_000_000) * rates["cache_read_per_mtok"]
+                )
+            return cost
 
         teams_data = []
         total_cost = 0.0
         total_tokens = 0
 
-        # Use default pricing for team calculations (teams don't track specific models)
-        from ...analyzers.tokens import DEFAULT_PRICING
+        for group_exchanges in groups.values():
+            # Aggregate model usage across all members
+            agg_model_usage: Dict[str, Any] = {}
+            for e in group_exchanges:
+                for model_id, usage in e.model_usage.items():
+                    if model_id not in agg_model_usage:
+                        from ...parsers.sessions import TokenUsage
+                        agg_model_usage[model_id] = TokenUsage()
+                    agg_model_usage[model_id] = agg_model_usage[model_id] + usage
 
-        for team_name, stats in team_stats.items():
-            # Calculate cost using default pricing
-            input_cost = (
-                stats.total_tokens.input_tokens / 1_000_000
-            ) * DEFAULT_PRICING["input_per_mtok"]
-            output_cost = (
-                stats.total_tokens.output_tokens / 1_000_000
-            ) * DEFAULT_PRICING["output_per_mtok"]
-            cache_write_cost = (
-                stats.total_tokens.cache_creation_input_tokens / 1_000_000
-            ) * DEFAULT_PRICING["cache_write_per_mtok"]
-            cache_read_cost = (
-                stats.total_tokens.cache_read_input_tokens / 1_000_000
-            ) * DEFAULT_PRICING["cache_read_per_mtok"]
-            cost = input_cost + output_cost + cache_write_cost + cache_read_cost
-
-            total_cost += cost
-            total_tokens += (
-                stats.total_tokens.input_tokens
-                + stats.total_tokens.output_tokens
-                + stats.total_tokens.cache_creation_input_tokens
-                + stats.total_tokens.cache_read_input_tokens
+            cost = _calc_cost(agg_model_usage)
+            group_total_tokens = sum(
+                u.input_tokens + u.output_tokens + u.cache_creation_input_tokens + u.cache_read_input_tokens
+                for u in agg_model_usage.values()
             )
 
+            total_cost += cost
+            total_tokens += group_total_tokens
+
+            # Per-member breakdown: one entry per member role (subagent_type)
+            members: Dict[str, dict] = {}
+            for e in group_exchanges:
+                role = e.subagent_type or "teammate"
+                if role not in members:
+                    members[role] = {"role": role, "exchanges": 0, "tokens": 0, "cost": 0.0}
+                members[role]["exchanges"] += 1
+                members[role]["tokens"] += e.total_tokens
+                members[role]["cost"] = round(members[role]["cost"] + e.subagent_cost, 4)
+
+            # Per-model breakdown
+            model_breakdown = sorted(
+                [
+                    {
+                        "model": model_id,
+                        "display": get_model_display_name(model_id),
+                        "tokens": u.input_tokens + u.output_tokens + u.cache_creation_input_tokens + u.cache_read_input_tokens,
+                        "output_tokens": u.output_tokens,
+                    }
+                    for model_id, u in agg_model_usage.items()
+                ],
+                key=lambda x: x["tokens"],
+                reverse=True,
+            )
+
+            # Use slug for team name (human-readable, e.g. "brave-dancing-tiger")
+            slug = next((e.slug for e in group_exchanges if e.slug), group_exchanges[0].session_id[:8])
+            project = group_exchanges[0].project or ""
+            project_name = Path(project).name if project else "Unknown"
+            # Use earliest timestamp for the team run date
+            earliest = min((e.timestamp for e in group_exchanges if e.timestamp), default="")
+
+            agg_input = sum(u.input_tokens for u in agg_model_usage.values())
+            agg_output = sum(u.output_tokens for u in agg_model_usage.values())
+
             teams_data.append({
-                "name": team_name,
-                "message_count": stats.message_count,
-                "session_count": stats.session_count,
-                "project_count": stats.project_count,
-                "input_tokens": stats.total_tokens.input_tokens,
-                "output_tokens": stats.total_tokens.output_tokens,
-                "cache_read_tokens": stats.total_tokens.cache_read_input_tokens,
-                "cache_write_tokens": stats.total_tokens.cache_creation_input_tokens,
-                "total_tokens": stats.total_tokens.total_input_tokens + stats.total_tokens.output_tokens,
+                "name": slug,
+                "project": project_name,
+                "timestamp": earliest,
+                "member_count": len(set(e.subagent_type for e in group_exchanges)),
+                "exchange_count": len(group_exchanges),
+                "session_count": 1,
+                "members": sorted(members.values(), key=lambda x: x["tokens"], reverse=True),
+                "input_tokens": agg_input,
+                "output_tokens": agg_output,
+                "total_tokens": group_total_tokens,
                 "cost": round(cost, 2),
+                "model_breakdown": model_breakdown,
             })
 
-        # Sort by total tokens (descending)
         teams_data.sort(key=lambda x: x["total_tokens"], reverse=True)
 
         return {

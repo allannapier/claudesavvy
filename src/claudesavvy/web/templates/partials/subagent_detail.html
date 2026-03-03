@@ -24,10 +24,26 @@
     </div>
 
     <!-- Metadata Row -->
-    <div class="px-6 py-3 bg-gray-50 border-b border-gray-200 grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+    <div class="px-6 py-3 bg-gray-50 border-b border-gray-200 grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
         <div>
             <span class="text-gray-500">Time</span>
             <p class="font-medium text-gray-900">{{ exchange.timestamp[:10] }} {{ exchange.timestamp[11:19] }}</p>
+        </div>
+        <div>
+            <span class="text-gray-500">Model</span>
+            {% if exchange.model %}
+            <p class="font-medium">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                    {% if 'opus' in exchange.model %}bg-amber-100 text-amber-800
+                    {% elif 'haiku' in exchange.model %}bg-emerald-100 text-emerald-800
+                    {% else %}bg-indigo-100 text-indigo-800{% endif %}"
+                    title="{{ exchange.model }}">
+                    {{ exchange.model_display }}
+                </span>
+            </p>
+            {% else %}
+            <p class="font-medium text-gray-400">Unknown</p>
+            {% endif %}
         </div>
         <div>
             <span class="text-gray-500">Duration</span>
@@ -223,6 +239,35 @@
                     <span class="text-gray-600">Cache Write</span>
                 </div>
             </div>
+
+            {% if exchange.model_breakdown %}
+            <!-- Model Breakdown -->
+            <div class="mt-6 bg-amber-50 rounded-lg border border-amber-200 p-4">
+                <h4 class="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"></path>
+                    </svg>
+                    Models Used by This Agent
+                </h4>
+                <div class="space-y-2">
+                    {% for m in exchange.model_breakdown %}
+                    <div class="flex items-center justify-between py-1.5 px-3 bg-white rounded border border-amber-100">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                            {% if 'opus' in m.model %}bg-amber-100 text-amber-800
+                            {% elif 'haiku' in m.model %}bg-emerald-100 text-emerald-800
+                            {% else %}bg-indigo-100 text-indigo-800{% endif %}"
+                            title="{{ m.model }}">
+                            {{ m.display }}
+                        </span>
+                        <span class="text-sm text-gray-600">{{ m.tokens|format_compact }} tokens</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if exchange.model_breakdown|length > 1 %}
+                <p class="mt-2 text-xs text-amber-700">⚠ Multiple models used — costs calculated per model</p>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
 
         <!-- Prompt Tab -->

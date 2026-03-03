@@ -894,6 +894,19 @@ class SessionParser:
         return result
 
 
+# Per-model pricing rates (inline to avoid circular imports with analyzers.tokens)
+_SUBAGENT_MODEL_RATES: dict = {
+    "claude-opus-4-6": {"input_per_mtok": 5.0, "output_per_mtok": 25.0, "cache_write_per_mtok": 6.25, "cache_read_per_mtok": 0.50},
+    "claude-opus-4-5-20251101": {"input_per_mtok": 5.0, "output_per_mtok": 25.0, "cache_write_per_mtok": 6.25, "cache_read_per_mtok": 0.50},
+    "claude-opus-4-20250514": {"input_per_mtok": 15.0, "output_per_mtok": 75.0, "cache_write_per_mtok": 18.75, "cache_read_per_mtok": 1.50},
+    "claude-sonnet-4-6": {"input_per_mtok": 3.0, "output_per_mtok": 15.0, "cache_write_per_mtok": 3.75, "cache_read_per_mtok": 0.30},
+    "claude-sonnet-4-5-20250929": {"input_per_mtok": 3.0, "output_per_mtok": 15.0, "cache_write_per_mtok": 3.75, "cache_read_per_mtok": 0.30},
+    "claude-haiku-4-6": {"input_per_mtok": 1.0, "output_per_mtok": 5.0, "cache_write_per_mtok": 1.25, "cache_read_per_mtok": 0.10},
+    "claude-haiku-4-5-20251001": {"input_per_mtok": 1.0, "output_per_mtok": 5.0, "cache_write_per_mtok": 1.25, "cache_read_per_mtok": 0.10},
+}
+_SUBAGENT_DEFAULT_RATES: dict = {"input_per_mtok": 3.0, "output_per_mtok": 15.0, "cache_write_per_mtok": 3.75, "cache_read_per_mtok": 0.30}
+
+
 @dataclass
 class SubAgentExchange:
     """Represents a complete sub-agent exchange (Task tool invocation and result)."""
@@ -921,6 +934,14 @@ class SubAgentExchange:
     # Token usage for the parent's Task invocation message
     parent_usage: Optional[TokenUsage] = None
 
+    # Model attribution (populated by reading subagent JSONL files)
+    model: Optional[str] = None  # Primary model used by this subagent
+    model_usage: dict = field(default_factory=dict)  # {model_id: TokenUsage}
+
+    # Teams feature metadata
+    slug: str = ""         # session slug shared by all team members (e.g. "brave-dancing-tiger")
+    is_teammate: bool = False  # True when spawned via Teams feature (<teammate-message>)
+
     # Status
     status: str = "completed"  # completed, error, etc.
 
@@ -936,28 +957,27 @@ class SubAgentExchange:
 
     @property
     def subagent_cost(self) -> float:
-        """Calculate estimated cost for sub-agent work using default Sonnet pricing."""
+        """Calculate estimated cost using model-aware pricing from subagent JSONL data."""
+        def _calc(usage: "TokenUsage", rates: dict) -> float:
+            return (
+                (usage.input_tokens / 1_000_000) * rates["input_per_mtok"]
+                + (usage.output_tokens / 1_000_000) * rates["output_per_mtok"]
+                + (usage.cache_creation_input_tokens / 1_000_000) * rates["cache_write_per_mtok"]
+                + (usage.cache_read_input_tokens / 1_000_000) * rates["cache_read_per_mtok"]
+            )
+
+        # Prefer per-model usage breakdown (most accurate)
+        if self.model_usage:
+            return sum(
+                _calc(usage, _SUBAGENT_MODEL_RATES.get(model_id, _SUBAGENT_DEFAULT_RATES))
+                for model_id, usage in self.model_usage.items()
+            )
+
+        # Fall back to aggregate subagent_usage with model-aware rates
         if not self.subagent_usage:
             return 0.0
-        pricing = {
-            "input_per_mtok": 3.0,
-            "output_per_mtok": 15.0,
-            "cache_write_per_mtok": 3.75,
-            "cache_read_per_mtok": 0.30,
-        }
-        input_cost = (self.subagent_usage.input_tokens / 1_000_000) * pricing[
-            "input_per_mtok"
-        ]
-        output_cost = (self.subagent_usage.output_tokens / 1_000_000) * pricing[
-            "output_per_mtok"
-        ]
-        cache_write_cost = (
-            self.subagent_usage.cache_creation_input_tokens / 1_000_000
-        ) * pricing["cache_write_per_mtok"]
-        cache_read_cost = (
-            self.subagent_usage.cache_read_input_tokens / 1_000_000
-        ) * pricing["cache_read_per_mtok"]
-        return input_cost + output_cost + cache_write_cost + cache_read_cost
+        rates = _SUBAGENT_MODEL_RATES.get(self.model or "", _SUBAGENT_DEFAULT_RATES)
+        return _calc(self.subagent_usage, rates)
 
     @property
     def duration_seconds(self) -> float:
@@ -970,14 +990,16 @@ class SubAgentExchange:
 class SubAgentParser:
     """Parser for extracting sub-agent exchange data from session files."""
 
-    def __init__(self, session_files: List[Path]):
+    def __init__(self, session_files: List[Path], subagent_file_map: Optional[dict] = None):
         """
         Initialize sub-agent parser.
 
         Args:
             session_files: List of session JSONL file paths
+            subagent_file_map: Optional dict mapping agent_id -> subagent JSONL Path
         """
         self.session_files = session_files
+        self.subagent_file_map: dict[str, Path] = subagent_file_map or {}
 
     def parse_exchanges(
         self,
@@ -988,7 +1010,8 @@ class SubAgentParser:
         Parse all session files and extract sub-agent exchanges.
 
         Looks for tool_result messages with toolUseResult.agentId to identify
-        completed sub-agent calls.
+        completed sub-agent calls. Also directly parses subagent JSONL files for
+        agents not captured via the parent session (e.g. Teams teammate agents).
 
         Args:
             time_filter: Optional time filter
@@ -1007,9 +1030,42 @@ class SubAgentParser:
             file_exchanges = self._parse_file(session_file, time_filter, project_filter)
             exchanges.extend(file_exchanges)
 
+        # Also parse subagent files not captured via parent session (e.g. Teams agents)
+        found_agent_ids = {ex.agent_id for ex in exchanges}
+        for agent_id in self.subagent_file_map:
+            if agent_id in found_agent_ids:
+                continue
+            exchange = self._parse_subagent_file_directly(agent_id, time_filter, project_filter)
+            if exchange:
+                exchanges.append(exchange)
+
         # Sort by timestamp (most recent first)
         exchanges.sort(key=lambda x: x.timestamp, reverse=True)
         return exchanges
+
+    def get_exchange_detail(self, agent_id: str) -> Optional[SubAgentExchange]:
+        """
+        Return a single SubAgentExchange for the given agent_id without scanning
+        all session files. Reads only the one subagent JSONL file if available,
+        otherwise falls back to a full scan.
+
+        Args:
+            agent_id: The agent ID to look up
+
+        Returns:
+            SubAgentExchange or None if not found
+        """
+        if agent_id in self.subagent_file_map:
+            return self._parse_subagent_file_directly(agent_id)
+
+        # Fall back to full scan for agents captured via parent session
+        for session_file in self.session_files:
+            if session_file.name.startswith("agent-"):
+                continue
+            for exchange in self._parse_file(session_file):
+                if exchange.agent_id == agent_id:
+                    return exchange
+        return None
 
     def _parse_file(
         self,
@@ -1145,8 +1201,14 @@ class SubAgentParser:
                                     result_text = text
                                     break
 
+                    agent_id = tool_result.get("agentId", "")
+
+                    # Load model attribution from the subagent's own JSONL file
+                    model_usage = self._load_model_usage_from_file(agent_id)
+                    primary_model = self._primary_model(model_usage)
+
                     exchange = SubAgentExchange(
-                        agent_id=tool_result.get("agentId", ""),
+                        agent_id=agent_id,
                         session_id=data.get("sessionId", ""),
                         project=project,
                         timestamp=invocation.get("timestamp", timestamp),
@@ -1160,6 +1222,8 @@ class SubAgentParser:
                         total_tool_use_count=tool_result.get("totalToolUseCount") or 0,
                         parent_usage=parent_usage,
                         status=tool_result.get("status", "completed"),
+                        model=primary_model,
+                        model_usage=model_usage,
                     )
 
                     exchanges.append(exchange)
@@ -1168,6 +1232,200 @@ class SubAgentParser:
                     continue
 
         return exchanges
+
+    def _load_model_usage_from_file(self, agent_id: str) -> dict:
+        """
+        Read a subagent JSONL file and aggregate token usage per model.
+
+        Args:
+            agent_id: The agent ID (hex string matching agent-<id>.jsonl filename)
+
+        Returns:
+            Dict mapping model_id -> TokenUsage, or empty dict if file not found
+        """
+        agent_file = self.subagent_file_map.get(agent_id)
+        if not agent_file or not agent_file.exists():
+            return {}
+
+        model_usage: dict[str, TokenUsage] = {}
+
+        with open(agent_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                    message = data.get("message", {})
+                    if message.get("role") != "assistant":
+                        continue
+                    model_id = message.get("model")
+                    usage_data = message.get("usage")
+                    if not model_id or not usage_data:
+                        continue
+                    usage = TokenUsage(
+                        input_tokens=usage_data.get("input_tokens", 0),
+                        output_tokens=usage_data.get("output_tokens", 0),
+                        cache_creation_input_tokens=usage_data.get("cache_creation_input_tokens", 0),
+                        cache_read_input_tokens=usage_data.get("cache_read_input_tokens", 0),
+                    )
+                    if model_id not in model_usage:
+                        model_usage[model_id] = TokenUsage()
+                    model_usage[model_id] = model_usage[model_id] + usage
+                except (json.JSONDecodeError, ValueError):
+                    continue
+
+        return model_usage
+
+    def _primary_model(self, model_usage: dict) -> Optional[str]:
+        """Return the model with the highest output token count, or None."""
+        if not model_usage:
+            return None
+        return max(model_usage, key=lambda m: model_usage[m].output_tokens)
+
+    def _parse_subagent_file_directly(
+        self,
+        agent_id: str,
+        time_filter: Optional[TimeFilter] = None,
+        project_filter: Optional[str] = None,
+    ) -> Optional["SubAgentExchange"]:
+        """
+        Parse a subagent JSONL file directly to create a SubAgentExchange.
+
+        Used for agents not captured via the parent session's toolUseResult (e.g.
+        Teams teammate agents where toolUseResult.agentId is absent).
+        """
+        agent_file = self.subagent_file_map.get(agent_id)
+        if not agent_file or not agent_file.exists():
+            return None
+
+        first_ts: Optional[str] = None
+        last_ts: Optional[str] = None
+        cwd: Optional[str] = None
+        session_id: str = ""
+        slug: str = ""
+        first_user_content: str = ""
+        model_usage: dict[str, TokenUsage] = {}
+        total_tool_use_count: int = 0
+
+        with open(agent_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+
+                ts = data.get("timestamp", "")
+                if ts:
+                    if not first_ts:
+                        first_ts = ts
+                    last_ts = ts
+
+                if not cwd:
+                    cwd = data.get("cwd")
+                if not session_id:
+                    session_id = data.get("sessionId", "")
+                if not slug:
+                    slug = data.get("slug", "")
+
+                msg = data.get("message", {})
+                role = msg.get("role")
+                content = msg.get("content", [])
+
+                if role == "user" and not first_user_content:
+                    if isinstance(content, str):
+                        first_user_content = content[:300]
+                    elif isinstance(content, list):
+                        for item in content:
+                            if isinstance(item, dict) and item.get("type") == "text":
+                                first_user_content = item.get("text", "")[:300]
+                                break
+
+                if role == "assistant":
+                    model_id = msg.get("model")
+                    usage_data = msg.get("usage")
+                    if model_id and usage_data:
+                        usage = TokenUsage(
+                            input_tokens=usage_data.get("input_tokens", 0),
+                            output_tokens=usage_data.get("output_tokens", 0),
+                            cache_creation_input_tokens=usage_data.get("cache_creation_input_tokens", 0),
+                            cache_read_input_tokens=usage_data.get("cache_read_input_tokens", 0),
+                        )
+                        if model_id not in model_usage:
+                            model_usage[model_id] = TokenUsage()
+                        model_usage[model_id] = model_usage[model_id] + usage
+
+                    if isinstance(content, list):
+                        total_tool_use_count += sum(
+                            1 for item in content
+                            if isinstance(item, dict) and item.get("type") == "tool_use"
+                        )
+
+        if not first_ts:
+            return None
+
+        # Apply time filter
+        if time_filter and not time_filter.matches_iso_string(first_ts):
+            return None
+
+        # Apply project filter
+        if project_filter and cwd != project_filter:
+            return None
+
+        # Duration
+        duration_ms: Optional[int] = None
+        if first_ts and last_ts and first_ts != last_ts:
+            try:
+                t1 = datetime.fromisoformat(first_ts.replace("Z", "+00:00"))
+                t2 = datetime.fromisoformat(last_ts.replace("Z", "+00:00"))
+                duration_ms = int((t2 - t1).total_seconds() * 1000)
+            except (ValueError, AttributeError):
+                pass
+
+        # Aggregate total usage
+        total_usage = TokenUsage()
+        for u in model_usage.values():
+            total_usage = total_usage + u
+
+        # Detect subagent type and extract readable description from Teams agents
+        is_teammate = False
+        description = first_user_content[:100]
+        if "<teammate-message" in first_user_content:
+            # Extract summary="..." and teammate_id="..." from the tag
+            summary_match = re.search(r'summary="([^"]*)"', first_user_content)
+            id_match = re.search(r'teammate_id="([^"]*)"', first_user_content)
+            teammate_id = id_match.group(1) if id_match else "teammate"
+            subagent_type = teammate_id
+            is_teammate = True
+            if summary_match:
+                description = summary_match.group(1)
+            else:
+                description = f"[{teammate_id}] teammate agent"
+        else:
+            subagent_type = "unknown"
+
+        primary_model = self._primary_model(model_usage)
+
+        return SubAgentExchange(
+            agent_id=agent_id,
+            session_id=session_id,
+            project=cwd,
+            timestamp=first_ts,
+            duration_ms=duration_ms,
+            subagent_type=subagent_type,
+            description=description,
+            prompt=first_user_content,
+            subagent_usage=total_usage,
+            total_tokens=total_usage.total_tokens,
+            total_tool_use_count=total_tool_use_count,
+            model=primary_model,
+            model_usage=model_usage,
+            slug=slug,
+            is_teammate=is_teammate,
+        )
 
     def get_exchange_stats(self, time_filter: Optional[TimeFilter] = None) -> dict:
         """
