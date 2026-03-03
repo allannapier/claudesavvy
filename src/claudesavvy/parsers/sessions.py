@@ -938,6 +938,10 @@ class SubAgentExchange:
     model: Optional[str] = None  # Primary model used by this subagent
     model_usage: dict = field(default_factory=dict)  # {model_id: TokenUsage}
 
+    # Teams feature metadata
+    slug: str = ""         # session slug shared by all team members (e.g. "brave-dancing-tiger")
+    is_teammate: bool = False  # True when spawned via Teams feature (<teammate-message>)
+
     # Status
     status: str = "completed"  # completed, error, etc.
 
@@ -1299,6 +1303,7 @@ class SubAgentParser:
         last_ts: Optional[str] = None
         cwd: Optional[str] = None
         session_id: str = ""
+        slug: str = ""
         first_user_content: str = ""
         model_usage: dict[str, TokenUsage] = {}
         total_tool_use_count: int = 0
@@ -1323,6 +1328,8 @@ class SubAgentParser:
                     cwd = data.get("cwd")
                 if not session_id:
                     session_id = data.get("sessionId", "")
+                if not slug:
+                    slug = data.get("slug", "")
 
                 msg = data.get("message", {})
                 role = msg.get("role")
@@ -1384,6 +1391,7 @@ class SubAgentParser:
             total_usage = total_usage + u
 
         # Detect subagent type and extract readable description from Teams agents
+        is_teammate = False
         description = first_user_content[:100]
         if "<teammate-message" in first_user_content:
             # Extract summary="..." and teammate_id="..." from the tag
@@ -1391,6 +1399,7 @@ class SubAgentParser:
             id_match = re.search(r'teammate_id="([^"]*)"', first_user_content)
             teammate_id = id_match.group(1) if id_match else "teammate"
             subagent_type = teammate_id
+            is_teammate = True
             if summary_match:
                 description = summary_match.group(1)
             else:
@@ -1414,6 +1423,8 @@ class SubAgentParser:
             total_tool_use_count=total_tool_use_count,
             model=primary_model,
             model_usage=model_usage,
+            slug=slug,
+            is_teammate=is_teammate,
         )
 
     def get_exchange_stats(self, time_filter: Optional[TimeFilter] = None) -> dict:
