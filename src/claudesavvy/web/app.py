@@ -5,12 +5,17 @@ the Claude Monitor web application.
 """
 
 import os
+import time
+import threading
 from datetime import datetime
-from flask import Flask, jsonify
 from typing import Optional
+
+from flask import Flask, jsonify
 
 from ..utils.paths import ClaudeDataPaths, get_claude_paths
 from .services.dashboard_service import DashboardService
+
+_REFRESH_INTERVAL = 5  # seconds between filesystem re-scans
 
 
 def create_app(claude_data_paths: Optional[ClaudeDataPaths] = None) -> Flask:
@@ -115,10 +120,19 @@ def create_app(claude_data_paths: Optional[ClaudeDataPaths] = None) -> Flask:
     # Store service in app context for routes to access
     app.dashboard_service = dashboard_service
 
+    app._last_refresh = 0.0
+    app._refresh_lock = threading.Lock()
+
     @app.before_request
     def refresh_data():
-        """Re-scan session files before each request to pick up new conversations."""
-        app.dashboard_service.refresh()
+        """Re-scan session files periodically to pick up new conversations."""
+        now = time.monotonic()
+        if now - app._last_refresh >= _REFRESH_INTERVAL:
+            with app._refresh_lock:
+                now = time.monotonic()
+                if now - app._last_refresh >= _REFRESH_INTERVAL:
+                    app.dashboard_service.refresh()
+                    app._last_refresh = time.monotonic()
 
     # Register blueprints (if they exist)
     # These will be imported from routes submodule
