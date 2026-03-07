@@ -38,7 +38,8 @@
             box-shadow: 0 0 10px rgba(7, 112, 227, 0.5);
         }
         
-        #global-loader.htmx-request {
+        #global-loader.htmx-request,
+        #global-loader.loading {
             opacity: 1;
         }
         
@@ -180,14 +181,35 @@
         document.body.addEventListener('htmx:beforeRequest', function(evt) {
             document.body.classList.add('htmx-requesting');
         });
-        
+
         document.body.addEventListener('htmx:afterRequest', function(evt) {
             document.body.classList.remove('htmx-requesting');
         });
-        
+
         // Handle failed requests
         document.body.addEventListener('htmx:responseError', function(evt) {
             document.body.classList.remove('htmx-requesting');
+        });
+
+        // Show loading bar immediately on nav link clicks (full page navigations)
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a[href]');
+            if (!link || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey) return;
+            const href = link.getAttribute('href');
+            if (!href || href.startsWith('#') || href.startsWith('javascript:') || link.target === '_blank') return;
+            if (link.hasAttribute('hx-get') || link.hasAttribute('hx-post') ||
+                link.hasAttribute('hx-put') || link.hasAttribute('hx-patch') || link.hasAttribute('hx-delete')) return;
+            try {
+                const url = new URL(href, window.location.origin);
+                if (url.origin === window.location.origin) {
+                    document.getElementById('global-loader').classList.add('loading');
+                }
+            } catch(err) { /* Invalid URL – skip */ }
+        });
+
+        // Reset loader if navigation is cancelled (e.g. back-forward cache restore)
+        window.addEventListener('pageshow', function() {
+            document.getElementById('global-loader').classList.remove('loading');
         });
     </script>
 </body>
