@@ -8,13 +8,14 @@ import os
 import time
 import threading
 from datetime import datetime
-from flask import Flask, jsonify
 from typing import Optional
 
-_REFRESH_INTERVAL = 5  # seconds between filesystem re-scans
+from flask import Flask, jsonify
 
 from ..utils.paths import ClaudeDataPaths, get_claude_paths
 from .services.dashboard_service import DashboardService
+
+_REFRESH_INTERVAL = 5  # seconds between filesystem re-scans
 
 
 def create_app(claude_data_paths: Optional[ClaudeDataPaths] = None) -> Flask:
