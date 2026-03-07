@@ -25,6 +25,7 @@ from ...analyzers.tokens import (
     TokenSummary,
     get_model_display_name,
     DEFAULT_PRICING,
+    MODEL_PRICING,
 )
 from ...analyzers.integrations import IntegrationAnalyzer, IntegrationSummary
 from ...analyzers.features import FeaturesAnalyzer, FeaturesSummary
@@ -111,7 +112,6 @@ class DashboardService:
     @staticmethod
     def _calc_model_cost(model_usage: dict) -> float:
         """Calculate cost from a {model_id: TokenUsage} dict using per-model pricing."""
-        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING
         total = 0.0
         for model_id, usage in model_usage.items():
             rates = MODEL_PRICING.get(model_id, DEFAULT_PRICING)
@@ -1569,7 +1569,6 @@ class DashboardService:
         success = self._pricing_settings.reset_pricing_for_model(model)
 
         if success:
-            from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING
 
             default_pricing = MODEL_PRICING.get(model, DEFAULT_PRICING)
             return {"success": True, "model": model, "pricing": default_pricing}
@@ -1895,7 +1894,6 @@ class DashboardService:
             if model_usage:
                 cost = self._calc_model_cost(model_usage)
             else:
-                from ...analyzers.tokens import DEFAULT_PRICING
                 usage = c["total_tokens"]
                 p = DEFAULT_PRICING
                 cost = (
@@ -1992,7 +1990,7 @@ class DashboardService:
         Returns:
             Dict with conversation details including context_per_turn, or None
         """
-        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING, get_model_display_name
+        from ...analyzers.tokens import get_model_display_name
 
         raw = self._session_parser.get_conversation_stats(time_filter=time_filter, limit=None)
 
@@ -2078,7 +2076,6 @@ class DashboardService:
         Returns:
             Dict with tool details and invocations grouped by session
         """
-        from ...analyzers.tokens import DEFAULT_PRICING
 
         tool_parser = self._features_analyzer.tool_parser
 
@@ -2206,7 +2203,6 @@ class DashboardService:
         Returns:
             Dict with chart-ready data
         """
-        from ...analyzers.tokens import DEFAULT_PRICING
 
         tool_parser = self._features_analyzer.tool_parser
         pricing = DEFAULT_PRICING
@@ -2341,7 +2337,6 @@ class DashboardService:
         Returns:
             Dict with invocation details or None if not found
         """
-        from ...analyzers.tokens import DEFAULT_PRICING
 
         tool_parser = self._features_analyzer.tool_parser
         pricing = DEFAULT_PRICING
@@ -2414,7 +2409,6 @@ class DashboardService:
         Returns:
             Dict with timeline data including chart data and session list
         """
-        from ...analyzers.tokens import DEFAULT_PRICING
 
         tool_parser = self._features_analyzer.tool_parser
         pricing = DEFAULT_PRICING
@@ -2591,7 +2585,7 @@ class DashboardService:
                     members[role] = {"role": role, "exchanges": 0, "tokens": 0, "cost": 0.0}
                 members[role]["exchanges"] += 1
                 members[role]["tokens"] += e.total_tokens
-                members[role]["cost"] = round(members[role]["cost"] + e.subagent_cost, 4)
+                members[role]["cost"] += e.subagent_cost
 
             # Per-model breakdown
             model_breakdown = sorted(
@@ -2625,7 +2619,10 @@ class DashboardService:
                 "member_count": len(set(e.subagent_type for e in group_exchanges)),
                 "exchange_count": len(group_exchanges),
                 "session_count": 1,
-                "members": sorted(members.values(), key=lambda x: x["tokens"], reverse=True),
+                "members": sorted(
+                    [{**m, "cost": round(m["cost"], 4)} for m in members.values()],
+                    key=lambda x: x["tokens"], reverse=True
+                ),
                 "input_tokens": agg_input,
                 "output_tokens": agg_output,
                 "total_tokens": group_total_tokens,
