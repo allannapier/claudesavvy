@@ -128,9 +128,10 @@ def create_app(claude_data_paths: Optional[ClaudeDataPaths] = None) -> Flask:
         now = time.monotonic()
         if now - app._last_refresh >= _REFRESH_INTERVAL:
             with app._refresh_lock:
+                now = time.monotonic()
                 if now - app._last_refresh >= _REFRESH_INTERVAL:
                     app.dashboard_service.refresh()
-                    app._last_refresh = now
+                    app._last_refresh = time.monotonic()
 
     # Register blueprints (if they exist)
     # These will be imported from routes submodule

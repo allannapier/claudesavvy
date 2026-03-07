@@ -194,7 +194,7 @@
         // Show loading bar immediately on nav link clicks (full page navigations)
         document.addEventListener('click', function(e) {
             const link = e.target.closest('a[href]');
-            if (!link || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey) return;
+            if (!link || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
             const href = link.getAttribute('href');
             if (!href || href.startsWith('#') || href.startsWith('javascript:') || link.target === '_blank') return;
             if (link.hasAttribute('hx-get') || link.hasAttribute('hx-post') ||
@@ -202,6 +202,10 @@
             try {
                 const url = new URL(href, window.location.origin);
                 if (url.origin === window.location.origin) {
+                    // Skip hash-only navigations — they don't trigger pageshow so the loader would get stuck
+                    if (url.pathname === window.location.pathname &&
+                        url.search === window.location.search &&
+                        url.hash) return;
                     document.getElementById('global-loader').classList.add('loading');
                 }
             } catch(err) { /* Invalid URL – skip */ }
