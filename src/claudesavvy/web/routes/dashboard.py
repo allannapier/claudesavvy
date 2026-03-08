@@ -1,8 +1,8 @@
 """Dashboard route handler for Claude Monitor web application."""
 
-import html
 import importlib.resources
 import json
+import re
 import subprocess
 from datetime import date, datetime, timezone
 from typing import Any, Dict, Optional
@@ -1519,11 +1519,12 @@ def _statusline_state() -> dict:
 
     settings_configured = False
     try:
-        with open(paths.settings_file) as f:
+        with open(paths.settings_file, encoding="utf-8") as f:
             cfg = json.load(f)
         sl = cfg.get("statusLine", {})
         settings_configured = sl.get("type") == "command" and "statusline.py" in sl.get("command", "")
     except Exception:
+        # settings.json may not exist or be unreadable; treat as unconfigured
         pass
 
     preview = None
@@ -1533,9 +1534,12 @@ def _statusline_state() -> dict:
                 ["python3", str(script_dest)],
                 capture_output=True, text=True, timeout=5
             )
-            preview = result.stdout or result.stderr or "(no output)"
-        except Exception as e:
-            preview = f"(error: {e})"
+            # Strip ANSI escape codes so the preview renders cleanly in HTML
+            ansi_escape = re.compile(r"\x1b\[[0-9;]*m")
+            raw = result.stdout or result.stderr or "(no output)"
+            preview = ansi_escape.sub("", raw)
+        except Exception:
+            preview = "(preview unavailable)"
 
     return {
         "installed": script_installed and settings_configured,
@@ -1560,26 +1564,33 @@ def api_statusline_status() -> str:
 @dashboard_bp.route("/api/statusline/install", methods=["POST"])
 def api_statusline_install() -> str:
     """Install the statusline script and configure ~/.claude/settings.json."""
+    from flask import request
+
+    # Restrict to localhost — this endpoint writes to the user's ~/.claude/settings.json
+    if request.remote_addr not in ("127.0.0.1", "::1"):
+        return '<div class="text-red-600 p-4">Install only permitted from localhost.</div>', 403
+
     try:
         paths = ClaudeDataPaths()
         paths.base_dir.mkdir(parents=True, exist_ok=True)
         script_dest = paths.base_dir / "statusline.py"
 
         pkg_data = importlib.resources.files("claudesavvy").joinpath("data/statusline.py")
-        script_dest.write_text(pkg_data.read_text())
+        script_dest.write_text(pkg_data.read_text(), encoding="utf-8")
 
         cfg: dict = {}
         try:
-            with open(paths.settings_file) as f:
+            with open(paths.settings_file, encoding="utf-8") as f:
                 cfg = json.load(f)
         except Exception:
+            # settings.json may not exist yet; start with empty config
             cfg = {}
 
         cfg["statusLine"] = {
             "type": "command",
             "command": f"python3 {script_dest}",
         }
-        with open(paths.settings_file, "w") as f:
+        with open(paths.settings_file, "w", encoding="utf-8") as f:
             json.dump(cfg, f, indent=2)
 
         state = _statusline_state()
@@ -1588,4 +1599,4 @@ def api_statusline_install() -> str:
 
     except Exception as e:
         logger.error("Error installing statusline: %s", str(e), exc_info=True)
-        return f'<div class="text-red-600 p-4">Install failed: {html.escape(str(e))}</div>', 500
+        return '<div class="text-red-600 p-4">Install failed. Check server logs for details.</div>', 500
