@@ -2,6 +2,20 @@
 
 All notable changes to ClaudeSavvy will be documented in this file.
 
+## [2.9.0] - 2026-03-08
+
+### Added
+- **New**: Claude Code statusline with one-click installer in Settings
+- `statusline.py`: standalone script showing today's cost, token count, cache hit %, session count, and month-to-date cost with ANSI colours
+- Bundled as package data so it ships with the package and can be installed from any machine running the app
+- `GET /api/statusline/status`: checks install state and runs a live preview
+- `POST /api/statusline/install`: writes the script and patches `settings.json` to register the hook
+- Settings page: new card with status badges, terminal preview, and Install/Reinstall button loaded via HTMX
+
+### Security
+- Restricted `POST /api/statusline/install` to localhost only (127.0.0.1/::1) to prevent remote config modification when server binds to 0.0.0.0
+- ANSI escape codes stripped from preview output before rendering in HTML
+
 ## [2.8.0] - 2026-03-01
 
 ### Added
