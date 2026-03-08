@@ -24,6 +24,36 @@
         </div>
     </div>
 
+    <!-- Claude Code Status Line -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Claude Code Status Line</h2>
+                    <p class="mt-1 text-sm text-gray-600">
+                        Install a status line into Claude Code that shows today's cost, token usage, cache hit rate, and monthly spend — updated live.
+                    </p>
+                </div>
+                <span class="ml-4 shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-[#0770E3]/10 text-[#0770E3]">
+                    One-click install
+                </span>
+            </div>
+        </div>
+        <div class="p-6"
+             hx-get="/api/statusline/status"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+                Checking status…
+            </div>
+        </div>
+    </div>
+
     <!-- Pricing Configuration Section -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200">
         <div class="p-6 border-b border-gray-200">

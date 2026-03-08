@@ -1,10 +1,15 @@
 """Dashboard route handler for Claude Monitor web application."""
 
+import importlib.resources
+import json
+import re
+import subprocess
 from datetime import date, datetime, timezone
 from typing import Any, Dict, Optional
 from flask import Blueprint, render_template, current_app
 import logging
 
+from ...utils.paths import ClaudeDataPaths
 from ...utils.time_filter import TimeFilter
 
 logger = logging.getLogger(__name__)
@@ -1499,3 +1504,99 @@ def api_teams() -> str:
     except Exception as e:
         logger.error(f"Error loading filtered teams: {e}", exc_info=True)
         return '<div class="text-red-600 p-4">Error loading team data.</div>', 500
+
+
+# ---------------------------------------------------------------------------
+# Statusline installer
+# ---------------------------------------------------------------------------
+
+def _statusline_state() -> dict:
+    """Return current install state and live preview output."""
+    paths = ClaudeDataPaths()
+    script_dest = paths.base_dir / "statusline.py"
+
+    script_installed = script_dest.exists()
+
+    settings_configured = False
+    try:
+        with open(paths.settings_file, encoding="utf-8") as f:
+            cfg = json.load(f)
+        sl = cfg.get("statusLine", {})
+        settings_configured = sl.get("type") == "command" and "statusline.py" in sl.get("command", "")
+    except Exception:
+        # settings.json may not exist or be unreadable; treat as unconfigured
+        pass
+
+    preview = None
+    if script_installed:
+        try:
+            result = subprocess.run(
+                ["python3", str(script_dest)],
+                capture_output=True, text=True, timeout=5
+            )
+            # Strip ANSI escape codes so the preview renders cleanly in HTML
+            ansi_escape = re.compile(r"\x1b\[[0-9;]*m")
+            raw = result.stdout or result.stderr or "(no output)"
+            preview = ansi_escape.sub("", raw)
+        except Exception:
+            preview = "(preview unavailable)"
+
+    return {
+        "installed": script_installed and settings_configured,
+        "script_installed": script_installed,
+        "settings_configured": settings_configured,
+        "script_dest": str(script_dest),
+        "preview": preview,
+    }
+
+
+@dashboard_bp.route("/api/statusline/status")
+def api_statusline_status() -> str:
+    """Return current statusline install state as HTML partial."""
+    try:
+        state = _statusline_state()
+        return render_template("partials/statusline_card.html", **state)
+    except Exception as e:
+        logger.error("Error checking statusline status: %s", str(e), exc_info=True)
+        return '<div class="text-red-600 p-4">Error checking statusline status.</div>', 500
+
+
+@dashboard_bp.route("/api/statusline/install", methods=["POST"])
+def api_statusline_install() -> str:
+    """Install the statusline script and configure ~/.claude/settings.json."""
+    from flask import request
+
+    # Restrict to localhost — this endpoint writes to the user's ~/.claude/settings.json
+    if request.remote_addr not in ("127.0.0.1", "::1"):
+        return '<div class="text-red-600 p-4">Install only permitted from localhost.</div>', 403
+
+    try:
+        paths = ClaudeDataPaths()
+        paths.base_dir.mkdir(parents=True, exist_ok=True)
+        script_dest = paths.base_dir / "statusline.py"
+
+        pkg_data = importlib.resources.files("claudesavvy").joinpath("data/statusline.py")
+        script_dest.write_text(pkg_data.read_text(), encoding="utf-8")
+
+        cfg: dict = {}
+        try:
+            with open(paths.settings_file, encoding="utf-8") as f:
+                cfg = json.load(f)
+        except Exception:
+            # settings.json may not exist yet; start with empty config
+            cfg = {}
+
+        cfg["statusLine"] = {
+            "type": "command",
+            "command": f"python3 {script_dest}",
+        }
+        with open(paths.settings_file, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2)
+
+        state = _statusline_state()
+        state["flash"] = "Installed! Restart Claude Code to activate."
+        return render_template("partials/statusline_card.html", **state)
+
+    except Exception as e:
+        logger.error("Error installing statusline: %s", str(e), exc_info=True)
+        return '<div class="text-red-600 p-4">Install failed. Check server logs for details.</div>', 500

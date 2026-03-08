@@ -1,0 +1,78 @@
+{# HTMX partial: statusline install status card #}
+<div id="statusline-card-inner">
+
+  {% if flash %}
+  <div class="mb-4 flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
+    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+    </svg>
+    {{ flash }}
+  </div>
+  {% endif %}
+
+  {# Status badges #}
+  <div class="flex flex-wrap gap-3 mb-5">
+    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium
+      {% if script_installed %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-600{% endif %}">
+      <span class="w-1.5 h-1.5 rounded-full {% if script_installed %}bg-green-500{% else %}bg-gray-400{% endif %}"></span>
+      Script {% if script_installed %}installed{% else %}not installed{% endif %}
+    </span>
+    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium
+      {% if settings_configured %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-600{% endif %}">
+      <span class="w-1.5 h-1.5 rounded-full {% if settings_configured %}bg-green-500{% else %}bg-gray-400{% endif %}"></span>
+      settings.json {% if settings_configured %}configured{% else %}not configured{% endif %}
+    </span>
+  </div>
+
+  {# Live preview #}
+  {% if preview %}
+  <div class="mb-5">
+    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Live Preview</p>
+    <div class="rounded-lg bg-gray-900 px-4 py-3 font-mono text-sm text-gray-100 overflow-x-auto whitespace-nowrap">{{ preview }}</div>
+    <p class="mt-1.5 text-xs text-gray-400">This is what Claude Code will show in the status line.</p>
+  </div>
+  {% endif %}
+
+  {# Install path info #}
+  <div class="mb-5 text-xs text-gray-500">
+    Install path: <code class="bg-gray-100 px-1.5 py-0.5 rounded font-mono">{{ script_dest }}</code>
+  </div>
+
+  {# Action buttons #}
+  <div class="flex gap-3">
+    <button
+      hx-post="/api/statusline/install"
+      hx-target="#statusline-card-inner"
+      hx-swap="outerHTML"
+      hx-indicator=".statusline-spinner"
+      class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors
+        {% if not installed %}bg-[#0770E3] text-white hover:bg-[#0558b0]{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {% if not installed %}
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        {% else %}
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        {% endif %}
+      </svg>
+      {{ "Install Status Line" if not installed else "Reinstall / Update" }}
+      <span class="statusline-spinner htmx-indicator">
+        <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+      </span>
+    </button>
+
+    <button
+      hx-get="/api/statusline/status"
+      hx-target="#statusline-card-inner"
+      hx-swap="outerHTML"
+      class="inline-flex items-center gap-2 px-4 py-2 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-100 transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+      </svg>
+      Refresh Preview
+    </button>
+  </div>
+
+</div>

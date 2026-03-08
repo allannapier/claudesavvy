@@ -31,3 +31,4 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "claudesavvy.web" = ["templates/**/*.html", "static/**/*"]
+"claudesavvy" = ["data/*"]
