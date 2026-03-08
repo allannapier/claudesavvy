@@ -2,7 +2,6 @@
 """Claude Code statusline: shows 24h usage stats."""
 import glob
 import json
-import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 

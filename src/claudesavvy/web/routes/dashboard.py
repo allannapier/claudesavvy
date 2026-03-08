@@ -5,7 +5,6 @@ import importlib.resources
 import json
 import subprocess
 from datetime import date, datetime, timezone
-from pathlib import Path
 from typing import Any, Dict, Optional
 from flask import Blueprint, render_template, current_app
 import logging
@@ -1520,7 +1519,7 @@ def _statusline_state() -> dict:
 
     settings_configured = False
     try:
-        with open(paths.settings_json) as f:
+        with open(paths.settings_file) as f:
             cfg = json.load(f)
         sl = cfg.get("statusLine", {})
         settings_configured = sl.get("type") == "command" and "statusline.py" in sl.get("command", "")
@@ -1571,7 +1570,7 @@ def api_statusline_install() -> str:
 
         cfg: dict = {}
         try:
-            with open(paths.settings_json) as f:
+            with open(paths.settings_file) as f:
                 cfg = json.load(f)
         except Exception:
             cfg = {}
@@ -1580,7 +1579,7 @@ def api_statusline_install() -> str:
             "type": "command",
             "command": f"python3 {script_dest}",
         }
-        with open(paths.settings_json, "w") as f:
+        with open(paths.settings_file, "w") as f:
             json.dump(cfg, f, indent=2)
 
         state = _statusline_state()
