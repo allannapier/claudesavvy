@@ -27,56 +27,43 @@
         </div>
     </div>
 
-    <div class="overflow-x-auto pb-1">
-        <div class="inline-flex flex-col" style="min-width: max-content;">
+    {% set num_weeks = token_heatmap.weeks|length %}
 
-            <!-- Month labels row -->
-            <div class="flex" style="margin-left: 28px; margin-bottom: 4px; gap: 2px;">
-                {% for week in token_heatmap.weeks %}
-                <div class="flex-shrink-0 overflow-visible" style="width: 14px;">
-                    {% if week.month_label %}
-                    <span class="text-xs text-gray-500 select-none whitespace-nowrap">{{ week.month_label }}</span>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
-
-            <!-- Day labels + cell grid -->
-            <div class="flex" style="gap: 2px;">
-
-                <!-- Day-of-week labels (Mon / Wed / Fri) -->
-                <div class="flex flex-col flex-shrink-0 text-xs text-gray-400 select-none" style="width: 24px; gap: 2px; margin-right: 4px; text-align: right;">
-                    <div style="height: 14px; line-height: 14px;"></div>
-                    <div style="height: 14px; line-height: 14px;">Mon</div>
-                    <div style="height: 14px; line-height: 14px;"></div>
-                    <div style="height: 14px; line-height: 14px;">Wed</div>
-                    <div style="height: 14px; line-height: 14px;"></div>
-                    <div style="height: 14px; line-height: 14px;">Fri</div>
-                    <div style="height: 14px; line-height: 14px;"></div>
-                </div>
-
-                <!-- Week columns -->
-                {% for week in token_heatmap.weeks %}
-                <div class="flex flex-col flex-shrink-0" style="gap: 2px;">
-                    {% for day in week.days %}
-                    {% if day.is_outside %}
-                    <div class="flex-shrink-0 rounded-sm" style="width: 14px; height: 14px; background-color: transparent;"></div>
-                    {% else %}
-                    <div
-                        class="flex-shrink-0 rounded-sm cursor-default"
-                        style="width: 14px; height: 14px; background-color: {{ day.color }};"
-                        data-tooltip="{{ day.display }}: {{ day.tokens_formatted }} tokens"
-                        @mouseenter="tooltip = { show: true, text: $el.dataset.tooltip, x: $event.clientX, y: $event.clientY }"
-                        @mousemove="tooltip.x = $event.clientX; tooltip.y = $event.clientY"
-                        @mouseleave="tooltip.show = false"
-                    ></div>
-                    {% endif %}
-                    {% endfor %}
-                </div>
-                {% endfor %}
-
-            </div>
+    <!-- Month labels row -->
+    <div style="display: grid; grid-template-columns: 28px repeat({{ num_weeks }}, 1fr); gap: 2px; margin-bottom: 4px;">
+        <div></div>
+        {% for week in token_heatmap.weeks %}
+        <div class="overflow-visible">
+            {% if week.month_label %}
+            <span class="text-xs text-gray-500 select-none whitespace-nowrap">{{ week.month_label }}</span>
+            {% endif %}
         </div>
+        {% endfor %}
+    </div>
+
+    <!-- Day labels + cell grid -->
+    <div style="display: grid; grid-template-columns: 28px repeat({{ num_weeks }}, 1fr); gap: 2px;">
+        {% set day_labels = ['', 'Mon', '', 'Wed', '', 'Fri', ''] %}
+        {% for dow in range(7) %}
+            <!-- Day-of-week label -->
+            <div class="text-xs text-gray-400 select-none" style="display: flex; align-items: center; justify-content: flex-end; padding-right: 4px;">{{ day_labels[dow] }}</div>
+            <!-- Cells for this row across all weeks -->
+            {% for week in token_heatmap.weeks %}
+                {% set day = week.days[dow] %}
+                {% if day.is_outside %}
+                <div class="rounded-sm" style="aspect-ratio: 1; background-color: transparent;"></div>
+                {% else %}
+                <div
+                    class="rounded-sm cursor-default"
+                    style="aspect-ratio: 1; background-color: {{ day.color }};"
+                    data-tooltip="{{ day.display }}: {{ day.tokens_formatted }} tokens"
+                    @mouseenter="tooltip = { show: true, text: $el.dataset.tooltip, x: $event.clientX, y: $event.clientY }"
+                    @mousemove="tooltip.x = $event.clientX; tooltip.y = $event.clientY"
+                    @mouseleave="tooltip.show = false"
+                ></div>
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
     </div>
 
     <!-- Tooltip -->
