@@ -33,6 +33,13 @@
 ) }}
 </div>
 
+<!-- Token Usage Heatmap -->
+{% if token_heatmap and token_heatmap.weeks %}
+<div class="mt-8">
+    {% include 'partials/token_heatmap.html' %}
+</div>
+{% endif %}
+
 <!-- Charts Row: Cost Over Time + Cost Breakdown -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
     {% include 'partials/dashboard_charts.html' %}

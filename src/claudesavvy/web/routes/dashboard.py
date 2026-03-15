@@ -175,6 +175,7 @@ def index() -> str:
         project_cost_trend: Dict[str, Any] = service.get_project_cost_trend(
             max_projects=8, time_filter=time_filter
         )
+        token_heatmap: Dict[str, Any] = service.get_yearly_token_heatmap()
 
         # Preview data for navigation hub cards
         previews = _build_preview_data(service, time_filter)
@@ -190,6 +191,7 @@ def index() -> str:
             models=model_breakdown,
             cost_trend=cost_trend,
             project_cost_trend=project_cost_trend,
+            token_heatmap=token_heatmap,
             period="today",
             **previews,
         )
@@ -641,6 +643,7 @@ def api_dashboard() -> str:
         project_cost_trend: Dict[str, Any] = service.get_project_cost_trend(
             time_filter=time_filter, max_projects=8
         )
+        token_heatmap: Dict[str, Any] = service.get_yearly_token_heatmap()
 
         previews = _build_preview_data(service, time_filter)
 
@@ -653,6 +656,7 @@ def api_dashboard() -> str:
             models=model_breakdown,
             cost_trend=cost_trend,
             project_cost_trend=project_cost_trend,
+            token_heatmap=token_heatmap,
             period=period,
             **previews,
         )

@@ -653,6 +653,94 @@ class DashboardService:
             },
         }
 
+    def get_yearly_token_heatmap(self) -> Dict[str, Any]:
+        """
+        Get daily total token counts for the last 365 days, structured as a
+        GitHub-style heatmap grid (weeks as columns, days as rows).
+
+        Always shows the last 365 days regardless of any time filter.
+
+        Returns:
+            Dict with:
+                - weeks: list of week dicts, each with month_label and days list
+                - max_tokens: highest single-day token count (for scaling)
+                - total_tokens: sum of all tokens in the period
+        """
+        from datetime import timedelta, date as date_type
+
+        LEVEL_COLORS = {
+            0: "#EBEDF0",
+            1: "#BDD7F8",
+            2: "#7AAEEF",
+            3: "#3880D0",
+            4: "#0770E3",
+        }
+
+        today = date_type.today()
+        start_date = today - timedelta(days=364)
+
+        # Fetch 365 days of daily stats with no time filter (always full year)
+        daily_stats = self._session_parser.get_daily_stats(days=365)
+
+        token_by_date: Dict[str, int] = {
+            date_str: self._calculate_total_tokens(stats.total_tokens)
+            for date_str, stats in daily_stats.items()
+        }
+
+        max_tokens = max(token_by_date.values(), default=0)
+
+        def get_level(tokens: int) -> int:
+            if tokens == 0 or max_tokens == 0:
+                return 0
+            pct = tokens / max_tokens
+            if pct < 0.15:
+                return 1
+            elif pct < 0.40:
+                return 2
+            elif pct < 0.70:
+                return 3
+            return 4
+
+        # Align grid start to the Sunday on or before start_date
+        # weekday(): Mon=0 ... Sun=6; convert to Sun=0 ... Sat=6
+        dow_sun0 = (start_date.weekday() + 1) % 7
+        grid_start = start_date - timedelta(days=dow_sun0)
+
+        weeks = []
+        current = grid_start
+        prev_month: Optional[int] = None
+
+        while current <= today:
+            week_days = []
+            for d in range(7):
+                day = current + timedelta(days=d)
+                date_str = day.strftime("%Y-%m-%d")
+                is_outside = day < start_date or day > today
+                tokens = 0 if is_outside else token_by_date.get(date_str, 0)
+                level = 0 if is_outside else get_level(tokens)
+                week_days.append({
+                    "date": date_str,
+                    "tokens": tokens,
+                    "tokens_formatted": f"{tokens:,}",
+                    "color": LEVEL_COLORS[level],
+                    "is_outside": is_outside,
+                    "display": day.strftime("%b %d, %Y"),
+                })
+
+            month_label = None
+            if current.month != prev_month:
+                month_label = current.strftime("%b")
+                prev_month = current.month
+
+            weeks.append({"month_label": month_label, "days": week_days})
+            current += timedelta(days=7)
+
+        return {
+            "weeks": weeks,
+            "max_tokens": max_tokens,
+            "total_tokens": sum(token_by_date.values()),
+        }
+
     def get_project_cost_trend(
         self,
         time_filter: Optional[TimeFilter] = None,
