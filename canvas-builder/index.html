@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com https://api.anthropic.com; frame-src 'none' blob:;">
+  <title>Canvas Builder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/sandbox.js"></script>
+  <script src="js/llm.js"></script>
+  <script src="js/app.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    #canvas { border: none; }
+    .prompt-bubble { word-break: break-word; }
+    textarea { resize: none; field-sizing: content; min-height: 44px; max-height: 160px; }
+    /* Subtle pulse border on canvas while loading */
+    .canvas-loading { animation: border-pulse 1.5s ease-in-out infinite; }
+    @keyframes border-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+      50% { box-shadow: 0 0 0 2px rgba(99,102,241,0.5); }
+    }
+  </style>
+</head>
+
+<body class="bg-[#0f0f0f] text-gray-200 h-screen flex flex-col overflow-hidden font-sans"
+      x-data="canvasApp()"
+      x-init="init()">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between px-4 py-2 border-b border-white/5 shrink-0">
+    <div class="flex items-center gap-2">
+      <span class="text-sm font-semibold text-gray-200 tracking-tight">Canvas Builder</span>
+      <span class="text-xs text-gray-600">ephemeral UI sandbox</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- Model selector -->
+      <select x-model="model"
+              class="bg-[#1a1a1a] border border-white/10 text-gray-400 text-xs rounded-md px-2 py-1 focus:outline-none focus:border-indigo-500/50">
+        <template x-for="m in models" :key="m">
+          <option :value="m" x-text="m"></option>
+        </template>
+      </select>
+      <!-- API Key button -->
+      <button @click="showKeyModal = true; keyInput = apiKey"
+              class="flex items-center gap-1.5 text-xs px-3 py-1 rounded-md border transition-colors"
+              :class="apiKey ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5' : 'border-amber-500/30 text-amber-400 bg-amber-500/5'">
+        <span x-text="apiKey ? '🔑 Key set' : '🔑 Set key'"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main layout -->
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- Left panel: prompt + history -->
+    <aside class="w-72 shrink-0 flex flex-col border-r border-white/5 bg-[#111]">
+
+      <!-- Prompt history -->
+      <div id="prompt-history"
+           class="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin">
+        <template x-if="promptHistory.length === 0">
+          <div class="text-xs text-gray-700 text-center mt-8 leading-relaxed">
+            Click an example in the canvas<br>or type a prompt below
+          </div>
+        </template>
+        <template x-for="(entry, i) in promptHistory" :key="i">
+          <div class="prompt-bubble">
+            <!-- User message -->
+            <template x-if="entry.role === 'user'">
+              <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-lg px-3 py-2 text-xs text-indigo-200"
+                   x-text="entry.text"></div>
+            </template>
+            <!-- Assistant message -->
+            <template x-if="entry.role === 'assistant'">
+              <div class="text-xs px-1 flex items-center gap-1.5"
+                   :class="{
+                     'text-gray-500': entry.status === 'generating',
+                     'text-emerald-500/70': entry.status === 'done',
+                     'text-red-400/70': entry.status === 'error'
+                   }">
+                <span x-show="entry.status === 'generating'"
+                      class="inline-block w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse"></span>
+                <span x-show="entry.status === 'done'">✓</span>
+                <span x-show="entry.status === 'error'">✗</span>
+                <span x-text="entry.text"></span>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <!-- Error banner -->
+      <div x-show="errorMessage" x-cloak
+           class="mx-3 mb-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400"
+           x-text="errorMessage"></div>
+
+      <!-- Prompt input -->
+      <div class="p-3 border-t border-white/5 space-y-2">
+        <div class="relative">
+          <textarea
+            x-model="promptText"
+            @keydown="handleKeydown($event)"
+            :disabled="isLoading"
+            placeholder="Describe what to build…"
+            class="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-indigo-500/40 disabled:opacity-50 leading-relaxed pr-16"
+            rows="1"
+          ></textarea>
+          <button @click="submitPrompt()"
+                  :disabled="isLoading || !promptText.trim()"
+                  class="absolute right-2 bottom-2 px-2 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs rounded-md transition-colors">
+            <span x-show="!isLoading">Send</span>
+            <span x-show="isLoading" class="flex items-center gap-1">
+              <svg class="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+              </svg>
+            </span>
+          </button>
+        </div>
+        <div class="text-[10px] text-gray-700 text-right">⌘↵ to send</div>
+
+        <!-- Controls -->
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <button @click="undo()" :disabled="!canUndo"
+                  title="Undo (⌘Z)"
+                  class="flex-1 py-1 text-xs rounded-md bg-[#1a1a1a] border border-white/10 text-gray-500 hover:text-gray-300 hover:border-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+            ↩ Undo
+          </button>
+          <button @click="redo()" :disabled="!canRedo"
+                  title="Redo (⌘Y)"
+                  class="flex-1 py-1 text-xs rounded-md bg-[#1a1a1a] border border-white/10 text-gray-500 hover:text-gray-300 hover:border-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+            ↪ Redo
+          </button>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button @click="copyHtml()"
+                  class="flex-1 py-1 text-xs rounded-md bg-[#1a1a1a] border border-white/10 text-gray-500 hover:text-gray-300 hover:border-white/20 transition-colors">
+            ⎘ Copy HTML
+          </button>
+          <button @click="exportHtml()"
+                  class="flex-1 py-1 text-xs rounded-md bg-[#1a1a1a] border border-white/10 text-gray-500 hover:text-gray-300 hover:border-white/20 transition-colors">
+            ↓ Export
+          </button>
+          <button @click="newSession()"
+                  class="py-1 px-2 text-xs rounded-md bg-[#1a1a1a] border border-white/10 text-gray-600 hover:text-red-400 hover:border-red-500/20 transition-colors">
+            ✕
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Canvas -->
+    <main class="flex-1 relative"
+          :class="isLoading ? 'canvas-loading' : ''">
+      <iframe
+        id="canvas"
+        sandbox="allow-scripts allow-forms"
+        class="w-full h-full bg-white"
+        title="Canvas"
+      ></iframe>
+    </main>
+  </div>
+
+  <!-- API Key Modal -->
+  <div x-show="showKeyModal" x-cloak
+       class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+       @click.self="showKeyModal = false">
+    <div class="bg-[#1a1a1a] border border-white/10 rounded-xl p-6 w-full max-w-sm mx-4 space-y-4">
+      <div>
+        <h2 class="text-sm font-semibold text-gray-200">API Key</h2>
+        <p class="text-xs text-gray-500 mt-1">
+          Your key is stored in <code class="text-gray-400">sessionStorage</code> only —
+          cleared when you close this tab. It's sent directly to the Anthropic API.
+        </p>
+      </div>
+      <input
+        x-model="keyInput"
+        type="password"
+        placeholder="sk-ant-..."
+        @keydown.enter="saveKey()"
+        class="w-full bg-[#111] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-indigo-500/50"
+        autocomplete="off"
+        spellcheck="false"
+      >
+      <div class="flex gap-2">
+        <button @click="saveKey()"
+                :disabled="!keyInput.trim()"
+                class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm rounded-lg transition-colors">
+          Save
+        </button>
+        <button x-show="apiKey" @click="clearKey()"
+                class="py-2 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm rounded-lg border border-red-500/20 transition-colors">
+          Clear
+        </button>
+        <button @click="showKeyModal = false"
+                class="py-2 px-3 bg-[#111] text-gray-500 text-sm rounded-lg border border-white/10 hover:text-gray-300 transition-colors">
+          Cancel
+        </button>
+      </div>
+      <p class="text-[10px] text-gray-700">
+        Get a key at <span class="text-gray-500">console.anthropic.com</span>
+      </p>
+    </div>
+  </div>
+
+</body>
+</html>
