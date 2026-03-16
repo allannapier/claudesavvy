@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com https://api.anthropic.com; frame-src 'none' blob:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com https://api.anthropic.com https://generativelanguage.googleapis.com; frame-src 'none' blob:;">
   <title>Canvas Builder</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -39,11 +39,15 @@
       <!-- Model selector -->
       <select x-model="model"
               class="bg-[#1a1a1a] border border-white/10 text-gray-400 text-xs rounded-md px-2 py-1 focus:outline-none focus:border-indigo-500/50">
-        <template x-for="m in models" :key="m">
-          <option :value="m" x-text="m"></option>
+        <template x-for="group in modelGroups" :key="group.label">
+          <optgroup :label="group.label">
+            <template x-for="m in group.models" :key="m">
+              <option :value="m" x-text="m"></option>
+            </template>
+          </optgroup>
         </template>
       </select>
-      <!-- API Key button -->
+      <!-- API Key button — shows per-provider status -->
       <button @click="showKeyModal = true; keyInput = apiKey"
               class="flex items-center gap-1.5 text-xs px-3 py-1 rounded-md border transition-colors"
               :class="apiKey ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5' : 'border-amber-500/30 text-amber-400 bg-amber-500/5'">
@@ -170,16 +174,21 @@
        @click.self="showKeyModal = false">
     <div class="bg-[#1a1a1a] border border-white/10 rounded-xl p-6 w-full max-w-sm mx-4 space-y-4">
       <div>
-        <h2 class="text-sm font-semibold text-gray-200">API Key</h2>
-        <p class="text-xs text-gray-500 mt-1">
-          Your key is stored in <code class="text-gray-400">sessionStorage</code> only —
-          cleared when you close this tab. It's sent directly to the Anthropic API.
+        <div class="flex items-center gap-2 mb-1">
+          <h2 class="text-sm font-semibold text-gray-200">API Key</h2>
+          <span class="text-[10px] px-2 py-0.5 rounded-full border"
+                :class="currentProvider === 'google' ? 'border-blue-500/30 text-blue-400 bg-blue-500/5' : 'border-orange-500/30 text-orange-400 bg-orange-500/5'"
+                x-text="keyProviderLabel"></span>
+        </div>
+        <p class="text-xs text-gray-500">
+          Stored in <code class="text-gray-400">sessionStorage</code> only — cleared when you close this tab.
+          Sent directly to <span x-text="keyProviderLabel" class="text-gray-400"></span>.
         </p>
       </div>
       <input
         x-model="keyInput"
         type="password"
-        placeholder="sk-ant-..."
+        :placeholder="keyPlaceholder"
         @keydown.enter="saveKey()"
         class="w-full bg-[#111] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-indigo-500/50"
         autocomplete="off"
@@ -201,7 +210,7 @@
         </button>
       </div>
       <p class="text-[10px] text-gray-700">
-        Get a key at <span class="text-gray-500">console.anthropic.com</span>
+        Get a key at <span class="text-gray-500" x-text="keyDocsUrl"></span>
       </p>
     </div>
   </div>

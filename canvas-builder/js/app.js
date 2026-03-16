@@ -1,9 +1,13 @@
 function canvasApp() {
   return {
     // State
-    apiKey: '',
+    anthropicKey: '',
+    googleKey: '',
     model: 'claude-sonnet-4-6',
-    models: ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001', 'claude-opus-4-6'],
+    modelGroups: [
+      { label: 'Anthropic', models: ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001', 'claude-opus-4-6'] },
+      { label: 'Google', models: ['gemini-3.1-pro-preview', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview'] },
+    ],
     messages: [],
     history: null,
     isLoading: false,
@@ -14,9 +18,26 @@ function canvasApp() {
     errorMessage: '',
     streamBuffer: '',
 
+    get currentProvider() {
+      return this.model.startsWith('gemini-') ? 'google' : 'anthropic';
+    },
+    get apiKey() {
+      return this.currentProvider === 'google' ? this.googleKey : this.anthropicKey;
+    },
+    get keyPlaceholder() {
+      return this.currentProvider === 'google' ? 'AIza...' : 'sk-ant-...';
+    },
+    get keyProviderLabel() {
+      return this.currentProvider === 'google' ? 'Google AI Studio' : 'Anthropic';
+    },
+    get keyDocsUrl() {
+      return this.currentProvider === 'google' ? 'aistudio.google.com' : 'console.anthropic.com';
+    },
+
     init() {
       this.history = new HistoryStack();
-      this.apiKey = sessionStorage.getItem('canvas_builder_key') || '';
+      this.anthropicKey = sessionStorage.getItem('canvas_builder_anthropic_key') || '';
+      this.googleKey = sessionStorage.getItem('canvas_builder_google_key') || '';
       this.keyInput = this.apiKey;
 
       // Show placeholder in iframe on init
@@ -69,6 +90,7 @@ Rules you must follow:
       if (!prompt || this.isLoading) return;
 
       if (!this.apiKey) {
+        this.keyInput = '';
         this.showKeyModal = true;
         return;
       }
@@ -191,15 +213,25 @@ Rules you must follow:
     saveKey() {
       const key = this.keyInput.trim();
       if (!key) return;
-      this.apiKey = key;
-      sessionStorage.setItem('canvas_builder_key', key);
+      if (this.currentProvider === 'google') {
+        this.googleKey = key;
+        sessionStorage.setItem('canvas_builder_google_key', key);
+      } else {
+        this.anthropicKey = key;
+        sessionStorage.setItem('canvas_builder_anthropic_key', key);
+      }
       this.showKeyModal = false;
     },
 
     clearKey() {
-      this.apiKey = '';
+      if (this.currentProvider === 'google') {
+        this.googleKey = '';
+        sessionStorage.removeItem('canvas_builder_google_key');
+      } else {
+        this.anthropicKey = '';
+        sessionStorage.removeItem('canvas_builder_anthropic_key');
+      }
       this.keyInput = '';
-      sessionStorage.removeItem('canvas_builder_key');
       this.showKeyModal = false;
     },
 
