@@ -48,7 +48,7 @@ def main():
     args = parser.parse_args()
 
     # Initialize and run agent
-    print(f"\n=== GitHub Code Review Agent ===")
+    print("\n=== GitHub Code Review Agent ===")
     print(f"Repository: {args.repo_owner}/{args.repo_name}\n")
 
     try:
