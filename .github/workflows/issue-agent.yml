@@ -1,0 +1,46 @@
+name: GitHub Issue Agent
+
+on:
+  schedule:
+    # Run daily at 9 AM UTC
+    - cron: '0 9 * * *'
+  workflow_dispatch:  # Allow manual triggering
+
+permissions:
+  contents: write
+  issues: read
+  pull-requests: write
+
+jobs:
+  process-issues:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Run issue agent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Run the issue agent to select the next issue
+          claudesavvy issue-agent \
+            --repo-owner ${{ github.repository_owner }} \
+            --repo-name ${{ github.event.repository.name }} \
+            --dry-run
+
+      - name: Comment on workflow run
+        if: always()
+        run: |
+          echo "Issue agent workflow completed"
+          echo "Check the logs above for details on which issue was selected"
