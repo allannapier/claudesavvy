@@ -1462,12 +1462,10 @@ def teams() -> str:
 
         # Get team summary stats
         summary = service.get_team_summary(time_filter=time_filter)
-        chart_data = service.get_team_chart_data(time_filter=time_filter)
 
         return render_template(
             "pages/teams.html",
             summary=summary,
-            chart_data=chart_data,
             period=default_period,
         )
 
@@ -1476,7 +1474,6 @@ def teams() -> str:
         return render_template(
             "pages/teams.html",
             summary={"teams": [], "total_teams": 0, "total_cost": 0, "total_tokens": 0},
-            chart_data={"labels": [], "datasets": []},
             period="all",
         )
 
@@ -1493,12 +1490,10 @@ def api_teams() -> str:
         time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
         summary = service.get_team_summary(time_filter=time_filter)
-        chart_data = service.get_team_chart_data(time_filter=time_filter)
 
         return render_template(
             "partials/teams_content.html",
             summary=summary,
-            chart_data=chart_data,
         )
 
     except Exception as e:

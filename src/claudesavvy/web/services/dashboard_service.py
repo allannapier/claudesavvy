@@ -13,7 +13,7 @@ from ...utils.paths import get_claude_paths, ClaudeDataPaths
 from ...utils.time_filter import TimeFilter
 from ...utils.pricing import PricingSettings
 from ...parsers.history import HistoryParser
-from ...parsers.sessions import SessionParser, SubAgentParser
+from ...parsers.sessions import SessionParser, SubAgentParser, TokenUsage
 from ...parsers.debug import DebugLogParser
 from ...parsers.files import FileHistoryParser
 from ...parsers.tools import ToolUsageParser
@@ -25,6 +25,7 @@ from ...analyzers.tokens import (
     TokenSummary,
     get_model_display_name,
     DEFAULT_PRICING,
+    MODEL_PRICING,
 )
 from ...analyzers.integrations import IntegrationAnalyzer, IntegrationSummary
 from ...analyzers.features import FeaturesAnalyzer, FeaturesSummary
@@ -107,6 +108,20 @@ class DashboardService:
             self._skills_parser,
             self._config_scanner,
         )
+
+    @staticmethod
+    def _calc_model_cost(model_usage: dict) -> float:
+        """Calculate cost from a {model_id: TokenUsage} dict using per-model pricing."""
+        total = 0.0
+        for model_id, usage in model_usage.items():
+            rates = MODEL_PRICING.get(model_id, DEFAULT_PRICING)
+            total += (
+                (usage.input_tokens / 1_000_000) * rates["input_per_mtok"]
+                + (usage.output_tokens / 1_000_000) * rates["output_per_mtok"]
+                + (usage.cache_creation_input_tokens / 1_000_000) * rates["cache_write_per_mtok"]
+                + (usage.cache_read_input_tokens / 1_000_000) * rates["cache_read_per_mtok"]
+            )
+        return total
 
     def refresh(self) -> None:
         """Re-scan session files to pick up conversations started after server launch."""
@@ -1554,7 +1569,6 @@ class DashboardService:
         success = self._pricing_settings.reset_pricing_for_model(model)
 
         if success:
-            from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING
 
             default_pricing = MODEL_PRICING.get(model, DEFAULT_PRICING)
             return {"success": True, "model": model, "pricing": default_pricing}
@@ -1866,21 +1880,11 @@ class DashboardService:
         Returns:
             Dict with 'conversations' list and 'summary' dict
         """
-        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING, get_model_display_name
+        from ...analyzers.tokens import get_model_display_name
 
         raw = self._session_parser.get_conversation_stats(
             time_filter=time_filter, limit=None
         )
-
-        def _calc_cost(model_usage: dict) -> float:
-            total = 0.0
-            for model_id, usage in model_usage.items():
-                pricing = MODEL_PRICING.get(model_id, DEFAULT_PRICING)
-                total += (usage.input_tokens / 1_000_000) * pricing["input_per_mtok"]
-                total += (usage.output_tokens / 1_000_000) * pricing["output_per_mtok"]
-                total += (usage.cache_creation_input_tokens / 1_000_000) * pricing["cache_write_per_mtok"]
-                total += (usage.cache_read_input_tokens / 1_000_000) * pricing["cache_read_per_mtok"]
-            return total
 
         conversations = []
         for c in raw:
@@ -1888,7 +1892,7 @@ class DashboardService:
 
             # If no model_usage, fall back to total_tokens with default pricing
             if model_usage:
-                cost = _calc_cost(model_usage)
+                cost = self._calc_model_cost(model_usage)
             else:
                 usage = c["total_tokens"]
                 p = DEFAULT_PRICING
@@ -1986,7 +1990,7 @@ class DashboardService:
         Returns:
             Dict with conversation details including context_per_turn, or None
         """
-        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING, get_model_display_name
+        from ...analyzers.tokens import get_model_display_name
 
         raw = self._session_parser.get_conversation_stats(time_filter=time_filter, limit=None)
 
@@ -2072,7 +2076,6 @@ class DashboardService:
         Returns:
             Dict with tool details and invocations grouped by session
         """
-        from ...analyzers.tokens import DEFAULT_PRICING
 
         tool_parser = self._features_analyzer.tool_parser
 
@@ -2200,7 +2203,6 @@ class DashboardService:
         Returns:
             Dict with chart-ready data
         """
-        from ...analyzers.tokens import DEFAULT_PRICING
 
         tool_parser = self._features_analyzer.tool_parser
         pricing = DEFAULT_PRICING
@@ -2335,7 +2337,6 @@ class DashboardService:
         Returns:
             Dict with invocation details or None if not found
         """
-        from ...analyzers.tokens import DEFAULT_PRICING
 
         tool_parser = self._features_analyzer.tool_parser
         pricing = DEFAULT_PRICING
@@ -2408,7 +2409,6 @@ class DashboardService:
         Returns:
             Dict with timeline data including chart data and session list
         """
-        from ...analyzers.tokens import DEFAULT_PRICING
 
         tool_parser = self._features_analyzer.tool_parser
         pricing = DEFAULT_PRICING
@@ -2546,8 +2546,6 @@ class DashboardService:
         Returns:
             Dict with team usage statistics
         """
-        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING
-
         exchanges = self._subagent_parser.parse_exchanges(time_filter=time_filter)
         teammate_exchanges = [e for e in exchanges if e.is_teammate]
 
@@ -2556,18 +2554,6 @@ class DashboardService:
         for e in teammate_exchanges:
             key = f"{e.project or ''}::{e.session_id}"
             groups.setdefault(key, []).append(e)
-
-        def _calc_cost(model_usage: dict) -> float:
-            cost = 0.0
-            for model_id, usage in model_usage.items():
-                rates = MODEL_PRICING.get(model_id, DEFAULT_PRICING)
-                cost += (
-                    (usage.input_tokens / 1_000_000) * rates["input_per_mtok"]
-                    + (usage.output_tokens / 1_000_000) * rates["output_per_mtok"]
-                    + (usage.cache_creation_input_tokens / 1_000_000) * rates["cache_write_per_mtok"]
-                    + (usage.cache_read_input_tokens / 1_000_000) * rates["cache_read_per_mtok"]
-                )
-            return cost
 
         teams_data = []
         total_cost = 0.0
@@ -2579,11 +2565,10 @@ class DashboardService:
             for e in group_exchanges:
                 for model_id, usage in e.model_usage.items():
                     if model_id not in agg_model_usage:
-                        from ...parsers.sessions import TokenUsage
                         agg_model_usage[model_id] = TokenUsage()
                     agg_model_usage[model_id] = agg_model_usage[model_id] + usage
 
-            cost = _calc_cost(agg_model_usage)
+            cost = self._calc_model_cost(agg_model_usage)
             group_total_tokens = sum(
                 u.input_tokens + u.output_tokens + u.cache_creation_input_tokens + u.cache_read_input_tokens
                 for u in agg_model_usage.values()
@@ -2600,7 +2585,7 @@ class DashboardService:
                     members[role] = {"role": role, "exchanges": 0, "tokens": 0, "cost": 0.0}
                 members[role]["exchanges"] += 1
                 members[role]["tokens"] += e.total_tokens
-                members[role]["cost"] = round(members[role]["cost"] + e.subagent_cost, 4)
+                members[role]["cost"] += e.subagent_cost
 
             # Per-model breakdown
             model_breakdown = sorted(
@@ -2634,7 +2619,10 @@ class DashboardService:
                 "member_count": len(set(e.subagent_type for e in group_exchanges)),
                 "exchange_count": len(group_exchanges),
                 "session_count": 1,
-                "members": sorted(members.values(), key=lambda x: x["tokens"], reverse=True),
+                "members": sorted(
+                    [{**m, "cost": round(m["cost"], 4)} for m in members.values()],
+                    key=lambda x: x["tokens"], reverse=True
+                ),
                 "input_tokens": agg_input,
                 "output_tokens": agg_output,
                 "total_tokens": group_total_tokens,

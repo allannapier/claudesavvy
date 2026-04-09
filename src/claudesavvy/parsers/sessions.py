@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterator, Optional, List, Set
 
+from ..analyzers.pricing import MODEL_PRICING as _MODEL_PRICING, DEFAULT_PRICING as _DEFAULT_PRICING
 from ..utils.time_filter import TimeFilter
 
 
@@ -894,17 +895,8 @@ class SessionParser:
         return result
 
 
-# Per-model pricing rates (inline to avoid circular imports with analyzers.tokens)
-_SUBAGENT_MODEL_RATES: dict = {
-    "claude-opus-4-6": {"input_per_mtok": 5.0, "output_per_mtok": 25.0, "cache_write_per_mtok": 6.25, "cache_read_per_mtok": 0.50},
-    "claude-opus-4-5-20251101": {"input_per_mtok": 5.0, "output_per_mtok": 25.0, "cache_write_per_mtok": 6.25, "cache_read_per_mtok": 0.50},
-    "claude-opus-4-20250514": {"input_per_mtok": 15.0, "output_per_mtok": 75.0, "cache_write_per_mtok": 18.75, "cache_read_per_mtok": 1.50},
-    "claude-sonnet-4-6": {"input_per_mtok": 3.0, "output_per_mtok": 15.0, "cache_write_per_mtok": 3.75, "cache_read_per_mtok": 0.30},
-    "claude-sonnet-4-5-20250929": {"input_per_mtok": 3.0, "output_per_mtok": 15.0, "cache_write_per_mtok": 3.75, "cache_read_per_mtok": 0.30},
-    "claude-haiku-4-6": {"input_per_mtok": 1.0, "output_per_mtok": 5.0, "cache_write_per_mtok": 1.25, "cache_read_per_mtok": 0.10},
-    "claude-haiku-4-5-20251001": {"input_per_mtok": 1.0, "output_per_mtok": 5.0, "cache_write_per_mtok": 1.25, "cache_read_per_mtok": 0.10},
-}
-_SUBAGENT_DEFAULT_RATES: dict = {"input_per_mtok": 3.0, "output_per_mtok": 15.0, "cache_write_per_mtok": 3.75, "cache_read_per_mtok": 0.30}
+_SUBAGENT_MODEL_RATES = _MODEL_PRICING
+_SUBAGENT_DEFAULT_RATES = _DEFAULT_PRICING
 
 
 @dataclass
