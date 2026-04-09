@@ -12,6 +12,7 @@ from .utils.paths import get_claude_paths, ClaudeDataPaths
 from .parsers.sessions import SessionParser
 from .utils.time_filter import TimeFilter
 from .agents.github_issue_agent import GitHubIssueAgent
+from .agents.github_code_review_agent import GitHubCodeReviewAgent
 
 
 def parse_time_filter(period: str) -> TimeFilter:
@@ -373,6 +374,167 @@ def issue_agent(repo_owner, repo_name, github_token, dry_run):
             else:
                 console.print("[yellow]Note: Automatic branch and PR creation is not yet implemented[/yellow]")
                 console.print("[dim]You can manually create a branch and PR for this issue[/dim]\n")
+        else:
+            console.print(f"[red]✗ Unknown status: {status}[/red]\n")
+
+    except RuntimeError as e:
+        console.print(f"\n[red]✗ Error:[/red] {e}\n")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"\n[red]✗ Unexpected error:[/red] {e}")
+        import traceback
+        console.print(traceback.format_exc())
+        sys.exit(1)
+
+
+@cli.command(name='code-review')
+@click.option(
+    '--repo-owner',
+    type=str,
+    required=True,
+    help='GitHub repository owner'
+)
+@click.option(
+    '--repo-name',
+    type=str,
+    required=True,
+    help='GitHub repository name'
+)
+@click.option(
+    '--pr-number',
+    type=int,
+    help='Pull request number to review (if not provided, lists all open PRs)'
+)
+@click.option(
+    '--github-token',
+    type=str,
+    help='GitHub personal access token (uses GITHUB_TOKEN env var if not provided)'
+)
+def code_review(repo_owner, repo_name, pr_number, github_token):
+    """
+    Run the GitHub code review agent to analyze pull requests.
+
+    The agent will:
+    1. Fetch pull request(s) from the repository
+    2. Analyze code changes for security issues
+    3. Check code quality and best practices
+    4. Provide automated review comments
+
+    Examples:
+
+      # List all open pull requests
+      $ claudesavvy code-review --repo-owner allannapier --repo-name claudesavvy
+
+      # Review a specific pull request
+      $ claudesavvy code-review --repo-owner allannapier --repo-name claudesavvy --pr-number 68
+
+      # Use custom GitHub token
+      $ claudesavvy code-review --repo-owner allannapier --repo-name claudesavvy --pr-number 68 --github-token ghp_xxx
+    """
+    console = Console()
+
+    try:
+        console.print("\n[cyan]═══ GitHub Code Review Agent ═══[/cyan]")
+        console.print(f"[dim]Repository: {repo_owner}/{repo_name}[/dim]\n")
+
+        # Initialize agent
+        agent = GitHubCodeReviewAgent(repo_owner, repo_name, github_token)
+
+        # Run agent
+        result = agent.run(pr_number)
+
+        # Display results
+        status = result['status']
+
+        if status == 'no_prs':
+            console.print("[yellow]✓ No open pull requests found in the repository[/yellow]\n")
+        elif status == 'pr_not_found':
+            console.print(f"[red]✗ Pull request #{pr_number} not found[/red]\n")
+        elif status == 'prs_listed':
+            console.print("[green]✓ Open pull requests:[/green]\n")
+
+            table = Table(show_header=True, box=None)
+            table.add_column("PR #", style="cyan")
+            table.add_column("Title")
+            table.add_column("Author", style="dim")
+            table.add_column("Files", justify="right", style="dim")
+            table.add_column("+/-", justify="right", style="dim")
+
+            for pr in result['prs']:
+                table.add_row(
+                    f"#{pr['number']}",
+                    pr['title'][:50] + "..." if len(pr['title']) > 50 else pr['title'],
+                    pr['author'],
+                    str(pr['changed_files']),
+                    f"+{pr['additions']}/-{pr['deletions']}"
+                )
+
+            console.print(table)
+            console.print()
+            console.print("[dim]Use --pr-number to review a specific pull request[/dim]\n")
+
+        elif status == 'review_complete':
+            pr = result['pr']
+            review = result['review']
+
+            console.print(f"[green]✓ Review complete for PR #{pr['number']}:[/green]\n")
+
+            # PR Summary
+            summary_table = Table(show_header=False, box=None)
+            summary_table.add_column("Field", style="cyan")
+            summary_table.add_column("Value")
+
+            summary_table.add_row("Title", pr['title'])
+            summary_table.add_row("Author", pr['author'])
+            summary_table.add_row("Changed Files", str(pr['changed_files']))
+            summary_table.add_row("Changes", f"+{pr['additions']} / -{pr['deletions']}")
+            summary_table.add_row("URL", pr['url'])
+
+            console.print(summary_table)
+            console.print()
+
+            # Review Summary
+            console.print("[cyan]Review Summary:[/cyan]")
+            console.print(f"  Total Comments: {review['total_comments']}")
+
+            if review['errors'] > 0:
+                console.print(f"  [red]Errors: {review['errors']}[/red]")
+            if review['warnings'] > 0:
+                console.print(f"  [yellow]Warnings: {review['warnings']}[/yellow]")
+            if review['info'] > 0:
+                console.print(f"  [blue]Info: {review['info']}[/blue]")
+
+            if review['total_comments'] == 0:
+                console.print("\n[green]✓ No issues found![/green]\n")
+            else:
+                console.print()
+
+                # Group comments by severity
+                errors = [c for c in review['comments'] if c['severity'] == 'error']
+                warnings = [c for c in review['comments'] if c['severity'] == 'warning']
+                info = [c for c in review['comments'] if c['severity'] == 'info']
+
+                # Display errors
+                if errors:
+                    console.print("[red]Errors:[/red]")
+                    for comment in errors:
+                        console.print(f"  [red]✗[/red] {comment['file']}:{comment['line']}")
+                        console.print(f"    {comment['comment']}\n")
+
+                # Display warnings
+                if warnings:
+                    console.print("[yellow]Warnings:[/yellow]")
+                    for comment in warnings:
+                        console.print(f"  [yellow]⚠[/yellow] {comment['file']}:{comment['line']}")
+                        console.print(f"    {comment['comment']}\n")
+
+                # Display info
+                if info:
+                    console.print("[blue]Info:[/blue]")
+                    for comment in info:
+                        console.print(f"  [blue]ℹ[/blue] {comment['file']}:{comment['line']}")
+                        console.print(f"    {comment['comment']}\n")
+
         else:
             console.print(f"[red]✗ Unknown status: {status}[/red]\n")
 
