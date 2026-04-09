@@ -1,7 +1,5 @@
 """Tests for the GitHub Issue Agent."""
 
-import pytest
-from datetime import datetime
 from claudesavvy.agents.github_issue_agent import Issue, GitHubIssueAgent
 
 
