@@ -8,4 +8,4 @@ dist/
 *.egg
 .venv/
 venv/
-harness.html
+/harness.html

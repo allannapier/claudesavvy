@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quokka — Claude Code Harness</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
+    <script src="https://unpkg.com/layout-base@2.0.1/layout-base.js"></script>
+    <script src="https://unpkg.com/cose-base@2.2.0/cose-base.js"></script>
+    <script src="https://unpkg.com/cytoscape-cose-bilkent@4.1.0/cytoscape-cose-bilkent.js"></script>
+    <style>
+        html, body { height: 100%; }
+        #cy { width: 100%; height: 100%; background: #f8fafc; border-radius: 0.5rem; }
+        .legend-dot { width: 0.75rem; height: 0.75rem; border-radius: 9999px; display: inline-block; }
+        .chip { transition: opacity 100ms ease, background-color 100ms ease; }
+        .chip[data-on="false"] { opacity: 0.35; }
+        details > summary { cursor: pointer; }
+        pre.snippet {
+            background: #f1f5f9;
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            line-height: 1rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 16rem;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+<script>const QUOKKA = {"counts": {"agents": 0, "commands": 0, "context_docs": 1, "hooks": 1, "mcps": 0, "plugins": 0, "settings_files": 1, "skills": 1}, "edges": [{"id": "hook:user:Stop_0-\u003eevent:synthetic:Stop:triggers_on", "label": "Stop", "source": "hook:user:Stop_0", "target": "event:synthetic:Stop", "type": "triggers_on"}], "nodes": [{"description": "Creating and developing startup hooks for Claude Code on the web. Use when the user wants to set up a repository for Claude Code on the web, create a SessionStart hook to ensure their project can run tests and linters during web sessions.", "id": "skill:user:session-start-hook", "label": "session-start-hook", "meta": {}, "name": "session-start-hook", "path": "/root/.claude/skills/session-start-hook/SKILL.md", "source": "user", "type": "skill"}, {"description": "Stop hook", "id": "hook:user:Stop_0", "label": "Stop_0", "meta": {"declared_in": "/root/.claude/settings.json", "handler": "~/.claude/stop-hook-git-check.sh", "hook_type": "Stop", "matcher": "", "plugin": null}, "name": "Stop_0", "path": null, "source": "user", "type": "hook"}, {"description": "Claude Code Project Instructions", "id": "context:project:claude_md", "label": "CLAUDE.md", "meta": {"kind": "claude_md"}, "name": "CLAUDE.md", "path": "/home/user/claudesavvy/CLAUDE.md", "source": "project", "type": "context_doc"}, {"description": "", "id": "settings:user:settings.json", "label": "settings.json", "meta": {}, "name": "settings.json", "path": "/root/.claude/settings.json", "source": "user", "type": "settings"}, {"description": "Stop session event", "id": "event:synthetic:Stop", "label": "Stop", "meta": {}, "name": "Stop", "path": null, "source": "synthetic", "type": "event"}], "project": "/home/user/claudesavvy", "user_home": "/root"};</script>
+
+<div class="min-h-screen flex flex-col" x-data="quokkaApp()" x-init="init()">
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap items-center gap-4 justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">Q</div>
+            <div>
+                <h1 class="text-xl font-bold leading-tight">Quokka</h1>
+                <p class="text-xs text-slate-500">Claude Code agent harness viewer</p>
+            </div>
+        </div>
+        <div class="text-sm text-slate-600 flex flex-col items-end">
+            <div><span class="font-medium">Project:</span> <span class="font-mono text-xs">/home/user/claudesavvy</span></div>
+            <div><span class="font-medium">User home:</span> <span class="font-mono text-xs">/root</span></div>
+            <div class="text-xs text-slate-400">Scanned 2026-05-02T15:00:54+00:00</div>
+        </div>
+    </header>
+
+    <!-- Counts -->
+    <section class="px-6 py-3 border-b border-slate-200 bg-white flex flex-wrap gap-3 text-sm">
+        <div class="rounded-md border border-slate-200 px-3 py-1.5">
+            <span class="text-slate-500">Skills:</span>
+            <span class="font-semibold">1</span>
+        </div>
+        <div class="rounded-md border border-slate-200 px-3 py-1.5">
+            <span class="text-slate-500">Agents:</span>
+            <span class="font-semibold">0</span>
+        </div>
+        <div class="rounded-md border border-slate-200 px-3 py-1.5">
+            <span class="text-slate-500">Commands:</span>
+            <span class="font-semibold">0</span>
+        </div>
+        <div class="rounded-md border border-slate-200 px-3 py-1.5">
+            <span class="text-slate-500">Hooks:</span>
+            <span class="font-semibold">1</span>
+        </div>
+        <div class="rounded-md border border-slate-200 px-3 py-1.5">
+            <span class="text-slate-500">MCPs:</span>
+            <span class="font-semibold">0</span>
+        </div>
+        <div class="rounded-md border border-slate-200 px-3 py-1.5">
+            <span class="text-slate-500">Plugins:</span>
+            <span class="font-semibold">0</span>
+        </div>
+        <div class="rounded-md border border-slate-200 px-3 py-1.5">
+            <span class="text-slate-500">Context docs:</span>
+            <span class="font-semibold">1</span>
+        </div>
+        <div class="rounded-md border border-slate-200 px-3 py-1.5">
+            <span class="text-slate-500">Settings:</span>
+            <span class="font-semibold">1</span>
+        </div>
+    </section>
+
+    <!-- Filters -->
+    <section class="px-6 py-3 border-b border-slate-200 bg-white flex flex-wrap items-center gap-2 text-xs">
+        <span class="text-slate-500 mr-1 font-medium">Types:</span>
+        <template x-for="t in typeOrder" :key="t">
+            <button class="chip px-2.5 py-1 rounded-full border"
+                    :class="typeColorClass(t)"
+                    :data-on="visibleTypes[t]"
+                    @click="toggleType(t)"
+                    x-text="typeLabel(t) + ' (' + (typeCounts[t] || 0) + ')'"></button>
+        </template>
+        <span class="text-slate-300 px-1">|</span>
+        <span class="text-slate-500 mr-1 font-medium">Source:</span>
+        <template x-for="s in ['user','project','plugin','synthetic']" :key="s">
+            <button class="chip px-2.5 py-1 rounded-full border bg-white"
+                    :data-on="visibleSources[s]"
+                    @click="toggleSource(s)"
+                    x-text="s + ' (' + (sourceCounts[s] || 0) + ')'"></button>
+        </template>
+        <span class="text-slate-300 px-1">|</span>
+        <button class="px-2.5 py-1 rounded-full border bg-slate-100 hover:bg-slate-200" @click="resetView()">Reset view</button>
+    </section>
+
+    <!-- Main: graph + side panel -->
+    <main class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 min-h-0">
+        <div class="md:col-span-2 bg-white border border-slate-200 rounded-lg p-2 min-h-[480px] md:min-h-[640px] relative">
+            <div id="cy"></div>
+            <div x-show="totalNodes === 0"
+                 class="absolute inset-0 flex items-center justify-center text-center p-8">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-700">No Claude Code harness found</h2>
+                    <p class="text-sm text-slate-500 mt-2">
+                        Quokka looked at <span class="font-mono">/root/.claude/</span> and
+                        <span class="font-mono">/home/user/claudesavvy/.claude/</span>
+                        but didn't find any skills, agents, hooks, plugins, MCPs, slash commands,
+                        or settings files.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <aside class="bg-white border border-slate-200 rounded-lg p-4 overflow-y-auto max-h-[80vh]">
+            <template x-if="!selected">
+                <div>
+                    <h2 class="text-lg font-semibold mb-2">Legend</h2>
+                    <ul class="space-y-1.5 text-sm">
+                        <template x-for="t in typeOrder" :key="t">
+                            <li class="flex items-center gap-2">
+                                <span class="legend-dot" :style="`background:${typeColor(t)}`"></span>
+                                <span x-text="typeLabel(t)"></span>
+                            </li>
+                        </template>
+                    </ul>
+                    <h3 class="text-sm font-semibold mt-5 mb-2 text-slate-700">Edges</h3>
+                    <ul class="space-y-1 text-xs text-slate-600">
+                        <li><span class="font-mono text-indigo-700">provides</span> — plugin owns its child entities</li>
+                        <li><span class="font-mono text-amber-700">triggers_on</span> — hook fires on a tool / event</li>
+                        <li><span class="font-mono text-emerald-700">grants_tool</span> — agent permitted to call a tool</li>
+                        <li><span class="font-mono text-rose-700">references</span> — context-doc mentions an entity</li>
+                    </ul>
+                    <p class="mt-5 text-xs text-slate-500">Click any node for its details.</p>
+                </div>
+            </template>
+
+            <template x-if="selected">
+                <div>
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <span class="legend-dot mr-1.5" :style="`background:${typeColor(selected.type)}`"></span>
+                            <span class="text-xs uppercase tracking-wide font-medium text-slate-500" x-text="typeLabel(selected.type)"></span>
+                            <h2 class="text-lg font-semibold leading-tight" x-text="selected.label || selected.name"></h2>
+                        </div>
+                        <button class="text-slate-400 hover:text-slate-600 text-xl leading-none" @click="selected = null">&times;</button>
+                    </div>
+
+                    <div class="mt-2 flex items-center gap-2 text-xs">
+                        <span class="px-2 py-0.5 rounded-full"
+                              :class="sourceBadgeClass(selected.source)"
+                              x-text="selected.source"></span>
+                        <span x-show="selected.path" class="font-mono text-slate-500 truncate" x-text="selected.path"></span>
+                    </div>
+
+                    <p class="mt-3 text-sm text-slate-700" x-show="selected.description" x-text="selected.description"></p>
+
+                    <template x-if="selected.meta && Object.keys(selected.meta || {}).length">
+                        <div class="mt-3">
+                            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Metadata</h3>
+                            <dl class="mt-1 text-xs grid grid-cols-3 gap-x-2 gap-y-1">
+                                <template x-for="[k, v] in metaPairs(selected.meta)" :key="k">
+                                    <template x-if="v !== null && v !== undefined && v !== ''">
+                                        <div class="contents">
+                                            <dt class="font-medium text-slate-600" x-text="k"></dt>
+                                            <dd class="col-span-2 font-mono text-slate-800 break-all" x-text="formatValue(v)"></dd>
+                                        </div>
+                                    </template>
+                                </template>
+                            </dl>
+                        </div>
+                    </template>
+
+                    <template x-if="connections(selected.id).length">
+                        <div class="mt-4">
+                            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Connections</h3>
+                            <ul class="mt-1 space-y-1 text-xs">
+                                <template x-for="conn in connections(selected.id)" :key="conn.edgeId">
+                                    <li>
+                                        <button class="text-left hover:underline w-full" @click="select(conn.otherId)">
+                                            <span class="font-mono" :class="edgeColorClass(conn.type)" x-text="conn.dir + ' ' + conn.type"></span>
+                                            <span class="text-slate-700" x-text="conn.label"></span>
+                                        </button>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </template>
+
+                    <template x-if="selectedSnippet">
+                        <details class="mt-4">
+                            <summary class="text-xs font-semibold uppercase tracking-wide text-slate-500">Content</summary>
+                            <pre class="snippet mt-2" x-text="selectedSnippet"></pre>
+                        </details>
+                    </template>
+                </div>
+            </template>
+        </aside>
+    </main>
+
+    <footer class="text-center text-xs text-slate-400 py-3">
+        Generated by Quokka. Open this file directly in any browser — no server required.
+    </footer>
+</div>
+
+<script>
+const TYPE_COLORS = {
+    skill: '#6366f1',
+    agent: '#0ea5e9',
+    command: '#a855f7',
+    hook: '#f59e0b',
+    mcp: '#10b981',
+    plugin: '#ef4444',
+    context_doc: '#ec4899',
+    settings: '#64748b',
+    tool: '#94a3b8',
+    event: '#fbbf24',
+};
+
+const TYPE_LABELS = {
+    skill: 'Skill',
+    agent: 'Agent',
+    command: 'Command',
+    hook: 'Hook',
+    mcp: 'MCP',
+    plugin: 'Plugin',
+    context_doc: 'Context doc',
+    settings: 'Settings',
+    tool: 'Tool',
+    event: 'Event',
+};
+
+const EDGE_COLORS = {
+    provides: '#4f46e5',
+    triggers_on: '#d97706',
+    grants_tool: '#059669',
+    references: '#e11d48',
+};
+
+const SOURCE_BADGE = {
+    user: 'bg-blue-100 text-blue-700',
+    project: 'bg-emerald-100 text-emerald-700',
+    plugin: 'bg-amber-100 text-amber-700',
+    synthetic: 'bg-slate-200 text-slate-700',
+};
+
+let CY = null;
+
+function quokkaApp() {
+    return {
+        graph: QUOKKA,
+        selected: null,
+        visibleTypes: {},
+        visibleSources: {},
+        typeOrder: [],
+        typeCounts: {},
+        sourceCounts: {},
+
+        init() {
+            this.computeCounts();
+            this.typeOrder = Object.keys(this.typeCounts);
+            this.typeOrder.forEach(t => this.visibleTypes[t] = true);
+            ['user', 'project', 'plugin', 'synthetic'].forEach(s => this.visibleSources[s] = true);
+            this.$nextTick(() => this.renderGraph());
+        },
+
+        get totalNodes() { return this.graph.nodes.length; },
+
+        computeCounts() {
+            for (const n of this.graph.nodes) {
+                this.typeCounts[n.type] = (this.typeCounts[n.type] || 0) + 1;
+                this.sourceCounts[n.source] = (this.sourceCounts[n.source] || 0) + 1;
+            }
+        },
+
+        renderGraph() {
+            if (!cytoscape) return;
+            if (typeof cytoscapeCoseBilkent === 'function') {
+                cytoscape.use(cytoscapeCoseBilkent);
+            }
+
+            const elements = [];
+            for (const n of this.graph.nodes) {
+                elements.push({ data: { ...n, color: TYPE_COLORS[n.type] || '#64748b' } });
+            }
+            for (const e of this.graph.edges) {
+                elements.push({ data: { ...e, color: EDGE_COLORS[e.type] || '#94a3b8' } });
+            }
+
+            CY = cytoscape({
+                container: document.getElementById('cy'),
+                elements,
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'background-color': 'data(color)',
+                            'label': 'data(label)',
+                            'color': '#0f172a',
+                            'font-size': 10,
+                            'text-valign': 'bottom',
+                            'text-margin-y': 4,
+                            'text-wrap': 'wrap',
+                            'text-max-width': 120,
+                            'width': 24,
+                            'height': 24,
+                            'border-width': 1,
+                            'border-color': '#e2e8f0',
+                        },
+                    },
+                    {
+                        selector: 'node[type = "plugin"]',
+                        style: { 'shape': 'round-rectangle', 'width': 36, 'height': 28 },
+                    },
+                    {
+                        selector: 'node[type = "context_doc"]',
+                        style: { 'shape': 'round-rectangle', 'width': 30, 'height': 24 },
+                    },
+                    {
+                        selector: 'node[type = "settings"]',
+                        style: { 'shape': 'diamond' },
+                    },
+                    {
+                        selector: 'node[source = "synthetic"]',
+                        style: { 'border-style': 'dashed', 'opacity': 0.85 },
+                    },
+                    {
+                        selector: 'node:selected',
+                        style: {
+                            'border-width': 3,
+                            'border-color': '#0f172a',
+                        },
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'curve-style': 'bezier',
+                            'line-color': 'data(color)',
+                            'target-arrow-color': 'data(color)',
+                            'target-arrow-shape': 'triangle',
+                            'width': 1.6,
+                            'opacity': 0.8,
+                            'font-size': 8,
+                            'color': '#475569',
+                        },
+                    },
+                ],
+                layout: {
+                    name: typeof cytoscapeCoseBilkent === 'function' ? 'cose-bilkent' : 'cose',
+                    animate: false,
+                    nodeRepulsion: 8000,
+                    idealEdgeLength: 90,
+                },
+                wheelSensitivity: 0.2,
+            });
+
+            CY.on('tap', 'node', (evt) => {
+                this.selected = evt.target.data();
+            });
+            CY.on('tap', (evt) => {
+                if (evt.target === CY) this.selected = null;
+            });
+        },
+
+        applyFilters() {
+            if (!CY) return;
+            CY.batch(() => {
+                CY.nodes().forEach(n => {
+                    const t = n.data('type');
+                    const s = n.data('source');
+                    const visible = this.visibleTypes[t] !== false && this.visibleSources[s] !== false;
+                    n.style('display', visible ? 'element' : 'none');
+                });
+            });
+        },
+
+        toggleType(t) { this.visibleTypes[t] = !this.visibleTypes[t]; this.applyFilters(); },
+        toggleSource(s) { this.visibleSources[s] = !this.visibleSources[s]; this.applyFilters(); },
+
+        resetView() {
+            if (!CY) return;
+            CY.fit(undefined, 24);
+        },
+
+        typeColor(t) { return TYPE_COLORS[t] || '#64748b'; },
+        typeLabel(t) { return TYPE_LABELS[t] || t; },
+        typeColorClass() { return 'bg-white'; },
+        sourceBadgeClass(s) { return SOURCE_BADGE[s] || 'bg-slate-100 text-slate-700'; },
+        edgeColorClass(t) {
+            const map = {
+                provides: 'text-indigo-700',
+                triggers_on: 'text-amber-700',
+                grants_tool: 'text-emerald-700',
+                references: 'text-rose-700',
+            };
+            return map[t] || 'text-slate-700';
+        },
+
+        metaPairs(meta) {
+            return Object.entries(meta || {});
+        },
+
+        formatValue(v) {
+            if (Array.isArray(v)) return v.join(', ');
+            if (typeof v === 'object' && v !== null) return JSON.stringify(v);
+            return String(v);
+        },
+
+        connections(id) {
+            const conns = [];
+            for (const e of this.graph.edges) {
+                if (e.source === id) {
+                    const other = this.graph.nodes.find(n => n.id === e.target);
+                    if (other) conns.push({ edgeId: e.id, otherId: other.id, type: e.type, dir: '→', label: other.label || other.name });
+                } else if (e.target === id) {
+                    const other = this.graph.nodes.find(n => n.id === e.source);
+                    if (other) conns.push({ edgeId: e.id, otherId: other.id, type: e.type, dir: '←', label: other.label || other.name });
+                }
+            }
+            return conns;
+        },
+
+        select(id) {
+            const node = this.graph.nodes.find(n => n.id === id);
+            if (node) {
+                this.selected = node;
+                if (CY) {
+                    const cyNode = CY.getElementById(id);
+                    if (cyNode && cyNode.length) {
+                        CY.center(cyNode);
+                    }
+                }
+            }
+        },
+
+        get selectedSnippet() {
+            if (!this.selected) return null;
+            // Snippets only for entities with a `path` and a "content"-ish meta value.
+            // We embed nothing extra in nodes by default, so this stays empty.
+            return null;
+        },
+    };
+}
+</script>
+</body>
+</html>
