@@ -433,6 +433,74 @@ def features() -> str:
         return render_template("pages/features.html", features={})
 
 
+@dashboard_bp.route("/harness")
+def harness() -> str:
+    """Render the Agent Harness overview page."""
+    try:
+        service = current_app.dashboard_service
+        repositories = service.get_discovered_repositories()
+
+        user_repo = None
+        user_features = {}
+        project_repos = []
+
+        for repo in repositories:
+            features = service.get_configuration_features(repo["path"])
+            repo_with_features = dict(repo)
+            repo_with_features["features"] = features
+
+            if repo.get("type") == "user" or repo.get("name", "").lower() in ("user", "user configuration", "~/.claude"):
+                user_repo = repo
+                user_features = features
+            else:
+                project_repos.append(repo_with_features)
+
+        if not user_repo and repositories:
+            user_repo = repositories[0]
+            user_features = service.get_configuration_features(repositories[0]["path"])
+            project_repos = []
+            for repo in repositories[1:]:
+                features = service.get_configuration_features(repo["path"])
+                repo_with_features = dict(repo)
+                repo_with_features["features"] = features
+                project_repos.append(repo_with_features)
+
+        def _count(features, key):
+            items = features.get(key) or []
+            return len(items) if isinstance(items, list) else 0
+
+        all_features_list = [user_features] + [r["features"] for r in project_repos if r.get("features")]
+
+        harness_totals = {
+            "skills": sum(_count(f, "skills") for f in all_features_list),
+            "agents": sum(_count(f, "agents") for f in all_features_list),
+            "mcps": sum(_count(f, "mcps") for f in all_features_list),
+            "plugins": sum(_count(f, "plugins") for f in all_features_list),
+            "hooks": sum(_count(f, "hooks") for f in all_features_list),
+            "commands": sum(_count(f, "commands") for f in all_features_list),
+        }
+
+        return render_template(
+            "pages/harness.html",
+            repositories=repositories,
+            user_repo=user_repo,
+            user_features=user_features,
+            project_repos=project_repos,
+            harness_totals=harness_totals,
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading harness page: {e}", exc_info=True)
+        return render_template(
+            "pages/harness.html",
+            repositories=[],
+            user_repo=None,
+            user_features={},
+            project_repos=[],
+            harness_totals={"skills": 0, "agents": 0, "mcps": 0, "plugins": 0, "hooks": 0, "commands": 0},
+        )
+
+
 @dashboard_bp.route("/configuration")
 def configuration() -> str:
     """Render the configuration page with Claude Code configuration viewer."""
