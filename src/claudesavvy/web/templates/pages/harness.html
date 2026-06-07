@@ -52,6 +52,24 @@
         {% endfor %}
     </div>
 
+    <!-- Session Quality Evaluation -->
+    <div class="space-y-4">
+        <div class="flex flex-wrap items-center gap-3">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Session quality</h2>
+                <p class="text-sm text-gray-500">How efficiently the harness ran your sessions — scored worst-first so you know what to tune.</p>
+            </div>
+            <div class="ml-auto">
+                {% with current_url='/api/harness/evaluation', target_id='harness-eval-content', default_period='7days', storage_key='harness_eval_period' %}
+                {% include "partials/time_filter.html" %}
+                {% endwith %}
+            </div>
+        </div>
+        <div id="harness-eval-content">
+            {% include "partials/harness_evaluation.html" %}
+        </div>
+    </div>
+
     <!-- Scope Level Tabs -->
     <div x-data="{ activeScope: 'user' }">
 

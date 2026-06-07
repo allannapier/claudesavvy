@@ -30,6 +30,7 @@ from ...analyzers.integrations import IntegrationAnalyzer, IntegrationSummary
 from ...analyzers.features import FeaturesAnalyzer, FeaturesSummary
 from ...analyzers.configuration import ConfigurationAnalyzer
 from ...analyzers.project_analyzer import ProjectAnalyzer
+from ...analyzers import harness_quality
 
 
 class DashboardService:
@@ -1349,6 +1350,102 @@ class DashboardService:
         """
         path = Path(repo_path)
         return self._configuration_analyzer.get_feature_breakdown(path)
+
+    def get_harness_evaluation(
+        self, time_filter: Optional[TimeFilter] = None, limit: int = 60
+    ) -> Dict[str, Any]:
+        """
+        Score recent Claude Code sessions on harness/agentic quality.
+
+        Parses each session transcript, deducts penalties for tool errors,
+        duplicate commands, repeated reads, low scriptability, and user
+        rejections, then returns a leaderboard plus aggregate stats.
+
+        Args:
+            time_filter: Optional TimeFilter to restrict sessions by mtime.
+            limit: Max number of recent sessions to score.
+
+        Returns:
+            Dict with sessions (worst-first), aggregate stats, and grade
+            distribution.
+        """
+        start = time_filter.start_time if time_filter else None
+        end = time_filter.end_time if time_filter else None
+
+        records: List[Dict[str, Any]] = []
+        for path in self.paths.get_project_session_files():
+            try:
+                mtime = path.stat().st_mtime
+            except OSError:
+                continue
+            when = datetime.fromtimestamp(mtime, tz=timezone.utc)
+            if start is not None and when < start:
+                continue
+            if end is not None and when > end:
+                continue
+            record = harness_quality.evaluate_file(path)
+            if record is not None:
+                records.append(record)
+            if len(records) >= limit:
+                break
+
+        scores = [r["score"] for r in records]
+        grade_dist: Dict[str, int] = {}
+        for r in records:
+            grade_dist[r["grade"]] = grade_dist.get(r["grade"], 0) + 1
+
+        issue_counts: Dict[str, int] = {
+            "tool_errors": 0,
+            "user_rejections": 0,
+            "duplicate_commands": 0,
+            "repeated_reads": 0,
+            "scriptability": 0,
+        }
+        for r in records:
+            pen = r["penalties"]
+            if pen.get("errors"):
+                issue_counts["tool_errors"] += 1
+            if pen.get("rejections"):
+                issue_counts["user_rejections"] += 1
+            if pen.get("duplicate_commands"):
+                issue_counts["duplicate_commands"] += 1
+            if pen.get("repeated_reads"):
+                issue_counts["repeated_reads"] += 1
+            if pen.get("scriptability"):
+                issue_counts["scriptability"] += 1
+
+        # Worst-first: that's what's worth fixing.
+        leaderboard = sorted(records, key=lambda r: r["score"])
+
+        return {
+            "period_description": (
+                time_filter.get_description() if time_filter else "All time"
+            ),
+            "sessions": leaderboard,
+            "session_count": len(records),
+            "average_score": round(sum(scores) / len(scores), 1) if scores else 0,
+            "best_score": max(scores) if scores else 0,
+            "worst_score": min(scores) if scores else 0,
+            "grade_distribution": grade_dist,
+            "issue_counts": issue_counts,
+        }
+
+    def get_harness_session_detail(
+        self, session_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Score a single session by id (full or prefix) and return its detail.
+
+        Args:
+            session_id: Session id or unique prefix.
+
+        Returns:
+            Evaluation record dict, or None if no matching session.
+        """
+        for path in self.paths.get_project_session_files():
+            if path.stem == session_id or path.stem.startswith(session_id):
+                return harness_quality.evaluate_file(path)
+        return None
 
     def get_feature_detail(
         self, repo_path: str, feature_type: str, feature_id: str

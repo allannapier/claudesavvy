@@ -480,6 +480,10 @@ def harness() -> str:
             "commands": sum(_count(f, "commands") for f in all_features_list),
         }
 
+        default_period = "7days"
+        time_filter = get_time_filter_from_period(default_period)
+        evaluation = service.get_harness_evaluation(time_filter=time_filter)
+
         return render_template(
             "pages/harness.html",
             repositories=repositories,
@@ -487,6 +491,8 @@ def harness() -> str:
             user_features=user_features,
             project_repos=project_repos,
             harness_totals=harness_totals,
+            evaluation=evaluation,
+            period=default_period,
         )
 
     except Exception as e:
@@ -498,6 +504,56 @@ def harness() -> str:
             user_features={},
             project_repos=[],
             harness_totals={"skills": 0, "agents": 0, "mcps": 0, "plugins": 0, "hooks": 0, "commands": 0},
+            evaluation=None,
+            period="7days",
+        )
+
+
+@dashboard_bp.route("/api/harness/evaluation")
+def api_harness_evaluation() -> str:
+    """HTMX endpoint: filtered harness evaluation leaderboard."""
+    from flask import request
+
+    try:
+        service = current_app.dashboard_service
+        period = request.args.get("period", "7days")
+        time_filter = get_time_filter_from_period(
+            period, start=request.args.get("start"), end=request.args.get("end")
+        )
+        evaluation = service.get_harness_evaluation(time_filter=time_filter)
+        return render_template(
+            "partials/harness_evaluation.html",
+            evaluation=evaluation,
+            period=period,
+        )
+    except Exception as e:
+        logger.error(f"Error loading harness evaluation: {e}", exc_info=True)
+        return (
+            '<div class="text-red-600 p-4">Error loading evaluation</div>',
+            500,
+        )
+
+
+@dashboard_bp.route("/api/harness/session/<session_id>")
+def api_harness_session(session_id: str) -> str:
+    """HTMX endpoint: detail for a single scored session."""
+    try:
+        service = current_app.dashboard_service
+        detail = service.get_harness_session_detail(session_id)
+        if detail is None:
+            return (
+                '<div class="text-slate-400 p-4">Session not found</div>',
+                404,
+            )
+        return render_template(
+            "partials/harness_session_detail.html",
+            session=detail,
+        )
+    except Exception as e:
+        logger.error(f"Error loading harness session detail: {e}", exc_info=True)
+        return (
+            '<div class="text-red-600 p-4">Error loading session</div>',
+            500,
         )
 
 

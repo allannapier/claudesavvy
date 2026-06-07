@@ -1,7 +1,7 @@
 {% from "components/card.html" import stat_card %}
 
 <!-- Summary Cards -->
-<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-6">
     {{ stat_card(
         label="Total Files",
         value=(files.total_files|default(0)|int)|string,

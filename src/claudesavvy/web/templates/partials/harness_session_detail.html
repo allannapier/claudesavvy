@@ -1,0 +1,137 @@
+<!-- Harness Session Detail (HTMX partial)
+     Context:
+       - session: dict from DashboardService.get_harness_session_detail()
+         keys: session_id, project_label, prompt, score, grade, headline,
+               metrics {assistant_turns, total_tool_calls, bash_calls,
+                        tool_errors, user_rejections, subagent_count},
+               penalties {errors, duplicate_commands, repeated_reads,
+                          scriptability, rejections},
+               suggestions [str], detail {errors, rejections, duplicates,
+                                          repeat_reads, binary_clusters}
+-->
+{% set grade_color = {'A': '#2ec27e', 'B': '#0770E3', 'C': '#f59e0b', 'D': '#fb923c', 'F': '#ef4444'} %}
+{% set gc = grade_color.get(session.grade, '#6b7280') %}
+
+<div class="text-left w-full space-y-5">
+
+    <!-- Header: grade + score + prompt -->
+    <div class="flex items-start gap-3">
+        <span class="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold shrink-0"
+              style="background: {{ gc }}18; color: {{ gc }};">{{ session.grade }}</span>
+        <div class="min-w-0 flex-1">
+            <div class="flex items-baseline gap-2">
+                <span class="text-2xl font-bold" style="color: {{ gc }};">{{ session.score }}</span>
+                <span class="text-xs font-mono text-gray-400 truncate">{{ session.project_label }}</span>
+            </div>
+            <p class="text-xs text-gray-500 mt-0.5">{{ session.prompt or 'No prompt captured' }}</p>
+        </div>
+    </div>
+
+    <!-- Metrics row -->
+    {% set m = session.metrics %}
+    <div class="grid grid-cols-3 gap-2">
+        {% for label, value in [
+            ('Turns', m.assistant_turns),
+            ('Tool calls', m.total_tool_calls),
+            ('Bash calls', m.bash_calls),
+            ('Errors', m.tool_errors),
+            ('Rejections', m.user_rejections),
+            ('Subagents', m.subagent_count),
+        ] %}
+        <div class="bg-gray-50 rounded-lg px-3 py-2">
+            <div class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ label }}</div>
+            <div class="text-base font-semibold text-gray-900">{{ value }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Penalty breakdown -->
+    {% set p = session.penalties %}
+    {% set pen_rows = [
+        ('Tool errors', p.errors),
+        ('User rejections', p.rejections),
+        ('Duplicate commands', p.duplicate_commands),
+        ('Repeated reads', p.repeated_reads),
+        ('Scriptability', p.scriptability),
+    ] %}
+    {% set total_pen = pen_rows | sum(attribute=1) %}
+    <div>
+        <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-semibold text-gray-700 uppercase tracking-wider">Penalties</span>
+            <span class="ml-auto text-xs font-mono text-gray-400">−{{ total_pen }} from 100</span>
+        </div>
+        {% if total_pen %}
+        <div class="space-y-1.5">
+            {% for label, val in pen_rows %}
+            {% if val %}
+            <div class="flex items-center gap-3">
+                <span class="text-xs text-gray-600 w-36 shrink-0">{{ label }}</span>
+                <div class="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                    <div class="h-full rounded-full" style="width: {{ (val / total_pen * 100) | round }}%; background: {{ gc }};"></div>
+                </div>
+                <span class="text-xs font-mono font-semibold text-gray-700 w-8 text-right">−{{ val }}</span>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-xs text-gray-400">No penalties. Clean run.</p>
+        {% endif %}
+    </div>
+
+    <!-- Suggestions -->
+    {% if session.suggestions %}
+    <div>
+        <div class="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Tuning suggestions</div>
+        <ul class="space-y-1.5">
+            {% for s in session.suggestions %}
+            <li class="flex items-start gap-2 text-xs text-gray-600">
+                <svg class="w-3.5 h-3.5 mt-0.5 shrink-0 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path d="M9 5l7 7-7 7"/>
+                </svg>
+                <span>{{ s }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Offender detail -->
+    {% set d = session.detail %}
+    {% if d.errors or d.rejections %}
+    <div class="space-y-3">
+        {% if d.errors %}
+        <div>
+            <div class="text-xs font-semibold text-red-600 uppercase tracking-wider mb-1.5">Tool errors</div>
+            <ul class="space-y-1">
+                {% for e in d.errors[:5] %}
+                <li class="text-xs">
+                    <span class="font-mono font-semibold text-gray-700">{{ e.label }}</span>
+                    {% if e.snippet %}
+                    <span class="text-gray-400 block truncate">{{ e.snippet }}</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+                {% if d.errors | length > 5 %}
+                <li class="text-xs text-gray-400">+{{ d.errors | length - 5 }} more</li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+        {% if d.rejections %}
+        <div>
+            <div class="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1.5">User rejections</div>
+            <ul class="space-y-1">
+                {% for r in d.rejections[:5] %}
+                <li class="text-xs font-mono font-semibold text-gray-700">{{ r.label }}</li>
+                {% endfor %}
+                {% if d.rejections | length > 5 %}
+                <li class="text-xs text-gray-400">+{{ d.rejections | length - 5 }} more</li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
