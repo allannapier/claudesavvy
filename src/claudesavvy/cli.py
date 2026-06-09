@@ -11,7 +11,6 @@ from rich.table import Table
 from .utils.paths import get_claude_paths, ClaudeDataPaths
 from .parsers.sessions import SessionParser
 from .utils.time_filter import TimeFilter
-from .agents.github_issue_agent import GitHubIssueAgent
 
 
 def parse_time_filter(period: str) -> TimeFilter:
@@ -277,107 +276,6 @@ def stats(period, format, claude_dir):
     except FileNotFoundError as e:
         console.print(f"\n[red]✗ Error:[/red] {e}")
         console.print("\n[yellow]Make sure Claude Code has been used at least once.[/yellow]")
-        sys.exit(1)
-    except Exception as e:
-        console.print(f"\n[red]✗ Unexpected error:[/red] {e}")
-        import traceback
-        console.print(traceback.format_exc())
-        sys.exit(1)
-
-
-@cli.command(name='issue-agent')
-@click.option(
-    '--repo-owner',
-    type=str,
-    required=True,
-    help='GitHub repository owner'
-)
-@click.option(
-    '--repo-name',
-    type=str,
-    required=True,
-    help='GitHub repository name'
-)
-@click.option(
-    '--github-token',
-    type=str,
-    help='GitHub personal access token (uses GITHUB_TOKEN env var if not provided)'
-)
-@click.option(
-    '--dry-run',
-    is_flag=True,
-    help='Show which issue would be selected without taking action'
-)
-def issue_agent(repo_owner, repo_name, github_token, dry_run):
-    """
-    Run the GitHub issue agent to process the next issue.
-
-    The agent will:
-    1. Fetch all open issues from the repository
-    2. Prioritize issues based on labels and age
-    3. Select the highest priority unassigned issue
-    4. (In future) Create a branch and PR to fix the issue
-
-    Examples:
-
-      # Run agent in dry-run mode to see which issue would be selected
-      $ claudesavvy issue-agent --repo-owner allannapier --repo-name claudesavvy --dry-run
-
-      # Run agent to actually process an issue
-      $ claudesavvy issue-agent --repo-owner allannapier --repo-name claudesavvy
-
-      # Use custom GitHub token
-      $ claudesavvy issue-agent --repo-owner allannapier --repo-name claudesavvy --github-token ghp_xxx
-    """
-    console = Console()
-
-    try:
-        console.print("\n[cyan]═══ GitHub Issue Agent ═══[/cyan]")
-        console.print(f"[dim]Repository: {repo_owner}/{repo_name}[/dim]\n")
-
-        # Initialize agent
-        agent = GitHubIssueAgent(repo_owner, repo_name, github_token)
-
-        # Run agent
-        if dry_run:
-            console.print("[yellow]Running in dry-run mode...[/yellow]\n")
-
-        result = agent.run()
-
-        # Display results
-        status = result['status']
-
-        if status == 'no_issues':
-            console.print("[yellow]✓ No open issues found in the repository[/yellow]\n")
-        elif status == 'no_available_issues':
-            console.print("[yellow]✓ No available issues to work on[/yellow]")
-            console.print("[dim]All issues are either assigned or filtered out[/dim]\n")
-        elif status == 'issue_selected':
-            issue = result['issue']
-            console.print("[green]✓ Selected issue to work on:[/green]\n")
-
-            table = Table(show_header=False, box=None)
-            table.add_column("Field", style="cyan")
-            table.add_column("Value")
-
-            table.add_row("Issue Number", f"#{issue['number']}")
-            table.add_row("Title", issue['title'])
-            table.add_row("Labels", ', '.join(issue['labels']) if issue['labels'] else 'None')
-            table.add_row("URL", issue['url'])
-
-            console.print(table)
-            console.print()
-
-            if dry_run:
-                console.print("[dim]Dry-run mode: No branch or PR will be created[/dim]\n")
-            else:
-                console.print("[yellow]Note: Automatic branch and PR creation is not yet implemented[/yellow]")
-                console.print("[dim]You can manually create a branch and PR for this issue[/dim]\n")
-        else:
-            console.print(f"[red]✗ Unknown status: {status}[/red]\n")
-
-    except RuntimeError as e:
-        console.print(f"\n[red]✗ Error:[/red] {e}\n")
         sys.exit(1)
     except Exception as e:
         console.print(f"\n[red]✗ Unexpected error:[/red] {e}")
