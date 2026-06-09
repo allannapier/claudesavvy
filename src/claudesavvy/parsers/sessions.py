@@ -4,6 +4,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
+from functools import cached_property
 from pathlib import Path
 from typing import Iterator, Optional, List, Set
 
@@ -116,9 +117,9 @@ class SessionMessage:
     model: Optional[str] = None
     team_name: Optional[str] = None
 
-    @property
+    @cached_property
     def datetime(self) -> Optional[datetime]:
-        """Get datetime from ISO timestamp.
+        """Get datetime from ISO timestamp (parsed once per message).
 
         Returns:
             datetime object or None if timestamp is invalid/empty
@@ -235,23 +236,15 @@ class SessionParser:
             session_files: List of session JSONL file paths
         """
         self.session_files = session_files
+        # Per-file cache of parsed messages, invalidated when the file's
+        # (mtime, size) changes. SessionMessage is small (no content bodies),
+        # so caching avoids re-reading and re-JSON-parsing every session
+        # file on each request.
+        self._file_cache: dict[Path, tuple[tuple[int, int], list[SessionMessage]]] = {}
 
-    def parse_file(
-        self, session_file: Path, time_filter: Optional[TimeFilter] = None
-    ) -> Iterator[SessionMessage]:
-        """
-        Parse a single session file and yield messages.
-
-        Args:
-            session_file: Path to session JSONL file
-            time_filter: Optional time filter
-
-        Yields:
-            SessionMessage instances
-        """
-        if not session_file.exists():
-            return
-
+    def _read_messages(self, session_file: Path) -> list[SessionMessage]:
+        """Read and parse all valid messages from a session file."""
+        messages: list[SessionMessage] = []
         with open(session_file, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
@@ -266,17 +259,52 @@ class SessionParser:
                     if not message.timestamp or not message.timestamp.strip():
                         continue
 
-                    # Apply time filter
-                    if time_filter and not time_filter.matches_iso_string(
-                        message.timestamp
-                    ):
-                        continue
-
-                    yield message
+                    messages.append(message)
 
                 except (json.JSONDecodeError, ValueError):
                     # Skip malformed lines
                     continue
+        return messages
+
+    def _load_file(self, session_file: Path) -> list[SessionMessage]:
+        """Load messages for a file, using the mtime/size-keyed cache."""
+        try:
+            stat = session_file.stat()
+        except OSError:
+            self._file_cache.pop(session_file, None)
+            return []
+
+        key = (stat.st_mtime_ns, stat.st_size)
+        cached = self._file_cache.get(session_file)
+        if cached is not None and cached[0] == key:
+            return cached[1]
+
+        try:
+            messages = self._read_messages(session_file)
+        except OSError:
+            return []
+        self._file_cache[session_file] = (key, messages)
+        return messages
+
+    def parse_file(
+        self, session_file: Path, time_filter: Optional[TimeFilter] = None
+    ) -> Iterator[SessionMessage]:
+        """
+        Parse a single session file and yield messages.
+
+        Args:
+            session_file: Path to session JSONL file
+            time_filter: Optional time filter
+
+        Yields:
+            SessionMessage instances
+        """
+        for message in self._load_file(session_file):
+            # Apply time filter
+            if time_filter and not time_filter.matches_iso_string(message.timestamp):
+                continue
+
+            yield message
 
     def parse_all(
         self,
