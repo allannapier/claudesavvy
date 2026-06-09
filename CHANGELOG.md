@@ -2,6 +2,24 @@
 
 All notable changes to ClaudeSavvy will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **New**: Built-in model pricing table synced with official Claude API rates, including Claude Fable 5, Opus 4.8/4.7/4.6/4.5, Opus 4.1/4 legacy rates, Sonnet 4.6, and Haiku 3.5/3
+- **New**: Model pricing resolution handles dated IDs, Bedrock/Vertex prefixes, the `[1m]` context-window marker, and falls back by model family for future releases
+- **New**: Client-side search, column sorting, and pagination on all major data tables (projects, conversations, tokens, files, features, integrations, sub-agents, teams)
+
+### Changed
+- Session file parsing is now cached per file (invalidated on mtime/size change) — steady-state page loads no longer re-parse unchanged JSONL files (~8x faster warm aggregation)
+- Daily and per-project cost trends now use per-model pricing instead of flat Sonnet rates
+- Table row caps raised now that tables paginate (files/tools 20 → 100, sub-agent exchanges 50 → 200)
+
+### Fixed
+- **Critical**: Models without a manual pricing override were silently billed at Sonnet rates ($3/$15), under-costing Opus ~5x and over-costing Haiku ~3x
+
+### Removed
+- GitHub Issue Agent (CLI command, module, workflow, and docs) — the feature only ever selected an issue and never implemented fixes or PR creation
+
 ## [2.9.0] - 2026-03-08
 
 ### Added
