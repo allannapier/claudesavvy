@@ -332,7 +332,7 @@ def files() -> str:
         time_filter = get_time_filter_from_period(default_period)
 
         # Get file statistics
-        file_data = service.get_file_statistics(limit=20, time_filter=time_filter)
+        file_data = service.get_file_statistics(limit=100, time_filter=time_filter)
 
         return render_template(
             "pages/files.html", files=file_data, period=default_period
@@ -393,7 +393,7 @@ def features() -> str:
         time_filter = get_time_filter_from_period(default_period)
 
         # Get tool usage data
-        top_tools = service.get_top_tools(limit=20, time_filter=time_filter)
+        top_tools = service.get_top_tools(limit=100, time_filter=time_filter)
         features_summary = service.get_features_summary(time_filter=time_filter)
 
         # Build tool_usage list with proper field names for template
@@ -845,7 +845,7 @@ def api_files() -> str:
 
         time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
-        file_data = service.get_file_statistics(limit=20, time_filter=time_filter)
+        file_data = service.get_file_statistics(limit=100, time_filter=time_filter)
         return render_template("partials/files_content.html", files=file_data)
 
     except Exception as e:
@@ -936,7 +936,7 @@ def api_features() -> str:
         prev_time_filter = time_filter.get_previous_period() if time_filter else None
 
         # Get tool usage data for current period
-        top_tools = service.get_top_tools(limit=20, time_filter=time_filter)
+        top_tools = service.get_top_tools(limit=100, time_filter=time_filter)
         features_summary = service.get_features_summary(time_filter=time_filter)
 
         # Get previous period data for trend comparison
@@ -1336,7 +1336,7 @@ def subagents() -> str:
 
         # Get summary stats
         summary = service.get_subagent_summary(time_filter=time_filter)
-        exchanges = service.get_subagent_exchanges(limit=50, time_filter=time_filter)
+        exchanges = service.get_subagent_exchanges(limit=200, time_filter=time_filter)
         chart_data = service.get_subagent_chart_data(limit=100, time_filter=time_filter)
 
         return render_template(
@@ -1369,7 +1369,7 @@ def api_subagents() -> str:
         time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
         summary = service.get_subagent_summary(time_filter=time_filter)
-        exchanges = service.get_subagent_exchanges(time_filter=time_filter, limit=50)
+        exchanges = service.get_subagent_exchanges(time_filter=time_filter, limit=200)
         chart_data = service.get_subagent_chart_data(time_filter=time_filter, limit=100)
 
         return render_template(
