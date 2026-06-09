@@ -5,16 +5,113 @@ for different Claude models. Pricing is stored in the Claude Monitor settings fi
 """
 
 import json
+import re
 from pathlib import Path
 from typing import Dict, Optional
 
-# Default pricing for models without custom pricing or models not in MODEL_PRICING
-DEFAULT_PRICING = {
-    'input_per_mtok': 3.00,
-    'output_per_mtok': 15.00,
-    'cache_write_per_mtok': 3.75,
-    'cache_read_per_mtok': 0.30
+
+def _pricing(input_per_mtok: float, output_per_mtok: float,
+             cache_write_per_mtok: float, cache_read_per_mtok: float) -> Dict[str, float]:
+    return {
+        'input_per_mtok': input_per_mtok,
+        'output_per_mtok': output_per_mtok,
+        'cache_write_per_mtok': cache_write_per_mtok,
+        'cache_read_per_mtok': cache_read_per_mtok,
+    }
+
+
+# Published Claude API pricing per million tokens (input, output,
+# 5-minute cache write, cache read). Source:
+# https://platform.claude.com/docs/en/about-claude/pricing
+_FABLE_PRICING = _pricing(10.00, 50.00, 12.50, 1.00)
+_OPUS_PRICING = _pricing(5.00, 25.00, 6.25, 0.50)        # Opus 4.5 and later
+_OPUS_LEGACY_PRICING = _pricing(15.00, 75.00, 18.75, 1.50)  # Opus 4.1 and earlier
+_SONNET_PRICING = _pricing(3.00, 15.00, 3.75, 0.30)
+_HAIKU_PRICING = _pricing(1.00, 5.00, 1.25, 0.10)        # Haiku 4.5 and later
+_HAIKU_35_PRICING = _pricing(0.80, 4.00, 1.00, 0.08)
+_HAIKU_3_PRICING = _pricing(0.25, 1.25, 0.30, 0.03)
+
+# Built-in pricing keyed by normalized model ID (lowercase, no date suffix,
+# no cloud-provider prefixes). See _normalize_model_id().
+MODEL_PRICING: Dict[str, Dict[str, float]] = {
+    'claude-fable-5': _FABLE_PRICING,
+    'claude-mythos-5': _FABLE_PRICING,
+    'claude-opus-4-8': _OPUS_PRICING,
+    'claude-opus-4-7': _OPUS_PRICING,
+    'claude-opus-4-6': _OPUS_PRICING,
+    'claude-opus-4-5': _OPUS_PRICING,
+    'claude-opus-4-1': _OPUS_LEGACY_PRICING,
+    'claude-opus-4-0': _OPUS_LEGACY_PRICING,
+    'claude-opus-4': _OPUS_LEGACY_PRICING,
+    'claude-3-opus': _OPUS_LEGACY_PRICING,
+    'claude-sonnet-4-6': _SONNET_PRICING,
+    'claude-sonnet-4-5': _SONNET_PRICING,
+    'claude-sonnet-4-0': _SONNET_PRICING,
+    'claude-sonnet-4': _SONNET_PRICING,
+    'claude-3-7-sonnet': _SONNET_PRICING,
+    'claude-3-5-sonnet': _SONNET_PRICING,
+    'claude-3-sonnet': _SONNET_PRICING,
+    'claude-haiku-4-6': _HAIKU_PRICING,
+    'claude-haiku-4-5': _HAIKU_PRICING,
+    'claude-3-5-haiku': _HAIKU_35_PRICING,
+    'claude-3-haiku': _HAIKU_3_PRICING,
 }
+
+# Substring fallbacks for model IDs that don't match the table even after
+# normalization (e.g. future releases). Order matters: most specific first.
+_FAMILY_FALLBACKS = [
+    ('fable', _FABLE_PRICING),
+    ('mythos', _FABLE_PRICING),
+    ('3-5-haiku', _HAIKU_35_PRICING),
+    ('haiku-3-5', _HAIKU_35_PRICING),
+    ('haiku', _HAIKU_PRICING),
+    ('3-opus', _OPUS_LEGACY_PRICING),
+    ('opus', _OPUS_PRICING),
+    ('sonnet', _SONNET_PRICING),
+]
+
+# Default pricing for models that can't be matched to any known family
+# (Sonnet rates, matching the historical behaviour of this module).
+DEFAULT_PRICING = _SONNET_PRICING
+
+
+def _normalize_model_id(model: str) -> str:
+    """Reduce a raw model ID to its canonical form for pricing lookup.
+
+    Handles dated IDs ("claude-sonnet-4-5-20250929"), Bedrock IDs
+    ("eu.anthropic.claude-opus-4-5-20251101-v1:0"), Vertex IDs
+    ("claude-sonnet-4-5@20250929"), and Claude Code context-window
+    markers ("claude-sonnet-4-5-20250929[1m]").
+    """
+    normalized = model.lower().strip()
+    normalized = re.sub(r'\[[^\]]*\]$', '', normalized)
+    normalized = re.sub(r'^(?:[a-z0-9-]+\.)?anthropic\.', '', normalized)
+    normalized = re.sub(r'-v\d+(?::\d+)?$', '', normalized)
+    normalized = re.sub(r'[@-]\d{8}$', '', normalized)
+    return normalized
+
+
+def resolve_model_pricing(model: Optional[str]) -> Dict[str, float]:
+    """Resolve built-in pricing for a model ID.
+
+    Tries an exact match, then a normalized match, then a model-family
+    substring fallback. Returns DEFAULT_PRICING for unrecognized models.
+    """
+    if not model:
+        return DEFAULT_PRICING
+
+    if model in MODEL_PRICING:
+        return MODEL_PRICING[model]
+
+    normalized = _normalize_model_id(model)
+    if normalized in MODEL_PRICING:
+        return MODEL_PRICING[normalized]
+
+    for fragment, pricing in _FAMILY_FALLBACKS:
+        if fragment in normalized:
+            return pricing
+
+    return DEFAULT_PRICING
 
 
 class PricingSettings:
@@ -101,14 +198,15 @@ class PricingSettings:
         Returns:
             Pricing dictionary with keys: input_per_mtok, output_per_mtok,
             cache_write_per_mtok, cache_read_per_mtok.
-            Returns custom pricing if set, otherwise default pricing.
+            Returns custom pricing if set, otherwise built-in pricing for
+            the model's family, otherwise default pricing.
         """
         custom_pricing = self.load_custom_pricing()
         if model in custom_pricing:
             return custom_pricing[model]
 
-        # Fall back to default pricing
-        return DEFAULT_PRICING
+        # Fall back to built-in published pricing for the model
+        return resolve_model_pricing(model)
 
     def set_pricing_for_model(
         self,
@@ -184,7 +282,7 @@ class PricingSettings:
             for model in additional_models:
                 # Only add if not already present (custom pricing takes precedence)
                 if model not in result:
-                    result[model] = DEFAULT_PRICING
+                    result[model] = resolve_model_pricing(model)
 
         return result
 

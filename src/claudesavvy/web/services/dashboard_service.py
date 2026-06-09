@@ -1651,9 +1651,9 @@ class DashboardService:
         success = self._pricing_settings.reset_pricing_for_model(model)
 
         if success:
-            from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING
+            from ...utils.pricing import resolve_model_pricing
 
-            default_pricing = MODEL_PRICING.get(model, DEFAULT_PRICING)
+            default_pricing = resolve_model_pricing(model)
             return {"success": True, "model": model, "pricing": default_pricing}
         else:
             return {"success": False, "error": "Failed to reset pricing settings"}
@@ -1963,7 +1963,7 @@ class DashboardService:
         Returns:
             Dict with 'conversations' list and 'summary' dict
         """
-        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING, get_model_display_name
+        from ...analyzers.tokens import DEFAULT_PRICING, get_model_display_name
 
         raw = self._session_parser.get_conversation_stats(
             time_filter=time_filter, limit=None
@@ -1972,7 +1972,7 @@ class DashboardService:
         def _calc_cost(model_usage: dict) -> float:
             total = 0.0
             for model_id, usage in model_usage.items():
-                pricing = MODEL_PRICING.get(model_id, DEFAULT_PRICING)
+                pricing = self._pricing_settings.get_pricing_for_model(model_id)
                 total += (usage.input_tokens / 1_000_000) * pricing["input_per_mtok"]
                 total += (usage.output_tokens / 1_000_000) * pricing["output_per_mtok"]
                 total += (usage.cache_creation_input_tokens / 1_000_000) * pricing["cache_write_per_mtok"]
@@ -2083,7 +2083,7 @@ class DashboardService:
         Returns:
             Dict with conversation details including context_per_turn, or None
         """
-        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING, get_model_display_name
+        from ...analyzers.tokens import DEFAULT_PRICING, get_model_display_name
 
         raw = self._session_parser.get_conversation_stats(time_filter=time_filter, limit=None)
 
@@ -2097,7 +2097,7 @@ class DashboardService:
             if model_usage:
                 cost = 0.0
                 for model_id, usage in model_usage.items():
-                    pricing = MODEL_PRICING.get(model_id, DEFAULT_PRICING)
+                    pricing = self._pricing_settings.get_pricing_for_model(model_id)
                     cost += (usage.input_tokens / 1_000_000) * pricing["input_per_mtok"]
                     cost += (usage.output_tokens / 1_000_000) * pricing["output_per_mtok"]
                     cost += (usage.cache_creation_input_tokens / 1_000_000) * pricing["cache_write_per_mtok"]
@@ -2643,8 +2643,6 @@ class DashboardService:
         Returns:
             Dict with team usage statistics
         """
-        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING
-
         exchanges = self._subagent_parser.parse_exchanges(time_filter=time_filter)
         teammate_exchanges = [e for e in exchanges if e.is_teammate]
 
@@ -2657,7 +2655,7 @@ class DashboardService:
         def _calc_cost(model_usage: dict) -> float:
             cost = 0.0
             for model_id, usage in model_usage.items():
-                rates = MODEL_PRICING.get(model_id, DEFAULT_PRICING)
+                rates = self._pricing_settings.get_pricing_for_model(model_id)
                 cost += (
                     (usage.input_tokens / 1_000_000) * rates["input_per_mtok"]
                     + (usage.output_tokens / 1_000_000) * rates["output_per_mtok"]
