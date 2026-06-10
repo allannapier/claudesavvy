@@ -2,10 +2,13 @@
      Context:
        - session: dict from DashboardService.get_harness_session_detail()
          keys: session_id, project_label, prompt, score, grade, headline,
+               low_activity (bool),
                metrics {assistant_turns, total_tool_calls, bash_calls,
-                        tool_errors, user_rejections, subagent_count},
-               penalties {errors, duplicate_commands, repeated_reads,
-                          scriptability, rejections},
+                        read_calls, tool_errors, user_rejections, subagent_count},
+               subscores {errors, rejections, duplicate_commands, repeated_reads,
+                          scriptability},
+               weights {same keys, sum to 1},
+               rates {same keys: (numerator, denominator)},
                suggestions [str], detail {errors, rejections, duplicates,
                                           repeat_reads, binary_clusters}
 -->
@@ -24,6 +27,9 @@
                 <span class="text-xs font-mono text-gray-400 truncate">{{ session.project_label }}</span>
             </div>
             <p class="text-xs text-gray-500 mt-0.5">{{ session.prompt or 'No prompt captured' }}</p>
+            {% if session.low_activity %}
+            <p class="text-xs text-gray-400 italic mt-1">Not enough activity to grade reliably (fewer than 3 tool calls).</p>
+            {% endif %}
         </div>
     </div>
 
@@ -45,37 +51,55 @@
         {% endfor %}
     </div>
 
-    <!-- Penalty breakdown -->
-    {% set p = session.penalties %}
-    {% set pen_rows = [
-        ('Tool errors', p.errors),
-        ('User rejections', p.rejections),
-        ('Duplicate commands', p.duplicate_commands),
-        ('Repeated reads', p.repeated_reads),
-        ('Scriptability', p.scriptability),
+    <!-- Category subscore breakdown -->
+    {% set subs = session.subscores %}
+    {% set wts = session.weights %}
+    {% set rates = session.rates %}
+    {% set cat_labels = [
+        ('errors', 'Tool errors'),
+        ('rejections', 'User rejections'),
+        ('duplicate_commands', 'Duplicate commands'),
+        ('repeated_reads', 'Repeated reads'),
+        ('scriptability', 'Scriptability'),
     ] %}
-    {% set total_pen = pen_rows | sum(attribute=1) %}
+    {% set rate_contexts = {
+        'errors': 'errors / tool calls',
+        'rejections': 'rejections / tool calls',
+        'duplicate_commands': 'extra dups / bash calls',
+        'repeated_reads': 'extra re-reads / read calls',
+        'scriptability': 'over-hammered binaries / unique binaries',
+    } %}
     <div>
-        <div class="flex items-center gap-2 mb-2">
-            <span class="text-xs font-semibold text-gray-700 uppercase tracking-wider">Penalties</span>
-            <span class="ml-auto text-xs font-mono text-gray-400">−{{ total_pen }} from 100</span>
+        <div class="flex items-center gap-2 mb-3">
+            <span class="text-xs font-semibold text-gray-700 uppercase tracking-wider">Category scores</span>
         </div>
-        {% if total_pen %}
-        <div class="space-y-1.5">
-            {% for label, val in pen_rows %}
-            {% if val %}
-            <div class="flex items-center gap-3">
-                <span class="text-xs text-gray-600 w-36 shrink-0">{{ label }}</span>
-                <div class="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                    <div class="h-full rounded-full" style="width: {{ (val / total_pen * 100) | round }}%; background: {{ gc }};"></div>
+        {% if not session.low_activity %}
+        <div class="space-y-3">
+            {% for cat, label in cat_labels %}
+            {% set sub = subs.get(cat, 100) %}
+            {% set wt = wts.get(cat, 0) %}
+            {% set rate_pair = rates.get(cat, (0, 1)) %}
+            {% set bar_color = '#2ec27e' if sub >= 80 else ('#f59e0b' if sub >= 60 else '#ef4444') %}
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-xs text-gray-700 w-36 shrink-0">{{ label }}</span>
+                    <div class="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div class="h-full rounded-full transition-all"
+                             style="width: {{ sub | round }}%; background: {{ bar_color }};"></div>
+                    </div>
+                    <span class="text-xs font-mono font-semibold w-8 text-right" style="color: {{ bar_color }};">{{ sub | round | int }}</span>
                 </div>
-                <span class="text-xs font-mono font-semibold text-gray-700 w-8 text-right">−{{ val }}</span>
+                <div class="flex items-center gap-2 pl-36 pl-0 ml-36">
+                    <span class="text-[10px] text-gray-400">
+                        {{ rate_pair[0] }}/{{ rate_pair[1] }} {{ rate_contexts.get(cat, '') }}
+                    </span>
+                    <span class="ml-auto text-[10px] text-gray-300 font-mono">{{ (wt * 100) | round | int }}% of score</span>
+                </div>
             </div>
-            {% endif %}
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-xs text-gray-400">No penalties. Clean run.</p>
+        <p class="text-xs text-gray-400">Subscores not computed — insufficient activity.</p>
         {% endif %}
     </div>
 

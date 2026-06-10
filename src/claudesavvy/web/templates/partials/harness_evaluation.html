@@ -17,12 +17,18 @@
 <div class="space-y-5">
 
     <!-- Aggregate strip -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
         {% set avg = evaluation.average_score %}
         {% set avg_color = '#2ec27e' if avg >= 80 else ('#f59e0b' if avg >= 60 else '#ef4444') %}
+        {% set med = evaluation.median_score %}
+        {% set med_color = '#2ec27e' if med >= 80 else ('#f59e0b' if med >= 60 else '#ef4444') %}
         <div class="bg-white rounded-xl border border-gray-200 p-4">
             <div class="text-xs font-medium text-gray-500">Average score</div>
             <div class="text-2xl font-bold mt-1" style="color: {{ avg_color }};">{{ avg }}</div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <div class="text-xs font-medium text-gray-500">Median score</div>
+            <div class="text-2xl font-bold mt-1" style="color: {{ med_color }};">{{ med }}</div>
         </div>
         <div class="bg-white rounded-xl border border-gray-200 p-4">
             <div class="text-xs font-medium text-gray-500">Sessions scored</div>
@@ -38,18 +44,43 @@
         </div>
     </div>
 
-    <!-- Grade distribution + issue counts -->
-    <div class="flex flex-wrap items-center gap-4">
-        <div class="flex items-center gap-2">
-            <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Grades</span>
-            {% for g in ['A', 'B', 'C', 'D', 'F'] %}
-            {% set n = evaluation.grade_distribution.get(g, 0) %}
-            <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md"
-                  style="background: {{ grade_color[g] }}14; color: {{ grade_color[g] }};">
-                {{ g }}<span class="font-mono opacity-70">{{ n }}</span>
-            </span>
-            {% endfor %}
+    <!-- Grade distribution stacked bar + issue counts -->
+    <div class="space-y-3">
+        <!-- Stacked bar grade distribution -->
+        {% set total = evaluation.session_count %}
+        {% if total > 0 %}
+        <div>
+            <div class="flex items-center gap-2 mb-1.5">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Grade distribution</span>
+            </div>
+            <div class="flex h-5 rounded-lg overflow-hidden gap-px">
+                {% for g in ['A', 'B', 'C', 'D', 'F'] %}
+                {% set n = evaluation.grade_distribution.get(g, 0) %}
+                {% if n > 0 %}
+                {% set pct = (n / total * 100) | round(1) %}
+                <div class="flex items-center justify-center text-[10px] font-bold text-white transition-all"
+                     style="width: {{ pct }}%; background: {{ grade_color[g] }};"
+                     title="{{ g }}: {{ n }} session{{ 's' if n != 1 else '' }} ({{ pct }}%)">
+                    {% if pct > 8 %}{{ g }}{{ n }}{% endif %}
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            <!-- Legend -->
+            <div class="flex flex-wrap items-center gap-3 mt-2">
+                {% for g in ['A', 'B', 'C', 'D', 'F'] %}
+                {% set n = evaluation.grade_distribution.get(g, 0) %}
+                <span class="inline-flex items-center gap-1 text-xs font-semibold"
+                      style="color: {{ grade_color[g] }};">
+                    <span class="w-2 h-2 rounded-sm inline-block" style="background: {{ grade_color[g] }};"></span>
+                    {{ g }}&nbsp;<span class="font-mono opacity-70">{{ n }}</span>
+                </span>
+                {% endfor %}
+            </div>
         </div>
+        {% endif %}
+
+        <!-- Issue counts -->
         {% set ic = evaluation.issue_counts %}
         {% set issue_labels = [
             ('tool_errors', 'tool errors'),
@@ -91,6 +122,9 @@
                             <div class="flex items-center gap-2">
                                 <span class="text-sm font-semibold text-gray-900">{{ s.score }}</span>
                                 <span class="text-xs text-gray-400 font-mono truncate">{{ s.project_label }}</span>
+                                {% if s.low_activity %}
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                {% endif %}
                             </div>
                             <div class="text-xs text-gray-500 truncate">{{ s.prompt or 'No prompt captured' }}</div>
                         </div>
