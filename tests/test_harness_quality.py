@@ -15,6 +15,7 @@ from claudesavvy.analyzers.harness_quality import (
     build_suggestions,
     evaluate_file,
     first_prompt,
+    format_tuning_report,
     score_session,
 )
 
@@ -574,3 +575,50 @@ def test_evaluate_file_smoke(tmp_path):
     assert "detail" in record
     assert "low_activity" in record
     assert "penalties" not in record, "Old 'penalties' key should not be present"
+
+
+# ---------------------------------------------------------------------------
+# 12. Tuning report for the copy-into-Claude-Code button
+# ---------------------------------------------------------------------------
+
+def test_format_tuning_report_contents():
+    calls = (
+        [("Bash", "make test", True, False)] * 3
+        + [("Bash", "git status", False, False)] * 2
+        + [("Read", "/proj/config.py", False, False)] * 3
+        + [("Grep", "", False, False)] * 4
+    )
+    parsed = _make_parsed(calls)
+    scored = score_session(parsed)
+    record = {
+        "session_id": "abc123",
+        "project_label": "my-project",
+        "date": "2026-06-10 09:00",
+        "prompt": "fix the build",
+        "score": scored["score"],
+        "grade": scored["grade"],
+        "low_activity": scored["low_activity"],
+        "metrics": scored["metrics"],
+        "subscores": scored["subscores"],
+        "weights": scored["weights"],
+        "rates": scored["rates"],
+        "suggestions": build_suggestions(scored),
+        "detail": scored["detail"],
+    }
+    report = format_tuning_report(record)
+    # Instructional preamble so it's directly actionable in Claude Code
+    assert "harness improvements" in report
+    assert "CLAUDE.md" in report
+    # Session identity and overall result
+    assert "abc123" in report
+    assert "my-project" in report
+    assert "fix the build" in report
+    assert f"{scored['score']}/100 (grade {scored['grade']})" in report
+    # Category breakdown with rates
+    assert "Tool errors" in report
+    assert "3/12 errors / tool calls" in report
+    # Offenders: the duplicated command and the re-read file appear
+    assert "make test" in report
+    assert "/proj/config.py" in report
+    # Impact-ranked suggestions present
+    assert "## Tuning suggestions (impact-ranked)" in report

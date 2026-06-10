@@ -31,6 +31,24 @@
             <p class="text-xs text-gray-400 italic mt-1">Not enough activity to grade reliably (fewer than 3 tool calls).</p>
             {% endif %}
         </div>
+        {% if session.tuning_report %}
+        <div x-data="{ copied: false }" class="shrink-0">
+            <button type="button"
+                    @click="navigator.clipboard.writeText($refs.report.textContent).then(() => { copied = true; setTimeout(() => copied = false, 2000); })"
+                    class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors"
+                    :class="copied ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
+                    title="Copy this session's tuning report to paste into Claude Code">
+                <svg x-show="!copied" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H6a2 2 0 00-2 2v9a2 2 0 002 2h9a2 2 0 002-2v-2M8 7V5a2 2 0 012-2h6l4 4v8a2 2 0 01-2 2h-2M8 7h6"/>
+                </svg>
+                <svg x-show="copied" x-cloak class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span x-text="copied ? 'Copied!' : 'Copy for Claude'"></span>
+            </button>
+            <div hidden x-ref="report">{{ session.tuning_report }}</div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Metrics row -->
