@@ -1458,7 +1458,10 @@ class DashboardService:
         """
         for path in self.paths.get_project_session_files():
             if path.stem == session_id or path.stem.startswith(session_id):
-                return harness_quality.evaluate_file(path)
+                record = harness_quality.evaluate_file(path)
+                if record is not None:
+                    record["tuning_report"] = harness_quality.format_tuning_report(record)
+                return record
         return None
 
     def get_feature_detail(

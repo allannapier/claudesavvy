@@ -528,6 +528,89 @@ def first_prompt(path: Path, max_lines: int = 200) -> str:
     return ""
 
 
+CATEGORY_LABELS = {
+    "errors": "Tool errors",
+    "rejections": "User rejections",
+    "duplicate_commands": "Duplicate commands",
+    "repeated_reads": "Repeated reads",
+    "scriptability": "Scriptability",
+}
+
+RATE_CONTEXTS = {
+    "errors": "errors / tool calls",
+    "rejections": "rejections / tool calls",
+    "duplicate_commands": "extra duplicate commands / bash calls",
+    "repeated_reads": "extra re-reads / read calls",
+    "scriptability": "over-hammered binaries / unique binaries",
+}
+
+
+def format_tuning_report(record: dict) -> str:
+    """
+    Render one session's evaluation as plain text suitable for pasting into
+    Claude Code, so it can tune its harness (CLAUDE.md, skills, hooks) based
+    on the session's failure patterns.
+    """
+    m = record["metrics"]
+    d = record["detail"]
+    lines = [
+        "Below is a quality report for one of my Claude Code sessions. Analyze the",
+        "issues and suggest concrete harness improvements — CLAUDE.md instructions,",
+        "skills, hooks, or workflow changes — that would prevent them in future",
+        "sessions.",
+        "",
+        f"## Session {record['session_id']}",
+        f"Project: {record.get('project_label', '?')}",
+    ]
+    if record.get("date"):
+        lines.append(f"Date: {record['date']}")
+    if record.get("prompt"):
+        lines.append(f"First prompt: {record['prompt']}")
+    lines += [
+        "",
+        f"Overall score: {record['score']}/100 (grade {record['grade']})",
+        f"Activity: {m['assistant_turns']} assistant turns, "
+        f"{m['total_tool_calls']} tool calls, {m['bash_calls']} bash calls, "
+        f"{m.get('read_calls', 0)} file reads, {m['subagent_count']} subagents",
+    ]
+    if record.get("low_activity"):
+        lines.append("Note: fewer than 3 tool calls — grade is not reliable.")
+
+    lines += ["", "## Category scores (0-100, weighted)"]
+    rates = record.get("rates", {})
+    weights = record.get("weights", CONFIG["weights"])
+    for cat, label in CATEGORY_LABELS.items():
+        sub = record.get("subscores", {}).get(cat, 100)
+        num, den = rates.get(cat, (0, 1))
+        wt = round(weights.get(cat, 0) * 100)
+        lines.append(
+            f"- {label}: {round(sub)}/100 ({wt}% of score) — "
+            f"{num}/{den} {RATE_CONTEXTS[cat]}"
+        )
+
+    suggestions = record.get("suggestions") or []
+    if suggestions:
+        lines += ["", "## Tuning suggestions (impact-ranked)"]
+        lines += [f"{i}. {s}" for i, s in enumerate(suggestions, 1)]
+
+    offenders = []
+    for e in d.get("errors", [])[:5]:
+        snippet = f" — {e['snippet']}" if e.get("snippet") else ""
+        offenders.append(f"- Error in {e.get('tool', '?')}: {e['label']}{snippet}")
+    for r in d.get("rejections", [])[:5]:
+        offenders.append(f"- Rejected {r.get('tool', '?')}: {r['label']}")
+    for cmd, n in sorted(d.get("duplicates", {}).items(), key=lambda x: -x[1])[:5]:
+        offenders.append(f"- Duplicate command ({n}x): {cmd[:120]}")
+    for p, n in sorted(d.get("repeat_reads", {}).items(), key=lambda x: -x[1])[:5]:
+        offenders.append(f"- Re-read ({n}x): {p}")
+    for b, n in sorted(d.get("binary_clusters", {}).items(), key=lambda x: -x[1])[:5]:
+        offenders.append(f"- `{b}` invoked {n}x raw")
+    if offenders:
+        lines += ["", "## Top offenders"] + offenders
+
+    return "\n".join(lines)
+
+
 def evaluate_file(path: Path) -> Optional[dict]:
     """Parse + score a single transcript, returning a display-ready record."""
     try:
