@@ -63,7 +63,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
                 <p class="text-sm text-blue-700">
-                    <strong>Pricing note:</strong> Tool costs are estimated using Claude Sonnet 4.5 rates, as per-tool model tracking is not available.
+                    <strong>Pricing note:</strong> Costs show each tool's share of the turns it appeared in — a turn's tokens (including cached context) are split evenly across its tool calls. Priced at Claude Sonnet 4.5 rates, as per-tool model tracking is not available.
                 </p>
             </div>
         </div>
@@ -91,7 +91,7 @@
                             {% if features.has_trends %}
                             <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Trend</th>
                             {% endif %}
-                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Est. Cost</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" title="This tool's share of the cost of turns it appeared in">Turn Cost Share</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">

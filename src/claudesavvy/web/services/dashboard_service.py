@@ -1432,7 +1432,10 @@ class DashboardService:
             if len(records) >= limit:
                 break
 
-        scores = [r["score"] for r in records]
+        # Aggregate over reliably-graded sessions only: low-activity sessions
+        # score an automatic 100 and would inflate the averages.
+        graded = [r for r in records if not r.get("low_activity")] or records
+        scores = [r["score"] for r in graded]
         grade_dist: Dict[str, int] = {}
         for r in records:
             grade_dist[r["grade"]] = grade_dist.get(r["grade"], 0) + 1
@@ -2176,6 +2179,7 @@ class DashboardService:
                     "duration_str": duration_str,
                     "message_count": c["message_count"],
                     "turn_count": c["turn_count"],
+                    "prompt_count": c.get("prompt_count", 0),
                     "total_tokens": total_tokens.total_tokens,
                     "input_tokens": total_tokens.input_tokens,
                     "output_tokens": total_tokens.output_tokens,
@@ -2201,6 +2205,12 @@ class DashboardService:
             if conversations
             else 0.0
         )
+        # Real human prompts only — excludes tool-result user messages.
+        avg_prompts = (
+            sum(c.get("prompt_count", 0) for c in conversations) / len(conversations)
+            if conversations
+            else 0.0
+        )
 
         most_expensive = conversations[0] if conversations else None
 
@@ -2212,6 +2222,7 @@ class DashboardService:
                 "avg_cost": round(avg_cost, 4),
                 "max_cost": round(max_cost, 4),
                 "avg_messages": round(avg_messages, 1),
+                "avg_prompts": round(avg_prompts, 1),
                 "most_expensive_session": most_expensive["session_id"][:8] if most_expensive else "",
                 "most_expensive_cost": most_expensive["total_cost"] if most_expensive else 0.0,
                 "most_expensive_project": most_expensive.get("project_name", "") if most_expensive else "",
