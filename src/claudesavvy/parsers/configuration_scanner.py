@@ -189,7 +189,7 @@ class ConfigurationScanner:
         return features
 
     def _parse_skills(self, project_claude_dir: Path, user_claude_dir: Path) -> List[Skill]:
-        """Parse skills from user and project directories."""
+        """Parse skills from user, plugin, and project directories."""
         skills = []
 
         # User skills from ~/.claude/skills/
@@ -224,6 +224,17 @@ class ConfigurationScanner:
             except (OSError, json.JSONDecodeError):
                 # Failed to read plugin skills; skip
                 pass
+
+        # Project skills from <project>/.claude/skills/ — skip when project IS
+        # the user config dir to avoid double-counting user-level items.
+        if project_claude_dir.resolve() != user_claude_dir.resolve():
+            project_skills_dir = project_claude_dir / "skills"
+            if project_skills_dir.exists():
+                for skill_dir in project_skills_dir.iterdir():
+                    if skill_dir.is_dir():
+                        skill = self._parse_skill_directory(skill_dir, ConfigSource.PROJECT)
+                        if skill:
+                            skills.append(skill)
 
         return skills
 
@@ -386,7 +397,7 @@ class ConfigurationScanner:
         return mcp_servers
 
     def _parse_commands(self, project_claude_dir: Path, user_claude_dir: Path) -> List[Command]:
-        """Parse slash commands from user and project directories."""
+        """Parse slash commands from user, plugin, and project directories."""
         commands = []
 
         # User commands from ~/.claude/commands/
@@ -419,6 +430,16 @@ class ConfigurationScanner:
             except (OSError, json.JSONDecodeError):
                 # Failed to read plugin commands; skip
                 pass
+
+        # Project commands from <project>/.claude/commands/ — skip when project IS
+        # the user config dir to avoid double-counting user-level items.
+        if project_claude_dir.resolve() != user_claude_dir.resolve():
+            project_commands_dir = project_claude_dir / "commands"
+            if project_commands_dir.exists():
+                for cmd_file in project_commands_dir.glob("*.md"):
+                    command = self._parse_command_file(cmd_file, ConfigSource.PROJECT)
+                    if command:
+                        commands.append(command)
 
         return commands
 

@@ -433,6 +433,22 @@ def features() -> str:
         return render_template("pages/features.html", features={})
 
 
+def _project_scoped(features):
+    """Return a copy of features containing only project-sourced items.
+
+    User/plugin items are attached to every repo by the scanner but should
+    only be counted once (via user_features).  This helper strips them out
+    so project repos contribute only their own PROJECT-tagged items to totals.
+    Non-list values (e.g. the 'counts' key) are dropped; the template only
+    iterates the list keys.
+    """
+    return {
+        key: [i for i in items if isinstance(i, dict) and i.get("source") == "project"]
+        for key, items in features.items()
+        if isinstance(items, list)
+    }
+
+
 @dashboard_bp.route("/harness")
 def harness() -> str:
     """Render the Agent Harness overview page."""
@@ -447,7 +463,7 @@ def harness() -> str:
         for repo in repositories:
             features = service.get_configuration_features(repo["path"])
             repo_with_features = dict(repo)
-            repo_with_features["features"] = features
+            repo_with_features["features"] = _project_scoped(features)
 
             if repo.get("type") == "user" or repo.get("name", "").lower() in ("user", "user configuration", "~/.claude"):
                 user_repo = repo
@@ -462,7 +478,7 @@ def harness() -> str:
             for repo in repositories[1:]:
                 features = service.get_configuration_features(repo["path"])
                 repo_with_features = dict(repo)
-                repo_with_features["features"] = features
+                repo_with_features["features"] = _project_scoped(features)
                 project_repos.append(repo_with_features)
 
         def _count(features, key):
@@ -483,6 +499,7 @@ def harness() -> str:
         default_period = "7days"
         time_filter = get_time_filter_from_period(default_period)
         evaluation = service.get_harness_evaluation(time_filter=time_filter)
+        harness_projects = service.get_harness_projects()
 
         return render_template(
             "pages/harness.html",
@@ -493,6 +510,7 @@ def harness() -> str:
             harness_totals=harness_totals,
             evaluation=evaluation,
             period=default_period,
+            harness_projects=harness_projects,
         )
 
     except Exception as e:
@@ -506,6 +524,7 @@ def harness() -> str:
             harness_totals={"skills": 0, "agents": 0, "mcps": 0, "plugins": 0, "hooks": 0, "commands": 0},
             evaluation=None,
             period="7days",
+            harness_projects=[],
         )
 
 
@@ -517,10 +536,11 @@ def api_harness_evaluation() -> str:
     try:
         service = current_app.dashboard_service
         period = request.args.get("period", "7days")
+        project = request.args.get("project") or None
         time_filter = get_time_filter_from_period(
             period, start=request.args.get("start"), end=request.args.get("end")
         )
-        evaluation = service.get_harness_evaluation(time_filter=time_filter)
+        evaluation = service.get_harness_evaluation(time_filter=time_filter, project=project)
         return render_template(
             "partials/harness_evaluation.html",
             evaluation=evaluation,

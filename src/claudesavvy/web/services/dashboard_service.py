@@ -73,6 +73,9 @@ class DashboardService:
             subagent_file_map=self.paths.get_subagent_file_map(),
         )
 
+        # Cache for harness grades: session_id -> (mtime, result)
+        self._session_grade_cache: Dict[str, tuple] = {}
+
         # Build project map for debug logs
         project_map = self._build_project_map()
         self._debug_parser = DebugLogParser(
@@ -1354,8 +1357,31 @@ class DashboardService:
         path = Path(repo_path)
         return self._configuration_analyzer.get_feature_breakdown(path)
 
+    def get_harness_projects(self) -> List[Dict[str, str]]:
+        """Return sorted unique project entries for the harness project filter.
+
+        Returns:
+            List of {"value": dir_name, "label": humanized_name} sorted by label.
+        """
+        seen: set[str] = set()
+        entries: List[Dict[str, str]] = []
+        for path in self.paths.get_project_session_files():
+            dir_name = path.parent.name
+            if dir_name not in seen:
+                seen.add(dir_name)
+                entries.append(
+                    {
+                        "value": dir_name,
+                        "label": harness_quality.humanize_project(dir_name),
+                    }
+                )
+        return sorted(entries, key=lambda e: e["label"].lower())
+
     def get_harness_evaluation(
-        self, time_filter: Optional[TimeFilter] = None, limit: int = 60
+        self,
+        time_filter: Optional[TimeFilter] = None,
+        limit: int = 60,
+        project: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Score recent Claude Code sessions on harness/agentic quality.
@@ -1377,6 +1403,8 @@ class DashboardService:
 
         records: List[Dict[str, Any]] = []
         for path in self.paths.get_project_session_files():
+            if project is not None and path.parent.name != project:
+                continue
             try:
                 mtime = path.stat().st_mtime
             except OSError:
@@ -1446,6 +1474,39 @@ class DashboardService:
             "grade_distribution": grade_dist,
             "issue_counts": issue_counts,
         }
+
+    def _get_session_grade(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Grade/score for a session, cached by (path, mtime).
+
+        Args:
+            session_id: Session id (stem of the JSONL file).
+
+        Returns:
+            Dict with 'grade' and 'score', or None if not found / error.
+        """
+        cache: Dict[str, tuple] = getattr(self, "_session_grade_cache", {})
+        for path in self.paths.get_project_session_files():
+            if path.stem == session_id or path.stem.startswith(session_id):
+                try:
+                    mtime = path.stat().st_mtime
+                except OSError:
+                    return None
+                cached = cache.get(session_id)
+                if cached is not None and cached[0] == mtime:
+                    return cached[1]
+                try:
+                    record = harness_quality.evaluate_file(path)
+                except OSError:
+                    cache[session_id] = (mtime, None)
+                    return None
+                result = (
+                    {"grade": record["grade"], "score": record["score"]}
+                    if record is not None
+                    else None
+                )
+                cache[session_id] = (mtime, result)
+                return result
+        return None
 
     def get_harness_session_detail(
         self, session_id: str
@@ -2743,6 +2804,7 @@ class DashboardService:
         teams_data = []
         total_cost = 0.0
         total_tokens = 0
+        _grade_memo: Dict[str, Optional[Dict[str, Any]]] = {}
 
         for group_exchanges in groups.values():
             # Aggregate model usage across all members
@@ -2798,6 +2860,10 @@ class DashboardService:
             agg_input = sum(u.input_tokens for u in agg_model_usage.values())
             agg_output = sum(u.output_tokens for u in agg_model_usage.values())
 
+            pid = next((e.parent_session_id for e in group_exchanges if getattr(e, "parent_session_id", "")), "")
+            if pid and pid not in _grade_memo:
+                _grade_memo[pid] = self._get_session_grade(pid)
+            g = _grade_memo.get(pid) if pid else None
             teams_data.append({
                 "name": slug,
                 "project": project_name,
@@ -2811,6 +2877,9 @@ class DashboardService:
                 "total_tokens": group_total_tokens,
                 "cost": round(cost, 2),
                 "model_breakdown": model_breakdown,
+                "parent_session_id": pid,
+                "harness_grade": (g or {}).get("grade"),
+                "harness_score": (g or {}).get("score"),
             })
 
         teams_data.sort(key=lambda x: x["total_tokens"], reverse=True)

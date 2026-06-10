@@ -51,10 +51,10 @@
         <!-- Nav Groups -->
         <nav class="flex-1 px-3 pb-4 space-y-5">
 
-            <!-- Analyze -->
+            <!-- Costs & Usage -->
             <div>
                 <div class="px-2 mb-1">
-                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Analyze</span>
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Costs &amp; Usage</span>
                 </div>
                 <div class="space-y-0.5">
                     {% set items = [
@@ -89,6 +89,8 @@
                          '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M6 8.5v3a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-3"/><path d="M12 14.5v1"/></svg>'),
                         ('/subagents', 'subagents', 'Sub-Agents',
                          '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>'),
+                        ('/teams', 'teams', 'Teams',
+                         '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M14 14a4 4 0 0 1 6 5"/></svg>'),
                         ('/integrations', 'mcps', 'MCP Servers',
                          '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M4 7v10l8 4 8-4V7l-8-4-8 4Z"/><path d="m4 7 8 4 8-4"/><path d="M12 11v10"/></svg>'),
                         ('/features', 'features', 'Tools & Features',
@@ -119,8 +121,6 @@
                          '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>'),
                         ('/files', 'files', 'Files',
                          '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/></svg>'),
-                        ('/teams', 'teams', 'Teams',
-                         '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M14 14a4 4 0 0 1 6 5"/></svg>'),
                     ] %}
                     {% for href, key, label, icon in workspace_items %}
                     {% set is_active = _active == key %}

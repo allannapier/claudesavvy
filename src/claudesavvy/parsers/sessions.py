@@ -920,6 +920,7 @@ class SubAgentExchange:
     # Teams feature metadata
     slug: str = ""         # session slug shared by all team members (e.g. "brave-dancing-tiger")
     is_teammate: bool = False  # True when spawned via Teams feature (<teammate-message>)
+    parent_session_id: str = ""  # UUID of the orchestrating parent session (derived from subagent file path)
 
     # Status
     status: str = "completed"  # completed, error, etc.
@@ -1379,6 +1380,13 @@ class SubAgentParser:
 
         primary_model = self._primary_model(model_usage)
 
+        # Derive parent session UUID from the file path: <proj>/<parent-uuid>/subagents/agent-x.jsonl
+        parent_session_id = (
+            agent_file.parent.parent.name
+            if agent_file.parent.name == "subagents"
+            else ""
+        )
+
         return SubAgentExchange(
             agent_id=agent_id,
             session_id=session_id,
@@ -1395,6 +1403,7 @@ class SubAgentParser:
             model_usage=model_usage,
             slug=slug,
             is_teammate=is_teammate,
+            parent_session_id=parent_session_id,
         )
 
     def get_exchange_stats(self, time_filter: Optional[TimeFilter] = None) -> dict:

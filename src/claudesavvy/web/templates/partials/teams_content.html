@@ -1,4 +1,5 @@
 {% from "components/card.html" import stat_card %}
+{% set grade_color = {'A': '#2ec27e', 'B': '#0770E3', 'C': '#f59e0b', 'D': '#fb923c', 'F': '#ef4444'} %}
 
 <!-- Summary Cards -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -26,7 +27,7 @@
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mt-8">
     <div class="px-6 py-4 border-b border-gray-200">
         <h3 class="text-lg font-semibold text-gray-900">Team Run Details</h3>
-        <p class="text-sm text-gray-500 mt-1">Each row is one team invocation. Tokens and costs are summed across all team members.</p>
+        <p class="text-sm text-gray-500 mt-1">Each row is one team invocation. Tokens and costs are summed across all team members. Click a row to see harness performance for the invoking session.</p>
     </div>
     <div class="overflow-x-auto">
         <table data-enhance="table" class="min-w-full divide-y divide-gray-200">
@@ -35,14 +36,21 @@
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team Session</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Members</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Models</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harness</th>
                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Exchanges</th>
                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Tokens</th>
                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+                    <th scope="col" class="px-3 py-3"><span class="sr-only">View harness detail</span></th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for team in summary.teams %}
-                <tr class="hover:bg-gray-50 transition-colors">
+                <tr class="hover:bg-gray-50 transition-colors{% if team.parent_session_id %} cursor-pointer{% endif %}"
+                    {% if team.parent_session_id %}
+                    hx-get="/api/harness/session/{{ team.parent_session_id }}"
+                    hx-target="#team-session-panel"
+                    hx-swap="innerHTML show:#team-session-panel:top"
+                    {% endif %}>
                     <td class="px-6 py-4">
                         <div class="flex items-center">
                             <div class="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -51,6 +59,9 @@
                             <div class="ml-3">
                                 <div class="text-sm font-medium text-gray-900">{{ team.name }}</div>
                                 <div class="text-xs text-gray-400">{{ team.project }}</div>
+                                {% if team.parent_session_id and team.parent_session_id[:8] != team.name %}
+                                <div class="text-xs font-mono text-gray-300 mt-0.5">{{ team.parent_session_id[:8] }}</div>
+                                {% endif %}
                             </div>
                         </div>
                     </td>
@@ -89,6 +100,21 @@
                         <span class="text-xs text-gray-400">—</span>
                         {% endif %}
                     </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if team.harness_grade %}
+                        {% set gc = grade_color.get(team.harness_grade, '#6b7280') %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm"
+                              style="background: {{ gc }}18; color: {{ gc }};"
+                              title="Harness score for the invoking session — click for breakdown">
+                            <span class="font-bold">{{ team.harness_grade }}</span>
+                            <span class="font-semibold">{{ team.harness_score }}</span>
+                        </span>
+                        {% elif team.parent_session_id %}
+                        <span class="text-xs text-gray-400">not scored</span>
+                        {% else %}
+                        <span class="text-xs text-gray-400">—</span>
+                        {% endif %}
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">
                         {{ team.exchange_count }}
                     </td>
@@ -98,10 +124,22 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-[#0770E3]">
                         ${{ "%.2f"|format(team.cost) }}
                     </td>
+                    <td class="px-3 py-4 text-right">
+                        {% if team.parent_session_id %}
+                        <svg class="w-4 h-4 text-gray-300 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+</div>
+<!-- Invoking Session Detail Panel -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 mt-8 p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Invoking Session — Harness Performance</h3>
+    <div id="team-session-panel" class="flex items-center justify-center text-center min-h-[8rem]">
+        <p class="text-sm text-gray-400">Click a team run to see how the harness performed in the session that invoked it.</p>
     </div>
 </div>
 {% else %}
