@@ -1360,9 +1360,9 @@ class DashboardService:
         """
         Score recent Claude Code sessions on harness/agentic quality.
 
-        Parses each session transcript, deducts penalties for tool errors,
-        duplicate commands, repeated reads, low scriptability, and user
-        rejections, then returns a leaderboard plus aggregate stats.
+        Parses each session transcript, scoring each on per-category subscores
+        (errors, duplicate commands, repeated reads, scriptability, rejections)
+        combined by weights, then returns a leaderboard plus aggregate stats.
 
         Args:
             time_filter: Optional TimeFilter to restrict sessions by mtime.
@@ -1405,17 +1405,30 @@ class DashboardService:
             "scriptability": 0,
         }
         for r in records:
-            pen = r["penalties"]
-            if pen.get("errors"):
+            # Use subscores to detect which categories had issues
+            subs = r.get("subscores", {})
+            m = r.get("metrics", {})
+            if m.get("tool_errors", 0):
                 issue_counts["tool_errors"] += 1
-            if pen.get("rejections"):
+            if m.get("user_rejections", 0):
                 issue_counts["user_rejections"] += 1
-            if pen.get("duplicate_commands"):
+            if subs.get("duplicate_commands", 100) < 100:
                 issue_counts["duplicate_commands"] += 1
-            if pen.get("repeated_reads"):
+            if subs.get("repeated_reads", 100) < 100:
                 issue_counts["repeated_reads"] += 1
-            if pen.get("scriptability"):
+            if subs.get("scriptability", 100) < 100:
                 issue_counts["scriptability"] += 1
+
+        # Median score
+        if scores:
+            sorted_scores = sorted(scores)
+            n = len(sorted_scores)
+            if n % 2 == 0:
+                median_score = round((sorted_scores[n // 2 - 1] + sorted_scores[n // 2]) / 2, 1)
+            else:
+                median_score = float(sorted_scores[n // 2])
+        else:
+            median_score = 0.0
 
         # Worst-first: that's what's worth fixing.
         leaderboard = sorted(records, key=lambda r: r["score"])
@@ -1427,6 +1440,7 @@ class DashboardService:
             "sessions": leaderboard,
             "session_count": len(records),
             "average_score": round(sum(scores) / len(scores), 1) if scores else 0,
+            "median_score": median_score,
             "best_score": max(scores) if scores else 0,
             "worst_score": min(scores) if scores else 0,
             "grade_distribution": grade_dist,
