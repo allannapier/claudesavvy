@@ -8,7 +8,8 @@ skill-tuning suggestions.
 Scoring model: per-category subscores (0–100) combined by weights.
 Each category subscore = 100 * max(0, 1 - rate / ref_rate), where ref_rate
 is the rate at which the subscore hits 0. The overall score is the weighted
-average of subscores, with a disaster guard: overall ≤ min_subscore + 45.
+average of subscores, with a disaster guard on the errors/rejections
+categories: overall ≤ min(guarded subscores) + 45.
 
 Ported and extended from a standalone session-scoring script. No third-party
 deps; defensive against transcript schema drift.
@@ -46,9 +47,13 @@ CONFIG = {
         # each called ≥ threshold times → subscore 0.
         "scriptability": 0.75,
     },
-    # Disaster guard: overall score ≤ min_subscore + this value.
+    # Disaster guard: overall score ≤ min(guarded subscores) + this value.
     # Prevents a catastrophic category from being hidden by high others.
+    # Only errors/rejections can be "disasters" — efficiency categories like
+    # scriptability or repeated reads should cost at most their weight, never
+    # drag an otherwise-healthy session to an F on their own.
     "disaster_cap_addend": 45,
+    "disaster_categories": ("errors", "rejections"),
     # Minimum total_tool_calls for a meaningful grade; below this → low_activity.
     "min_tool_calls": 3,
     # if a single shell binary is invoked this many times, it should probably be
@@ -325,8 +330,8 @@ def score_session(parsed: dict) -> dict:
     # --- weighted average ---
     weighted_avg = sum(w[cat] * subscores[cat] for cat in w)
 
-    # --- disaster guard: catastrophic in one category → cap the overall ---
-    min_sub = min(subscores.values())
+    # --- disaster guard: catastrophic errors/rejections → cap the overall ---
+    min_sub = min(subscores[c] for c in CONFIG["disaster_categories"])
     disaster_cap = min_sub + CONFIG["disaster_cap_addend"]
     overall = min(weighted_avg, disaster_cap)
 

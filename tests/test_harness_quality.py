@@ -129,6 +129,21 @@ def test_disaster_cap_applied():
     assert result["score"] <= 45, f"Disaster cap should hold score ≤ 45, got {result['score']}"
 
 
+def test_disaster_cap_only_guards_errors_and_rejections():
+    """
+    A session whose only flaw is scriptability (one binary hammered, zero
+    errors/dups/rejections) must not be capped to an F — efficiency
+    categories cost at most their weight.
+    """
+    calls = [("Bash", f"git log --oneline f{i}", False, False) for i in range(30)]
+    parsed = _make_parsed(calls)
+    result = score_session(parsed)
+    assert result["subscores"]["scriptability"] == 0.0
+    # 15% weight → overall 85, not dragged to ≤45 by the disaster guard
+    assert result["score"] == 85
+    assert result["grade"] == "B"
+
+
 def test_disaster_cap_not_applied_on_clean():
     """Clean session: disaster cap does not reduce a perfect score."""
     calls = [("Bash", f"cmd{i}", False, False) for i in range(10)]
