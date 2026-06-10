@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Claude Code statusline: shows 24h usage stats."""
+"""Claude Code statusline: today's and month-to-date usage stats."""
 import glob
 import json
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from pathlib import Path
 
 # ANSI colors
@@ -54,9 +54,15 @@ def fmt_tokens(n: int) -> str:
 
 
 def main():
-    now = datetime.now(timezone.utc)
-    cutoff_24h = now - timedelta(hours=24)
-    cutoff_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    # Match the dashboard's "today" / "this month" windows: local calendar
+    # boundaries, converted to UTC for comparison with message timestamps.
+    now_local = datetime.now().astimezone()
+    cutoff_today = now_local.replace(
+        hour=0, minute=0, second=0, microsecond=0
+    ).astimezone(timezone.utc)
+    cutoff_month = now_local.replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    ).astimezone(timezone.utc)
     claude_dir = Path.home() / ".claude"
 
     pattern = str(claude_dir / "projects" / "**" / "*.jsonl")
@@ -121,7 +127,7 @@ def main():
 
                     month_cost += cost
 
-                    if ts >= cutoff_24h:
+                    if ts >= cutoff_today:
                         sid = obj.get("sessionId", "")
                         if sid:
                             day_sessions.add(sid)

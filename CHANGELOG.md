@@ -18,6 +18,7 @@ All notable changes to ClaudeSavvy will be documented in this file.
 
 ### Fixed
 - **Critical**: Models without a manual pricing override were silently billed at Sonnet rates ($3/$15), under-costing Opus ~5x and over-costing Haiku ~3x
+- Statusline "today" was actually a rolling last-24-hours window, so yesterday's usage kept showing as today's; it now uses the local calendar day and month boundaries, matching the dashboard's "Today" and "This month" filters
 
 ### Removed
 - GitHub Issue Agent (CLI command, module, workflow, and docs) — the feature only ever selected an issue and never implemented fixes or PR creation
