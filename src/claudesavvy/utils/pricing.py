@@ -114,8 +114,96 @@ def resolve_model_pricing(model: Optional[str]) -> Dict[str, float]:
     return DEFAULT_PRICING
 
 
+# Published pricing page, served as raw markdown
+PRICING_SOURCE_URL = "https://platform.claude.com/docs/en/about-claude/pricing.md"
+
+# Pricing-page display names whose canonical model IDs don't follow the
+# simple "claude opus 4.8" -> "claude-opus-4-8" convention (Claude 3.x
+# IDs put the version before the family name).
+_PRICING_NAME_OVERRIDES = {
+    'claude haiku 3.5': ['claude-3-5-haiku'],
+    'claude haiku 3': ['claude-3-haiku'],
+    'claude sonnet 3.7': ['claude-3-7-sonnet'],
+    'claude sonnet 3.5': ['claude-3-5-sonnet'],
+    'claude sonnet 3': ['claude-3-sonnet'],
+    'claude opus 3': ['claude-3-opus'],
+    'claude opus 4': ['claude-opus-4', 'claude-opus-4-0'],
+    'claude sonnet 4': ['claude-sonnet-4', 'claude-sonnet-4-0'],
+}
+
+
+def _pricing_name_to_keys(name: str) -> list:
+    """Map a pricing-page model name to canonical model ID key(s)."""
+    cleaned = re.sub(r'\(.*', '', name).strip().lower()
+    if cleaned in _PRICING_NAME_OVERRIDES:
+        return _PRICING_NAME_OVERRIDES[cleaned]
+    return [cleaned.replace('.', '-').replace(' ', '-')]
+
+
+def parse_pricing_markdown(text: str) -> Dict[str, Dict[str, float]]:
+    """Parse the '## Model pricing' table from the published pricing page.
+
+    Returns a dict mapping canonical model ID keys to pricing dicts
+    (input, output, 5-minute cache write, cache read per MTok).
+    """
+    result: Dict[str, Dict[str, float]] = {}
+    in_section = False
+
+    for line in text.splitlines():
+        if line.startswith('## '):
+            in_section = line.strip().lower() == '## model pricing'
+            continue
+        if not in_section:
+            continue
+        stripped = line.strip()
+        if not stripped.startswith('|'):
+            continue
+
+        cells = [c.strip() for c in stripped.strip('|').split('|')]
+        # Expected columns: Model | Base Input | 5m Cache Writes |
+        # 1h Cache Writes | Cache Hits & Refreshes | Output
+        if len(cells) < 6 or not cells[0].lower().startswith('claude'):
+            continue
+
+        prices = []
+        for cell in cells[1:6]:
+            match = re.search(r'\$\s*([0-9]+(?:\.[0-9]+)?)', cell)
+            if not match:
+                break
+            prices.append(float(match.group(1)))
+        if len(prices) != 5:
+            continue
+
+        base_input, cache_write_5m, _cache_write_1h, cache_read, output = prices
+        pricing = _pricing(base_input, output, cache_write_5m, cache_read)
+        for key in _pricing_name_to_keys(cells[0]):
+            result[key] = pricing
+
+    return result
+
+
+def fetch_live_pricing(url: str = PRICING_SOURCE_URL, timeout: float = 15.0) -> Dict[str, Dict[str, float]]:
+    """Fetch current model pricing from the published pricing page.
+
+    Raises urllib.error.URLError (or OSError) on network failure.
+    """
+    import urllib.request
+
+    request = urllib.request.Request(
+        url, headers={'User-Agent': 'claudesavvy-pricing-sync'}
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        text = response.read().decode('utf-8', errors='replace')
+    return parse_pricing_markdown(text)
+
+
 class PricingSettings:
-    """Manages custom pricing settings for Claude models."""
+    """Manages custom and synced pricing settings for Claude models.
+
+    Resolution order for a model: custom override (set by the user) ->
+    synced pricing (fetched from the published pricing page) -> built-in
+    table -> default pricing.
+    """
 
     def __init__(self, settings_dir: Path):
         """
@@ -127,6 +215,51 @@ class PricingSettings:
         self.settings_dir = settings_dir
         self.pricing_file = settings_dir / "pricing.json"
         self._custom_pricing: Optional[Dict[str, Dict[str, float]]] = None
+        self._synced_pricing: Optional[Dict[str, Dict[str, float]]] = None
+        self._synced_at: Optional[str] = None
+
+    def _load(self) -> None:
+        """Load pricing.json into the in-memory caches (once)."""
+        if self._custom_pricing is not None:
+            return
+
+        self._custom_pricing = {}
+        self._synced_pricing = {}
+        self._synced_at = None
+
+        if not self.pricing_file.exists():
+            return
+
+        try:
+            with open(self.pricing_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            self._custom_pricing = data.get('models', {})
+            self._synced_pricing = data.get('synced_models', {})
+            self._synced_at = data.get('synced_at')
+        except (OSError, json.JSONDecodeError):
+            # If file is corrupted or unreadable, start fresh
+            pass
+
+    def _write(self) -> bool:
+        """Persist the in-memory caches to pricing.json atomically."""
+        try:
+            self.settings_dir.mkdir(parents=True, exist_ok=True)
+
+            data = {
+                'models': self._custom_pricing or {},
+                'synced_models': self._synced_pricing or {},
+                'synced_at': self._synced_at,
+                'version': '1.0',
+            }
+
+            temp_file = self.pricing_file.with_suffix('.tmp')
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2)
+            temp_file.replace(self.pricing_file)
+            return True
+
+        except (OSError, json.JSONDecodeError):
+            return False
 
     def load_custom_pricing(self) -> Dict[str, Dict[str, float]]:
         """
@@ -136,22 +269,8 @@ class PricingSettings:
             Dictionary mapping model IDs to pricing configurations.
             Empty dict if no custom pricing exists.
         """
-        if self._custom_pricing is not None:
-            return self._custom_pricing
-
-        if not self.pricing_file.exists():
-            self._custom_pricing = {}
-            return self._custom_pricing
-
-        try:
-            with open(self.pricing_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                self._custom_pricing = data.get('models', {})
-                return self._custom_pricing
-        except (OSError, json.JSONDecodeError):
-            # If file is corrupted or unreadable, start fresh
-            self._custom_pricing = {}
-            return self._custom_pricing
+        self._load()
+        return self._custom_pricing
 
     def save_custom_pricing(self, pricing: Dict[str, Dict[str, float]]) -> bool:
         """
@@ -163,30 +282,35 @@ class PricingSettings:
         Returns:
             True if save was successful, False otherwise.
         """
-        try:
-            # Ensure settings directory exists
-            self.settings_dir.mkdir(parents=True, exist_ok=True)
+        self._load()
+        self._custom_pricing = pricing
+        return self._write()
 
-            # Prepare data structure
-            data = {
-                'models': pricing,
-                'version': '1.0'
-            }
+    def load_synced_pricing(self) -> Dict[str, Dict[str, float]]:
+        """Get pricing previously synced from the published pricing page."""
+        self._load()
+        return self._synced_pricing
 
-            # Write to file with atomic operation
-            temp_file = self.pricing_file.with_suffix('.tmp')
-            with open(temp_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2)
+    def get_synced_at(self) -> Optional[str]:
+        """ISO timestamp of the last successful pricing sync, if any."""
+        self._load()
+        return self._synced_at
 
-            # Atomic rename
-            temp_file.replace(self.pricing_file)
+    def save_synced_pricing(self, pricing: Dict[str, Dict[str, float]]) -> bool:
+        """Persist pricing fetched from the published pricing page.
 
-            # Update cached value
-            self._custom_pricing = pricing
-            return True
+        Args:
+            pricing: Dict mapping canonical model ID keys to pricing dicts.
 
-        except (OSError, json.JSONDecodeError):
-            return False
+        Returns:
+            True if save was successful, False otherwise.
+        """
+        from datetime import datetime, timezone
+
+        self._load()
+        self._synced_pricing = pricing
+        self._synced_at = datetime.now(timezone.utc).isoformat(timespec='seconds')
+        return self._write()
 
     def get_pricing_for_model(self, model: str) -> Dict[str, float]:
         """
@@ -198,12 +322,21 @@ class PricingSettings:
         Returns:
             Pricing dictionary with keys: input_per_mtok, output_per_mtok,
             cache_write_per_mtok, cache_read_per_mtok.
-            Returns custom pricing if set, otherwise built-in pricing for
-            the model's family, otherwise default pricing.
+            Resolution order: custom override -> synced pricing ->
+            built-in pricing for the model's family -> default pricing.
         """
         custom_pricing = self.load_custom_pricing()
         if model in custom_pricing:
             return custom_pricing[model]
+
+        # Pricing synced from the published pricing page, if any
+        synced = self.load_synced_pricing()
+        if synced and model:
+            if model in synced:
+                return synced[model]
+            normalized = _normalize_model_id(model)
+            if normalized in synced:
+                return synced[normalized]
 
         # Fall back to built-in published pricing for the model
         return resolve_model_pricing(model)

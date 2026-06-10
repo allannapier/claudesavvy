@@ -5,6 +5,7 @@ by wrapping existing parsers and analyzers. It reuses all existing business logi
 while returning data as dicts/dataclasses suitable for web rendering.
 """
 
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Dict, List, Any
@@ -31,6 +32,8 @@ from ...analyzers.features import FeaturesAnalyzer, FeaturesSummary
 from ...analyzers.configuration import ConfigurationAnalyzer
 from ...analyzers.project_analyzer import ProjectAnalyzer
 from ...analyzers import harness_quality
+
+logger = logging.getLogger(__name__)
 
 
 class DashboardService:
@@ -1589,17 +1592,73 @@ class DashboardService:
                               (e.g., models discovered from session data)
 
         Returns:
-            Dict with default pricing and custom overrides.
+            Dict with pricing for every known model (models seen in session
+            data first, then the remaining built-in models), custom
+            overrides, display names, and last-sync metadata.
         """
-        all_pricing = self._pricing_settings.get_all_pricing(
-            additional_models=additional_models
-        )
+        from ...utils.pricing import MODEL_PRICING
+
+        used_models = list(additional_models or [])
+
+        # Models seen in session data first, then remaining built-ins,
+        # then any custom overrides for models in neither group.
+        all_pricing: Dict[str, Dict[str, float]] = {}
+        for model in used_models:
+            all_pricing[model] = self._pricing_settings.get_pricing_for_model(model)
+        for model in MODEL_PRICING:
+            if model not in all_pricing:
+                all_pricing[model] = self._pricing_settings.get_pricing_for_model(model)
         custom_pricing = self._pricing_settings.get_custom_pricing_summary()
+        for model in custom_pricing:
+            if model not in all_pricing:
+                all_pricing[model] = custom_pricing[model]
 
         return {
             "all_pricing": all_pricing,
             "custom_pricing": custom_pricing,
             "has_custom_pricing": len(custom_pricing) > 0,
+            "used_models": used_models,
+            "display_names": {m: get_model_display_name(m) for m in all_pricing},
+            "synced_at": self._pricing_settings.get_synced_at(),
+        }
+
+    def sync_pricing_from_web(self) -> Dict[str, Any]:
+        """
+        Fetch current model pricing from the published pricing page and
+        persist it as the synced pricing layer.
+
+        Custom per-model overrides continue to take precedence over
+        synced prices.
+
+        Returns:
+            Dict with success status, the synced pricing, and sync time.
+        """
+        from ...utils.pricing import fetch_live_pricing, PRICING_SOURCE_URL
+
+        try:
+            live_pricing = fetch_live_pricing()
+        except Exception as e:
+            logger.error("Pricing sync failed: %s", e.__class__.__name__, exc_info=True)
+            return {
+                "success": False,
+                "error": f"Could not fetch pricing from {PRICING_SOURCE_URL}",
+            }
+
+        if not live_pricing:
+            logger.warning("Pricing sync fetched the page but found no model pricing table")
+            return {
+                "success": False,
+                "error": "No model pricing found on the pricing page (format may have changed)",
+            }
+
+        if not self._pricing_settings.save_synced_pricing(live_pricing):
+            return {"success": False, "error": "Failed to save synced pricing"}
+
+        return {
+            "success": True,
+            "synced_models": live_pricing,
+            "model_count": len(live_pricing),
+            "synced_at": self._pricing_settings.get_synced_at(),
         }
 
     def update_model_pricing(

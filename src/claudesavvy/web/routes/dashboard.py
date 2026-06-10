@@ -1325,6 +1325,28 @@ def api_reset_pricing() -> Any:
         return jsonify({"success": False, "error": "Failed to reset pricing"}), 500
 
 
+@dashboard_bp.route("/api/settings/pricing/sync", methods=["POST"])
+def api_sync_pricing() -> Any:
+    """
+    API endpoint to sync model pricing from Anthropic's published
+    pricing page. Synced prices become the new defaults; custom
+    per-model overrides still take precedence.
+
+    Returns:
+        JSON with success status, synced pricing, and sync timestamp.
+    """
+    from flask import jsonify
+
+    try:
+        service = current_app.dashboard_service
+        result = service.sync_pricing_from_web()
+        return jsonify(result), 200 if result["success"] else 502
+
+    except Exception as e:
+        logger.error(f"Error syncing pricing: {e}", exc_info=True)
+        return jsonify({"success": False, "error": "Failed to sync pricing"}), 500
+
+
 @dashboard_bp.route("/subagents")
 def subagents() -> str:
     """Render the sub-agents page with exchange analytics."""

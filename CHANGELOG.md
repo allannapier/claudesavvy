@@ -5,6 +5,8 @@ All notable changes to ClaudeSavvy will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **New**: Settings → Pricing now lists every built-in model up front (models found in your session data are badged "In use"), so applicable rates are visible before a model is ever used
+- **New**: "Sync prices from anthropic.com" button on the Settings page — fetches the published pricing page and stores current rates locally; synced prices become the new defaults while custom per-model overrides still take precedence
 - **New**: Built-in model pricing table synced with official Claude API rates, including Claude Fable 5, Opus 4.8/4.7/4.6/4.5, Opus 4.1/4 legacy rates, Sonnet 4.6, and Haiku 3.5/3
 - **New**: Model pricing resolution handles dated IDs, Bedrock/Vertex prefixes, the `[1m]` context-window marker, and falls back by model family for future releases
 - **New**: Client-side search, column sorting, and pagination on all major data tables (projects, conversations, tokens, files, features, integrations, sub-agents, teams)
