@@ -1,0 +1,42 @@
+{% if scope_features %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for category, items, color, icon_path in [
+        ('Skills',   scope_features.skills,   '#2ec27e', '<path d="M12 2 14 8h6l-5 4 2 6-5-3.5L7 18l2-6-5-4h6Z"/>'),
+        ('MCPs',     scope_features.mcps,     '#8b5cf6', '<path d="M4 7v10l8 4 8-4V7l-8-4-8 4Z"/><path d="m4 7 8 4 8-4"/><path d="M12 11v10"/>'),
+        ('Commands', scope_features.commands, '#6b7280', '<path d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>'),
+        ('Plugins',  scope_features.plugins,  '#f59e0b', '<path d="M9 3v3H6a2 2 0 0 0-2 2v3h3a2 2 0 0 1 0 4H4v3a2 2 0 0 0 2 2h3v-3a2 2 0 0 1 4 0v3h3a2 2 0 0 0 2-2v-3h3a2 2 0 0 0 0-4h-3V8a2 2 0 0 0-2-2h-3V3"/>'),
+        ('Hooks',    scope_features.hooks,    '#ef4444', '<path d="M12 4v8a4 4 0 1 1-4 4"/><circle cx="12" cy="3.5" r="1.5"/>'),
+        ('Agents',   scope_features.agents,   '#0770E3', '<circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/>'),
+    ] %}
+    {% if items %}
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+            <div class="w-6 h-6 rounded-md flex items-center justify-center" style="background: {{ color }}18;">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="{{ color }}" viewBox="0 0 24 24" stroke-width="1.7">{{ icon_path | safe }}</svg>
+            </div>
+            <span class="text-sm font-semibold text-gray-800">{{ category }}</span>
+            <span class="ml-auto text-xs font-mono text-gray-400">{{ items | length }}</span>
+        </div>
+        <ul class="divide-y divide-gray-50">
+            {% for item in items[:5] %}
+            <li class="px-4 py-2.5 flex items-start gap-2">
+                <span class="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style="background: {{ color }};"></span>
+                <div class="min-w-0">
+                    <div class="text-xs font-semibold text-gray-800 truncate">{{ item.name }}</div>
+                    {% if item.description %}
+                    <div class="text-xs text-gray-400 truncate">{{ item.description[:80] }}{% if item.description|length > 80 %}…{% endif %}</div>
+                    {% endif %}
+                </div>
+            </li>
+            {% endfor %}
+            {% if items | length > 5 %}
+            <li class="px-4 py-2 text-xs text-gray-400 text-center">+{{ items | length - 5 }} more</li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-sm text-gray-400 py-4">No configuration items found at this scope.</p>
+{% endif %}

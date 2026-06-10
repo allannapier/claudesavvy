@@ -24,7 +24,6 @@ ClaudeSavvy provides comprehensive analytics for your Claude Code usage by readi
 - 🚀 **Performance Insights**: Identify optimization opportunities
 - 📁 **Project Breakdown**: See which projects consume the most resources
 - 🔧 **Tool Analytics**: Track sub-agent and MCP integration usage
-- 🤖 **GitHub Issue Agent**: Automatically process GitHub issues and create PRs
 
 ## Features
 
@@ -40,12 +39,11 @@ ClaudeSavvy provides comprehensive analytics for your Claude Code usage by readi
 ### Capabilities
 
 - **Real-time Monitoring**: Live data from your Claude Code usage
-- **Cost Analysis**: Track spending with Claude Sonnet 4.5 pricing
+- **Cost Analysis**: Per-model cost tracking using official Claude API pricing
 - **Cache Efficiency**: Monitor prompt cache performance and savings
 - **Time Filtering**: View metrics by today, week, month, or all-time
 - **Data Export**: Export metrics to CSV or JSON format
 - **Zero Configuration**: Works automatically with Claude Code data
-- **GitHub Issue Automation**: Automatically select and process GitHub issues (see [docs/GITHUB_ISSUE_AGENT.md](docs/GITHUB_ISSUE_AGENT.md))
 
 ## Quick Start
 

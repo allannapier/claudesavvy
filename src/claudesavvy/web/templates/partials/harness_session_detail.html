@@ -1,0 +1,179 @@
+<!-- Harness Session Detail (HTMX partial)
+     Context:
+       - session: dict from DashboardService.get_harness_session_detail()
+         keys: session_id, project_label, prompt, score, grade, headline,
+               low_activity (bool),
+               metrics {assistant_turns, total_tool_calls, bash_calls,
+                        read_calls, tool_errors, user_rejections, subagent_count},
+               subscores {errors, rejections, duplicate_commands, repeated_reads,
+                          scriptability},
+               weights {same keys, sum to 1},
+               rates {same keys: (numerator, denominator)},
+               suggestions [str], detail {errors, rejections, duplicates,
+                                          repeat_reads, binary_clusters}
+-->
+{% set grade_color = {'A': '#2ec27e', 'B': '#0770E3', 'C': '#f59e0b', 'D': '#fb923c', 'F': '#ef4444'} %}
+{% set gc = grade_color.get(session.grade, '#6b7280') %}
+
+<div class="text-left w-full space-y-5">
+
+    <!-- Header: grade + score + prompt -->
+    <div class="flex items-start gap-3">
+        <span class="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold shrink-0"
+              style="background: {{ gc }}18; color: {{ gc }};">{{ session.grade }}</span>
+        <div class="min-w-0 flex-1">
+            <div class="flex items-baseline gap-2">
+                <span class="text-2xl font-bold" style="color: {{ gc }};">{{ session.score }}</span>
+                <span class="text-xs font-mono text-gray-400 truncate">{{ session.project_label }}</span>
+            </div>
+            <p class="text-xs text-gray-500 mt-0.5">{{ session.prompt or 'No prompt captured' }}</p>
+            {% if session.low_activity %}
+            <p class="text-xs text-gray-400 italic mt-1">Not enough activity to grade reliably (fewer than 3 tool calls).</p>
+            {% endif %}
+        </div>
+        {% if session.tuning_report %}
+        <div x-data="{ copied: false }" class="shrink-0">
+            <button type="button"
+                    @click="navigator.clipboard.writeText($refs.report.textContent).then(() => { copied = true; setTimeout(() => copied = false, 2000); })"
+                    class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors"
+                    :class="copied ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
+                    title="Copy this session's tuning report to paste into Claude Code">
+                <svg x-show="!copied" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H6a2 2 0 00-2 2v9a2 2 0 002 2h9a2 2 0 002-2v-2M8 7V5a2 2 0 012-2h6l4 4v8a2 2 0 01-2 2h-2M8 7h6"/>
+                </svg>
+                <svg x-show="copied" x-cloak class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span x-text="copied ? 'Copied!' : 'Copy for Claude'"></span>
+            </button>
+            <div hidden x-ref="report">{{ session.tuning_report }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Metrics row -->
+    {% set m = session.metrics %}
+    <div class="grid grid-cols-3 gap-2">
+        {% for label, value in [
+            ('Turns', m.assistant_turns),
+            ('Tool calls', m.total_tool_calls),
+            ('Bash calls', m.bash_calls),
+            ('Errors', m.tool_errors),
+            ('Rejections', m.user_rejections),
+            ('Subagents', m.subagent_count),
+        ] %}
+        <div class="bg-gray-50 rounded-lg px-3 py-2">
+            <div class="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{{ label }}</div>
+            <div class="text-base font-semibold text-gray-900">{{ value }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Category subscore breakdown -->
+    {% set subs = session.subscores %}
+    {% set wts = session.weights %}
+    {% set rates = session.rates %}
+    {% set cat_labels = [
+        ('errors', 'Tool errors'),
+        ('rejections', 'User rejections'),
+        ('duplicate_commands', 'Duplicate commands'),
+        ('repeated_reads', 'Repeated reads'),
+        ('scriptability', 'Scriptability'),
+    ] %}
+    {% set rate_contexts = {
+        'errors': 'errors / tool calls',
+        'rejections': 'rejections / tool calls',
+        'duplicate_commands': 'extra dups / bash calls',
+        'repeated_reads': 'extra re-reads / read calls',
+        'scriptability': 'over-hammered binaries / unique binaries',
+    } %}
+    <div>
+        <div class="flex items-center gap-2 mb-3">
+            <span class="text-xs font-semibold text-gray-700 uppercase tracking-wider">Category scores</span>
+        </div>
+        {% if not session.low_activity %}
+        <div class="space-y-3">
+            {% for cat, label in cat_labels %}
+            {% set sub = subs.get(cat, 100) %}
+            {% set wt = wts.get(cat, 0) %}
+            {% set rate_pair = rates.get(cat, (0, 1)) %}
+            {% set bar_color = '#2ec27e' if sub >= 80 else ('#f59e0b' if sub >= 60 else '#ef4444') %}
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-xs text-gray-700 w-36 shrink-0">{{ label }}</span>
+                    <div class="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div class="h-full rounded-full transition-all"
+                             style="width: {{ sub | round }}%; background: {{ bar_color }};"></div>
+                    </div>
+                    <span class="text-xs font-mono font-semibold w-8 text-right" style="color: {{ bar_color }};">{{ sub | round | int }}</span>
+                </div>
+                <div class="flex items-center gap-2 ml-36">
+                    <span class="text-[10px] text-gray-400">
+                        {{ rate_pair[0] }}/{{ rate_pair[1] }} {{ rate_contexts.get(cat, '') }}
+                    </span>
+                    <span class="ml-auto text-[10px] text-gray-300 font-mono">{{ (wt * 100) | round | int }}% of score</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-xs text-gray-400">Subscores not computed — insufficient activity.</p>
+        {% endif %}
+    </div>
+
+    <!-- Suggestions -->
+    {% if session.suggestions %}
+    <div>
+        <div class="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Tuning suggestions</div>
+        <ul class="space-y-1.5">
+            {% for s in session.suggestions %}
+            <li class="flex items-start gap-2 text-xs text-gray-600">
+                <svg class="w-3.5 h-3.5 mt-0.5 shrink-0 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path d="M9 5l7 7-7 7"/>
+                </svg>
+                <span>{{ s }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Offender detail -->
+    {% set d = session.detail %}
+    {% if d.errors or d.rejections %}
+    <div class="space-y-3">
+        {% if d.errors %}
+        <div>
+            <div class="text-xs font-semibold text-red-600 uppercase tracking-wider mb-1.5">Tool errors</div>
+            <ul class="space-y-1">
+                {% for e in d.errors[:5] %}
+                <li class="text-xs">
+                    <span class="font-mono font-semibold text-gray-700">{{ e.label }}</span>
+                    {% if e.snippet %}
+                    <span class="text-gray-400 block truncate">{{ e.snippet }}</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+                {% if d.errors | length > 5 %}
+                <li class="text-xs text-gray-400">+{{ d.errors | length - 5 }} more</li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+        {% if d.rejections %}
+        <div>
+            <div class="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1.5">User rejections</div>
+            <ul class="space-y-1">
+                {% for r in d.rejections[:5] %}
+                <li class="text-xs font-mono font-semibold text-gray-700">{{ r.label }}</li>
+                {% endfor %}
+                {% if d.rejections | length > 5 %}
+                <li class="text-xs text-gray-400">+{{ d.rejections | length - 5 }} more</li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>

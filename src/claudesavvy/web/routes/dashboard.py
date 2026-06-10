@@ -332,7 +332,7 @@ def files() -> str:
         time_filter = get_time_filter_from_period(default_period)
 
         # Get file statistics
-        file_data = service.get_file_statistics(limit=20, time_filter=time_filter)
+        file_data = service.get_file_statistics(limit=100, time_filter=time_filter)
 
         return render_template(
             "pages/files.html", files=file_data, period=default_period
@@ -393,7 +393,7 @@ def features() -> str:
         time_filter = get_time_filter_from_period(default_period)
 
         # Get tool usage data
-        top_tools = service.get_top_tools(limit=20, time_filter=time_filter)
+        top_tools = service.get_top_tools(limit=100, time_filter=time_filter)
         features_summary = service.get_features_summary(time_filter=time_filter)
 
         # Build tool_usage list with proper field names for template
@@ -431,6 +431,150 @@ def features() -> str:
     except Exception as e:
         logger.error(f"Error loading features page: {e}", exc_info=True)
         return render_template("pages/features.html", features={})
+
+
+def _project_scoped(features):
+    """Return a copy of features containing only project-sourced items.
+
+    User/plugin items are attached to every repo by the scanner but should
+    only be counted once (via user_features).  This helper strips them out
+    so project repos contribute only their own PROJECT-tagged items to totals.
+    Non-list values (e.g. the 'counts' key) are dropped; the template only
+    iterates the list keys.
+    """
+    return {
+        key: [i for i in items if isinstance(i, dict) and i.get("source") == "project"]
+        for key, items in features.items()
+        if isinstance(items, list)
+    }
+
+
+@dashboard_bp.route("/harness")
+def harness() -> str:
+    """Render the Agent Harness overview page."""
+    try:
+        service = current_app.dashboard_service
+        repositories = service.get_discovered_repositories()
+
+        user_repo = None
+        user_features = {}
+        project_repos = []
+
+        for repo in repositories:
+            features = service.get_configuration_features(repo["path"])
+            repo_with_features = dict(repo)
+            repo_with_features["features"] = _project_scoped(features)
+
+            if repo.get("type") == "user" or repo.get("name", "").lower() in ("user", "user configuration", "~/.claude"):
+                user_repo = repo
+                user_features = features
+            else:
+                project_repos.append(repo_with_features)
+
+        if not user_repo and repositories:
+            user_repo = repositories[0]
+            user_features = service.get_configuration_features(repositories[0]["path"])
+            project_repos = []
+            for repo in repositories[1:]:
+                features = service.get_configuration_features(repo["path"])
+                repo_with_features = dict(repo)
+                repo_with_features["features"] = _project_scoped(features)
+                project_repos.append(repo_with_features)
+
+        def _count(features, key):
+            items = features.get(key) or []
+            return len(items) if isinstance(items, list) else 0
+
+        all_features_list = [user_features] + [r["features"] for r in project_repos if r.get("features")]
+
+        harness_totals = {
+            "skills": sum(_count(f, "skills") for f in all_features_list),
+            "agents": sum(_count(f, "agents") for f in all_features_list),
+            "mcps": sum(_count(f, "mcps") for f in all_features_list),
+            "plugins": sum(_count(f, "plugins") for f in all_features_list),
+            "hooks": sum(_count(f, "hooks") for f in all_features_list),
+            "commands": sum(_count(f, "commands") for f in all_features_list),
+        }
+
+        default_period = "7days"
+        time_filter = get_time_filter_from_period(default_period)
+        evaluation = service.get_harness_evaluation(time_filter=time_filter)
+        harness_projects = service.get_harness_projects()
+
+        return render_template(
+            "pages/harness.html",
+            repositories=repositories,
+            user_repo=user_repo,
+            user_features=user_features,
+            project_repos=project_repos,
+            harness_totals=harness_totals,
+            evaluation=evaluation,
+            period=default_period,
+            harness_projects=harness_projects,
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading harness page: {e}", exc_info=True)
+        return render_template(
+            "pages/harness.html",
+            repositories=[],
+            user_repo=None,
+            user_features={},
+            project_repos=[],
+            harness_totals={"skills": 0, "agents": 0, "mcps": 0, "plugins": 0, "hooks": 0, "commands": 0},
+            evaluation=None,
+            period="7days",
+            harness_projects=[],
+        )
+
+
+@dashboard_bp.route("/api/harness/evaluation")
+def api_harness_evaluation() -> str:
+    """HTMX endpoint: filtered harness evaluation leaderboard."""
+    from flask import request
+
+    try:
+        service = current_app.dashboard_service
+        period = request.args.get("period", "7days")
+        project = request.args.get("project") or None
+        time_filter = get_time_filter_from_period(
+            period, start=request.args.get("start"), end=request.args.get("end")
+        )
+        evaluation = service.get_harness_evaluation(time_filter=time_filter, project=project)
+        return render_template(
+            "partials/harness_evaluation.html",
+            evaluation=evaluation,
+            period=period,
+        )
+    except Exception as e:
+        logger.error(f"Error loading harness evaluation: {e}", exc_info=True)
+        return (
+            '<div class="text-red-600 p-4">Error loading evaluation</div>',
+            500,
+        )
+
+
+@dashboard_bp.route("/api/harness/session/<session_id>")
+def api_harness_session(session_id: str) -> str:
+    """HTMX endpoint: detail for a single scored session."""
+    try:
+        service = current_app.dashboard_service
+        detail = service.get_harness_session_detail(session_id)
+        if detail is None:
+            return (
+                '<div class="text-slate-400 p-4">Session not found</div>',
+                404,
+            )
+        return render_template(
+            "partials/harness_session_detail.html",
+            session=detail,
+        )
+    except Exception as e:
+        logger.error(f"Error loading harness session detail: {e}", exc_info=True)
+        return (
+            '<div class="text-red-600 p-4">Error loading session</div>',
+            500,
+        )
 
 
 @dashboard_bp.route("/configuration")
@@ -721,7 +865,7 @@ def api_files() -> str:
 
         time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
-        file_data = service.get_file_statistics(limit=20, time_filter=time_filter)
+        file_data = service.get_file_statistics(limit=100, time_filter=time_filter)
         return render_template("partials/files_content.html", files=file_data)
 
     except Exception as e:
@@ -812,7 +956,7 @@ def api_features() -> str:
         prev_time_filter = time_filter.get_previous_period() if time_filter else None
 
         # Get tool usage data for current period
-        top_tools = service.get_top_tools(limit=20, time_filter=time_filter)
+        top_tools = service.get_top_tools(limit=100, time_filter=time_filter)
         features_summary = service.get_features_summary(time_filter=time_filter)
 
         # Get previous period data for trend comparison
@@ -1201,6 +1345,28 @@ def api_reset_pricing() -> Any:
         return jsonify({"success": False, "error": "Failed to reset pricing"}), 500
 
 
+@dashboard_bp.route("/api/settings/pricing/sync", methods=["POST"])
+def api_sync_pricing() -> Any:
+    """
+    API endpoint to sync model pricing from Anthropic's published
+    pricing page. Synced prices become the new defaults; custom
+    per-model overrides still take precedence.
+
+    Returns:
+        JSON with success status, synced pricing, and sync timestamp.
+    """
+    from flask import jsonify
+
+    try:
+        service = current_app.dashboard_service
+        result = service.sync_pricing_from_web()
+        return jsonify(result), 200 if result["success"] else 502
+
+    except Exception as e:
+        logger.error(f"Error syncing pricing: {e}", exc_info=True)
+        return jsonify({"success": False, "error": "Failed to sync pricing"}), 500
+
+
 @dashboard_bp.route("/subagents")
 def subagents() -> str:
     """Render the sub-agents page with exchange analytics."""
@@ -1212,7 +1378,7 @@ def subagents() -> str:
 
         # Get summary stats
         summary = service.get_subagent_summary(time_filter=time_filter)
-        exchanges = service.get_subagent_exchanges(limit=50, time_filter=time_filter)
+        exchanges = service.get_subagent_exchanges(limit=200, time_filter=time_filter)
         chart_data = service.get_subagent_chart_data(limit=100, time_filter=time_filter)
 
         return render_template(
@@ -1245,7 +1411,7 @@ def api_subagents() -> str:
         time_filter = get_time_filter_from_period(period, start=request.args.get("start"), end=request.args.get("end"))
 
         summary = service.get_subagent_summary(time_filter=time_filter)
-        exchanges = service.get_subagent_exchanges(time_filter=time_filter, limit=50)
+        exchanges = service.get_subagent_exchanges(time_filter=time_filter, limit=200)
         chart_data = service.get_subagent_chart_data(time_filter=time_filter, limit=100)
 
         return render_template(

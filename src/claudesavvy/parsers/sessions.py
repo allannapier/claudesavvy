@@ -4,10 +4,51 @@ import json
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
+from functools import cached_property
 from pathlib import Path
 from typing import Iterator, Optional, List, Set
 
 from ..utils.time_filter import TimeFilter
+from ..utils.pricing import resolve_model_pricing, DEFAULT_PRICING
+
+
+def _usage_cost(usage: "TokenUsage", rates: dict) -> float:
+    """Cost of a TokenUsage at the given per-MTok rates."""
+    return (
+        (usage.input_tokens / 1_000_000) * rates["input_per_mtok"]
+        + (usage.output_tokens / 1_000_000) * rates["output_per_mtok"]
+        + (usage.cache_creation_input_tokens / 1_000_000) * rates["cache_write_per_mtok"]
+        + (usage.cache_read_input_tokens / 1_000_000) * rates["cache_read_per_mtok"]
+    )
+
+
+def _stats_cost_breakdown(stats: "SessionStats") -> dict[str, float]:
+    """Cost breakdown for a SessionStats, using per-model rates when known.
+
+    Falls back to default rates for the aggregate totals when no per-model
+    usage was recorded.
+    """
+    input_cost = output_cost = cache_write_cost = cache_read_cost = 0.0
+
+    usage_by_rates = (
+        [(usage, resolve_model_pricing(model)) for model, usage in stats.model_usage.items()]
+        if stats.model_usage
+        else [(stats.total_tokens, DEFAULT_PRICING)]
+    )
+
+    for usage, rates in usage_by_rates:
+        input_cost += (usage.input_tokens / 1_000_000) * rates["input_per_mtok"]
+        output_cost += (usage.output_tokens / 1_000_000) * rates["output_per_mtok"]
+        cache_write_cost += (usage.cache_creation_input_tokens / 1_000_000) * rates["cache_write_per_mtok"]
+        cache_read_cost += (usage.cache_read_input_tokens / 1_000_000) * rates["cache_read_per_mtok"]
+
+    return {
+        "input_cost": round(input_cost, 4),
+        "output_cost": round(output_cost, 4),
+        "cache_write_cost": round(cache_write_cost, 4),
+        "cache_read_cost": round(cache_read_cost, 4),
+        "total_cost": round(input_cost + output_cost + cache_write_cost + cache_read_cost, 4),
+    }
 
 
 @dataclass
@@ -76,9 +117,9 @@ class SessionMessage:
     model: Optional[str] = None
     team_name: Optional[str] = None
 
-    @property
+    @cached_property
     def datetime(self) -> Optional[datetime]:
-        """Get datetime from ISO timestamp.
+        """Get datetime from ISO timestamp (parsed once per message).
 
         Returns:
             datetime object or None if timestamp is invalid/empty
@@ -195,23 +236,15 @@ class SessionParser:
             session_files: List of session JSONL file paths
         """
         self.session_files = session_files
+        # Per-file cache of parsed messages, invalidated when the file's
+        # (mtime, size) changes. SessionMessage is small (no content bodies),
+        # so caching avoids re-reading and re-JSON-parsing every session
+        # file on each request.
+        self._file_cache: dict[Path, tuple[tuple[int, int], list[SessionMessage]]] = {}
 
-    def parse_file(
-        self, session_file: Path, time_filter: Optional[TimeFilter] = None
-    ) -> Iterator[SessionMessage]:
-        """
-        Parse a single session file and yield messages.
-
-        Args:
-            session_file: Path to session JSONL file
-            time_filter: Optional time filter
-
-        Yields:
-            SessionMessage instances
-        """
-        if not session_file.exists():
-            return
-
+    def _read_messages(self, session_file: Path) -> list[SessionMessage]:
+        """Read and parse all valid messages from a session file."""
+        messages: list[SessionMessage] = []
         with open(session_file, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
@@ -226,17 +259,52 @@ class SessionParser:
                     if not message.timestamp or not message.timestamp.strip():
                         continue
 
-                    # Apply time filter
-                    if time_filter and not time_filter.matches_iso_string(
-                        message.timestamp
-                    ):
-                        continue
-
-                    yield message
+                    messages.append(message)
 
                 except (json.JSONDecodeError, ValueError):
                     # Skip malformed lines
                     continue
+        return messages
+
+    def _load_file(self, session_file: Path) -> list[SessionMessage]:
+        """Load messages for a file, using the mtime/size-keyed cache."""
+        try:
+            stat = session_file.stat()
+        except OSError:
+            self._file_cache.pop(session_file, None)
+            return []
+
+        key = (stat.st_mtime_ns, stat.st_size)
+        cached = self._file_cache.get(session_file)
+        if cached is not None and cached[0] == key:
+            return cached[1]
+
+        try:
+            messages = self._read_messages(session_file)
+        except OSError:
+            return []
+        self._file_cache[session_file] = (key, messages)
+        return messages
+
+    def parse_file(
+        self, session_file: Path, time_filter: Optional[TimeFilter] = None
+    ) -> Iterator[SessionMessage]:
+        """
+        Parse a single session file and yield messages.
+
+        Args:
+            session_file: Path to session JSONL file
+            time_filter: Optional time filter
+
+        Yields:
+            SessionMessage instances
+        """
+        for message in self._load_file(session_file):
+            # Apply time filter
+            if time_filter and not time_filter.matches_iso_string(message.timestamp):
+                continue
+
+            yield message
 
     def parse_all(
         self,
@@ -403,44 +471,12 @@ class SessionParser:
             - cache_read_cost: Cost of cache reads
             - total_cost: Total cost for the day
         """
-        # Define pricing constants locally to avoid cyclic import
-        DEFAULT_PRICING = {
-            "input_per_mtok": 3.0,
-            "output_per_mtok": 15.0,
-            "cache_write_per_mtok": 3.75,
-            "cache_read_per_mtok": 0.30,
-        }
-
         daily_stats = self.get_daily_stats(days=days, time_filter=time_filter)
 
-        daily_costs = {}
-        for date_str, stats in daily_stats.items():
-            # Calculate costs for each token type using default pricing
-            # (This is an approximation since model-specific pricing varies)
-            input_cost = (
-                stats.total_tokens.input_tokens / 1_000_000
-            ) * DEFAULT_PRICING["input_per_mtok"]
-            output_cost = (
-                stats.total_tokens.output_tokens / 1_000_000
-            ) * DEFAULT_PRICING["output_per_mtok"]
-            cache_write_cost = (
-                stats.total_tokens.cache_creation_input_tokens / 1_000_000
-            ) * DEFAULT_PRICING["cache_write_per_mtok"]
-            cache_read_cost = (
-                stats.total_tokens.cache_read_input_tokens / 1_000_000
-            ) * DEFAULT_PRICING["cache_read_per_mtok"]
-
-            daily_costs[date_str] = {
-                "input_cost": round(input_cost, 4),
-                "output_cost": round(output_cost, 4),
-                "cache_write_cost": round(cache_write_cost, 4),
-                "cache_read_cost": round(cache_read_cost, 4),
-                "total_cost": round(
-                    input_cost + output_cost + cache_write_cost + cache_read_cost, 4
-                ),
-            }
-
-        return daily_costs
+        return {
+            date_str: _stats_cost_breakdown(stats)
+            for date_str, stats in daily_stats.items()
+        }
 
     def get_tool_output_files(
         self,
@@ -783,35 +819,14 @@ class SessionParser:
         """
         from datetime import timedelta
 
-        # Define pricing constants locally to avoid cyclic import
-        DEFAULT_PRICING = {
-            "input_per_mtok": 3.0,
-            "output_per_mtok": 15.0,
-            "cache_write_per_mtok": 3.75,
-            "cache_read_per_mtok": 0.30,
-        }
-
         # First, get overall project stats to find top projects by total cost
         all_project_stats = self.get_project_stats(time_filter=time_filter)
 
         # Calculate total cost for each project
-        project_costs = {}
-        for project_path, stats in all_project_stats.items():
-            input_cost = (
-                stats.total_tokens.input_tokens / 1_000_000
-            ) * DEFAULT_PRICING["input_per_mtok"]
-            output_cost = (
-                stats.total_tokens.output_tokens / 1_000_000
-            ) * DEFAULT_PRICING["output_per_mtok"]
-            cache_write_cost = (
-                stats.total_tokens.cache_creation_input_tokens / 1_000_000
-            ) * DEFAULT_PRICING["cache_write_per_mtok"]
-            cache_read_cost = (
-                stats.total_tokens.cache_read_input_tokens / 1_000_000
-            ) * DEFAULT_PRICING["cache_read_per_mtok"]
-            project_costs[project_path] = (
-                input_cost + output_cost + cache_write_cost + cache_read_cost
-            )
+        project_costs = {
+            project_path: _stats_cost_breakdown(stats)["total_cost"]
+            for project_path, stats in all_project_stats.items()
+        }
 
         # Get top projects
         top_projects = sorted(project_costs.items(), key=lambda x: x[1], reverse=True)[
@@ -863,48 +878,12 @@ class SessionParser:
 
             project_stats = project_stats_map.get(project_path, {})
 
-            # Convert to costs
-            daily_costs = {}
-            for date_key, stats in project_stats.items():
-                input_cost = (
-                    stats.total_tokens.input_tokens / 1_000_000
-                ) * DEFAULT_PRICING["input_per_mtok"]
-                output_cost = (
-                    stats.total_tokens.output_tokens / 1_000_000
-                ) * DEFAULT_PRICING["output_per_mtok"]
-                cache_write_cost = (
-                    stats.total_tokens.cache_creation_input_tokens / 1_000_000
-                ) * DEFAULT_PRICING["cache_write_per_mtok"]
-                cache_read_cost = (
-                    stats.total_tokens.cache_read_input_tokens / 1_000_000
-                ) * DEFAULT_PRICING["cache_read_per_mtok"]
-
-                daily_costs[date_key] = {
-                    "input_cost": round(input_cost, 4),
-                    "output_cost": round(output_cost, 4),
-                    "cache_write_cost": round(cache_write_cost, 4),
-                    "cache_read_cost": round(cache_read_cost, 4),
-                    "total_cost": round(
-                        input_cost + output_cost + cache_write_cost + cache_read_cost, 4
-                    ),
-                }
-
-            result[project_name] = daily_costs
+            result[project_name] = {
+                date_key: _stats_cost_breakdown(stats)
+                for date_key, stats in project_stats.items()
+            }
 
         return result
-
-
-# Per-model pricing rates (inline to avoid circular imports with analyzers.tokens)
-_SUBAGENT_MODEL_RATES: dict = {
-    "claude-opus-4-6": {"input_per_mtok": 5.0, "output_per_mtok": 25.0, "cache_write_per_mtok": 6.25, "cache_read_per_mtok": 0.50},
-    "claude-opus-4-5-20251101": {"input_per_mtok": 5.0, "output_per_mtok": 25.0, "cache_write_per_mtok": 6.25, "cache_read_per_mtok": 0.50},
-    "claude-opus-4-20250514": {"input_per_mtok": 15.0, "output_per_mtok": 75.0, "cache_write_per_mtok": 18.75, "cache_read_per_mtok": 1.50},
-    "claude-sonnet-4-6": {"input_per_mtok": 3.0, "output_per_mtok": 15.0, "cache_write_per_mtok": 3.75, "cache_read_per_mtok": 0.30},
-    "claude-sonnet-4-5-20250929": {"input_per_mtok": 3.0, "output_per_mtok": 15.0, "cache_write_per_mtok": 3.75, "cache_read_per_mtok": 0.30},
-    "claude-haiku-4-6": {"input_per_mtok": 1.0, "output_per_mtok": 5.0, "cache_write_per_mtok": 1.25, "cache_read_per_mtok": 0.10},
-    "claude-haiku-4-5-20251001": {"input_per_mtok": 1.0, "output_per_mtok": 5.0, "cache_write_per_mtok": 1.25, "cache_read_per_mtok": 0.10},
-}
-_SUBAGENT_DEFAULT_RATES: dict = {"input_per_mtok": 3.0, "output_per_mtok": 15.0, "cache_write_per_mtok": 3.75, "cache_read_per_mtok": 0.30}
 
 
 @dataclass
@@ -941,6 +920,7 @@ class SubAgentExchange:
     # Teams feature metadata
     slug: str = ""         # session slug shared by all team members (e.g. "brave-dancing-tiger")
     is_teammate: bool = False  # True when spawned via Teams feature (<teammate-message>)
+    parent_session_id: str = ""  # UUID of the orchestrating parent session (derived from subagent file path)
 
     # Status
     status: str = "completed"  # completed, error, etc.
@@ -958,26 +938,17 @@ class SubAgentExchange:
     @property
     def subagent_cost(self) -> float:
         """Calculate estimated cost using model-aware pricing from subagent JSONL data."""
-        def _calc(usage: "TokenUsage", rates: dict) -> float:
-            return (
-                (usage.input_tokens / 1_000_000) * rates["input_per_mtok"]
-                + (usage.output_tokens / 1_000_000) * rates["output_per_mtok"]
-                + (usage.cache_creation_input_tokens / 1_000_000) * rates["cache_write_per_mtok"]
-                + (usage.cache_read_input_tokens / 1_000_000) * rates["cache_read_per_mtok"]
-            )
-
         # Prefer per-model usage breakdown (most accurate)
         if self.model_usage:
             return sum(
-                _calc(usage, _SUBAGENT_MODEL_RATES.get(model_id, _SUBAGENT_DEFAULT_RATES))
+                _usage_cost(usage, resolve_model_pricing(model_id))
                 for model_id, usage in self.model_usage.items()
             )
 
         # Fall back to aggregate subagent_usage with model-aware rates
         if not self.subagent_usage:
             return 0.0
-        rates = _SUBAGENT_MODEL_RATES.get(self.model or "", _SUBAGENT_DEFAULT_RATES)
-        return _calc(self.subagent_usage, rates)
+        return _usage_cost(self.subagent_usage, resolve_model_pricing(self.model))
 
     @property
     def duration_seconds(self) -> float:
@@ -1409,6 +1380,13 @@ class SubAgentParser:
 
         primary_model = self._primary_model(model_usage)
 
+        # Derive parent session UUID from the file path: <proj>/<parent-uuid>/subagents/agent-x.jsonl
+        parent_session_id = (
+            agent_file.parent.parent.name
+            if agent_file.parent.name == "subagents"
+            else ""
+        )
+
         return SubAgentExchange(
             agent_id=agent_id,
             session_id=session_id,
@@ -1425,6 +1403,7 @@ class SubAgentParser:
             model_usage=model_usage,
             slug=slug,
             is_teammate=is_teammate,
+            parent_session_id=parent_session_id,
         )
 
     def get_exchange_stats(self, time_filter: Optional[TimeFilter] = None) -> dict:

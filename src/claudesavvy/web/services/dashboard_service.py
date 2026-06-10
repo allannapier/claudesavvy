@@ -5,6 +5,7 @@ by wrapping existing parsers and analyzers. It reuses all existing business logi
 while returning data as dicts/dataclasses suitable for web rendering.
 """
 
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Dict, List, Any
@@ -30,6 +31,9 @@ from ...analyzers.integrations import IntegrationAnalyzer, IntegrationSummary
 from ...analyzers.features import FeaturesAnalyzer, FeaturesSummary
 from ...analyzers.configuration import ConfigurationAnalyzer
 from ...analyzers.project_analyzer import ProjectAnalyzer
+from ...analyzers import harness_quality
+
+logger = logging.getLogger(__name__)
 
 
 class DashboardService:
@@ -68,6 +72,9 @@ class DashboardService:
             self.paths.get_project_session_files(),
             subagent_file_map=self.paths.get_subagent_file_map(),
         )
+
+        # Cache for harness grades: session_id -> (mtime, result)
+        self._session_grade_cache: Dict[str, tuple] = {}
 
         # Build project map for debug logs
         project_map = self._build_project_map()
@@ -1350,6 +1357,177 @@ class DashboardService:
         path = Path(repo_path)
         return self._configuration_analyzer.get_feature_breakdown(path)
 
+    def get_harness_projects(self) -> List[Dict[str, str]]:
+        """Return sorted unique project entries for the harness project filter.
+
+        Returns:
+            List of {"value": dir_name, "label": humanized_name} sorted by label.
+        """
+        seen: set[str] = set()
+        entries: List[Dict[str, str]] = []
+        for path in self.paths.get_project_session_files():
+            dir_name = path.parent.name
+            if dir_name not in seen:
+                seen.add(dir_name)
+                entries.append(
+                    {
+                        "value": dir_name,
+                        "label": harness_quality.humanize_project(dir_name),
+                    }
+                )
+        return sorted(entries, key=lambda e: e["label"].lower())
+
+    def get_harness_evaluation(
+        self,
+        time_filter: Optional[TimeFilter] = None,
+        limit: int = 60,
+        project: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Score recent Claude Code sessions on harness/agentic quality.
+
+        Parses each session transcript, scoring each on per-category subscores
+        (errors, duplicate commands, repeated reads, scriptability, rejections)
+        combined by weights, then returns a leaderboard plus aggregate stats.
+
+        Args:
+            time_filter: Optional TimeFilter to restrict sessions by mtime.
+            limit: Max number of recent sessions to score.
+
+        Returns:
+            Dict with sessions (worst-first), aggregate stats, and grade
+            distribution.
+        """
+        start = time_filter.start_time if time_filter else None
+        end = time_filter.end_time if time_filter else None
+
+        records: List[Dict[str, Any]] = []
+        for path in self.paths.get_project_session_files():
+            if project is not None and path.parent.name != project:
+                continue
+            try:
+                mtime = path.stat().st_mtime
+            except OSError:
+                continue
+            when = datetime.fromtimestamp(mtime, tz=timezone.utc)
+            if start is not None and when < start:
+                continue
+            if end is not None and when > end:
+                continue
+            record = harness_quality.evaluate_file(path)
+            if record is not None:
+                records.append(record)
+            if len(records) >= limit:
+                break
+
+        scores = [r["score"] for r in records]
+        grade_dist: Dict[str, int] = {}
+        for r in records:
+            grade_dist[r["grade"]] = grade_dist.get(r["grade"], 0) + 1
+
+        issue_counts: Dict[str, int] = {
+            "tool_errors": 0,
+            "user_rejections": 0,
+            "duplicate_commands": 0,
+            "repeated_reads": 0,
+            "scriptability": 0,
+        }
+        for r in records:
+            # Use subscores to detect which categories had issues
+            subs = r.get("subscores", {})
+            m = r.get("metrics", {})
+            if m.get("tool_errors", 0):
+                issue_counts["tool_errors"] += 1
+            if m.get("user_rejections", 0):
+                issue_counts["user_rejections"] += 1
+            if subs.get("duplicate_commands", 100) < 100:
+                issue_counts["duplicate_commands"] += 1
+            if subs.get("repeated_reads", 100) < 100:
+                issue_counts["repeated_reads"] += 1
+            if subs.get("scriptability", 100) < 100:
+                issue_counts["scriptability"] += 1
+
+        # Median score
+        if scores:
+            sorted_scores = sorted(scores)
+            n = len(sorted_scores)
+            if n % 2 == 0:
+                median_score = round((sorted_scores[n // 2 - 1] + sorted_scores[n // 2]) / 2, 1)
+            else:
+                median_score = float(sorted_scores[n // 2])
+        else:
+            median_score = 0.0
+
+        # Worst-first: that's what's worth fixing.
+        leaderboard = sorted(records, key=lambda r: r["score"])
+
+        return {
+            "period_description": (
+                time_filter.get_description() if time_filter else "All time"
+            ),
+            "sessions": leaderboard,
+            "session_count": len(records),
+            "average_score": round(sum(scores) / len(scores), 1) if scores else 0,
+            "median_score": median_score,
+            "best_score": max(scores) if scores else 0,
+            "worst_score": min(scores) if scores else 0,
+            "grade_distribution": grade_dist,
+            "issue_counts": issue_counts,
+        }
+
+    def _get_session_grade(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Grade/score for a session, cached by (path, mtime).
+
+        Args:
+            session_id: Session id (stem of the JSONL file).
+
+        Returns:
+            Dict with 'grade' and 'score', or None if not found / error.
+        """
+        cache: Dict[str, tuple] = getattr(self, "_session_grade_cache", {})
+        for path in self.paths.get_project_session_files():
+            if path.stem == session_id or path.stem.startswith(session_id):
+                try:
+                    mtime = path.stat().st_mtime
+                except OSError:
+                    return None
+                cached = cache.get(session_id)
+                if cached is not None and cached[0] == mtime:
+                    return cached[1]
+                try:
+                    record = harness_quality.evaluate_file(path)
+                except OSError:
+                    cache[session_id] = (mtime, None)
+                    return None
+                result = (
+                    {"grade": record["grade"], "score": record["score"]}
+                    if record is not None
+                    else None
+                )
+                cache[session_id] = (mtime, result)
+                return result
+        return None
+
+    def get_harness_session_detail(
+        self, session_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Score a single session by id (full or prefix) and return its detail.
+
+        Args:
+            session_id: Session id or unique prefix.
+
+        Returns:
+            Evaluation record dict, or None if no matching session.
+        """
+        for path in self.paths.get_project_session_files():
+            if path.stem == session_id or path.stem.startswith(session_id):
+                record = harness_quality.evaluate_file(path)
+                if record is not None:
+                    record["tuning_report"] = harness_quality.format_tuning_report(record)
+                return record
+        return None
+
     def get_feature_detail(
         self, repo_path: str, feature_type: str, feature_id: str
     ) -> Dict[str, Any]:
@@ -1492,17 +1670,73 @@ class DashboardService:
                               (e.g., models discovered from session data)
 
         Returns:
-            Dict with default pricing and custom overrides.
+            Dict with pricing for every known model (models seen in session
+            data first, then the remaining built-in models), custom
+            overrides, display names, and last-sync metadata.
         """
-        all_pricing = self._pricing_settings.get_all_pricing(
-            additional_models=additional_models
-        )
+        from ...utils.pricing import MODEL_PRICING
+
+        used_models = list(additional_models or [])
+
+        # Models seen in session data first, then remaining built-ins,
+        # then any custom overrides for models in neither group.
+        all_pricing: Dict[str, Dict[str, float]] = {}
+        for model in used_models:
+            all_pricing[model] = self._pricing_settings.get_pricing_for_model(model)
+        for model in MODEL_PRICING:
+            if model not in all_pricing:
+                all_pricing[model] = self._pricing_settings.get_pricing_for_model(model)
         custom_pricing = self._pricing_settings.get_custom_pricing_summary()
+        for model in custom_pricing:
+            if model not in all_pricing:
+                all_pricing[model] = custom_pricing[model]
 
         return {
             "all_pricing": all_pricing,
             "custom_pricing": custom_pricing,
             "has_custom_pricing": len(custom_pricing) > 0,
+            "used_models": used_models,
+            "display_names": {m: get_model_display_name(m) for m in all_pricing},
+            "synced_at": self._pricing_settings.get_synced_at(),
+        }
+
+    def sync_pricing_from_web(self) -> Dict[str, Any]:
+        """
+        Fetch current model pricing from the published pricing page and
+        persist it as the synced pricing layer.
+
+        Custom per-model overrides continue to take precedence over
+        synced prices.
+
+        Returns:
+            Dict with success status, the synced pricing, and sync time.
+        """
+        from ...utils.pricing import fetch_live_pricing, PRICING_SOURCE_URL
+
+        try:
+            live_pricing = fetch_live_pricing()
+        except Exception as e:
+            logger.error("Pricing sync failed: %s", e.__class__.__name__, exc_info=True)
+            return {
+                "success": False,
+                "error": f"Could not fetch pricing from {PRICING_SOURCE_URL}",
+            }
+
+        if not live_pricing:
+            logger.warning("Pricing sync fetched the page but found no model pricing table")
+            return {
+                "success": False,
+                "error": "No model pricing found on the pricing page (format may have changed)",
+            }
+
+        if not self._pricing_settings.save_synced_pricing(live_pricing):
+            return {"success": False, "error": "Failed to save synced pricing"}
+
+        return {
+            "success": True,
+            "synced_models": live_pricing,
+            "model_count": len(live_pricing),
+            "synced_at": self._pricing_settings.get_synced_at(),
         }
 
     def update_model_pricing(
@@ -1554,9 +1788,9 @@ class DashboardService:
         success = self._pricing_settings.reset_pricing_for_model(model)
 
         if success:
-            from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING
+            from ...utils.pricing import resolve_model_pricing
 
-            default_pricing = MODEL_PRICING.get(model, DEFAULT_PRICING)
+            default_pricing = resolve_model_pricing(model)
             return {"success": True, "model": model, "pricing": default_pricing}
         else:
             return {"success": False, "error": "Failed to reset pricing settings"}
@@ -1866,7 +2100,7 @@ class DashboardService:
         Returns:
             Dict with 'conversations' list and 'summary' dict
         """
-        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING, get_model_display_name
+        from ...analyzers.tokens import DEFAULT_PRICING, get_model_display_name
 
         raw = self._session_parser.get_conversation_stats(
             time_filter=time_filter, limit=None
@@ -1875,7 +2109,7 @@ class DashboardService:
         def _calc_cost(model_usage: dict) -> float:
             total = 0.0
             for model_id, usage in model_usage.items():
-                pricing = MODEL_PRICING.get(model_id, DEFAULT_PRICING)
+                pricing = self._pricing_settings.get_pricing_for_model(model_id)
                 total += (usage.input_tokens / 1_000_000) * pricing["input_per_mtok"]
                 total += (usage.output_tokens / 1_000_000) * pricing["output_per_mtok"]
                 total += (usage.cache_creation_input_tokens / 1_000_000) * pricing["cache_write_per_mtok"]
@@ -1986,7 +2220,7 @@ class DashboardService:
         Returns:
             Dict with conversation details including context_per_turn, or None
         """
-        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING, get_model_display_name
+        from ...analyzers.tokens import DEFAULT_PRICING, get_model_display_name
 
         raw = self._session_parser.get_conversation_stats(time_filter=time_filter, limit=None)
 
@@ -2000,7 +2234,7 @@ class DashboardService:
             if model_usage:
                 cost = 0.0
                 for model_id, usage in model_usage.items():
-                    pricing = MODEL_PRICING.get(model_id, DEFAULT_PRICING)
+                    pricing = self._pricing_settings.get_pricing_for_model(model_id)
                     cost += (usage.input_tokens / 1_000_000) * pricing["input_per_mtok"]
                     cost += (usage.output_tokens / 1_000_000) * pricing["output_per_mtok"]
                     cost += (usage.cache_creation_input_tokens / 1_000_000) * pricing["cache_write_per_mtok"]
@@ -2546,8 +2780,6 @@ class DashboardService:
         Returns:
             Dict with team usage statistics
         """
-        from ...analyzers.tokens import MODEL_PRICING, DEFAULT_PRICING
-
         exchanges = self._subagent_parser.parse_exchanges(time_filter=time_filter)
         teammate_exchanges = [e for e in exchanges if e.is_teammate]
 
@@ -2560,7 +2792,7 @@ class DashboardService:
         def _calc_cost(model_usage: dict) -> float:
             cost = 0.0
             for model_id, usage in model_usage.items():
-                rates = MODEL_PRICING.get(model_id, DEFAULT_PRICING)
+                rates = self._pricing_settings.get_pricing_for_model(model_id)
                 cost += (
                     (usage.input_tokens / 1_000_000) * rates["input_per_mtok"]
                     + (usage.output_tokens / 1_000_000) * rates["output_per_mtok"]
@@ -2572,6 +2804,7 @@ class DashboardService:
         teams_data = []
         total_cost = 0.0
         total_tokens = 0
+        _grade_memo: Dict[str, Optional[Dict[str, Any]]] = {}
 
         for group_exchanges in groups.values():
             # Aggregate model usage across all members
@@ -2627,6 +2860,10 @@ class DashboardService:
             agg_input = sum(u.input_tokens for u in agg_model_usage.values())
             agg_output = sum(u.output_tokens for u in agg_model_usage.values())
 
+            pid = next((e.parent_session_id for e in group_exchanges if getattr(e, "parent_session_id", "")), "")
+            if pid and pid not in _grade_memo:
+                _grade_memo[pid] = self._get_session_grade(pid)
+            g = _grade_memo.get(pid) if pid else None
             teams_data.append({
                 "name": slug,
                 "project": project_name,
@@ -2640,6 +2877,9 @@ class DashboardService:
                 "total_tokens": group_total_tokens,
                 "cost": round(cost, 2),
                 "model_breakdown": model_breakdown,
+                "parent_session_id": pid,
+                "harness_grade": (g or {}).get("grade"),
+                "harness_score": (g or {}).get("score"),
             })
 
         teams_data.sort(key=lambda x: x["total_tokens"], reverse=True)

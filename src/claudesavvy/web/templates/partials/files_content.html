@@ -1,7 +1,7 @@
 {% from "components/card.html" import stat_card %}
 
 <!-- Summary Cards -->
-<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-6">
     {{ stat_card(
         label="Total Files",
         value=(files.total_files|default(0)|int)|string,
@@ -35,7 +35,7 @@
         <h3 class="text-lg font-semibold text-gray-900">Recent File Operations</h3>
     </div>
     <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
+        <table data-enhance="table" class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File</th>
@@ -46,7 +46,7 @@
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-                {% for file_op in files.file_operations[:20] %}
+                {% for file_op in files.file_operations[:100] %}
                 <tr class="hover:bg-gray-50">
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">

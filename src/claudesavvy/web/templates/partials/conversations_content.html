@@ -16,7 +16,7 @@
 
     {{ stat_card(
         label="Avg Cost / Conv.",
-        value="$" + (summary.avg_cost|default(0.0)|float|round(4)|string),
+        value="$" + (summary.avg_cost|default(0.0)|float|round(2)|string),
         icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>'
     ) }}
 
@@ -42,7 +42,7 @@
         <p class="text-sm text-gray-500 mt-1">Sorted by cost — click a row to see context growth chart</p>
     </div>
     <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
+        <table data-enhance="table" class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>

@@ -5,6 +5,11 @@ from typing import Optional, TYPE_CHECKING, Dict
 
 from ..parsers.sessions import SessionParser, TokenUsage
 from ..utils.time_filter import TimeFilter
+from ..utils.pricing import (  # noqa: F401 - re-exported for existing importers
+    MODEL_PRICING,
+    DEFAULT_PRICING,
+    resolve_model_pricing,
+)
 
 if TYPE_CHECKING:
     from ..utils.pricing import PricingSettings
@@ -12,14 +17,22 @@ if TYPE_CHECKING:
 
 # Friendly display names for models
 MODEL_DISPLAY_NAMES = {
+    'claude-fable-5': 'Claude Fable 5',
+    'claude-opus-4-8': 'Claude Opus 4.8',
+    'claude-opus-4-7': 'Claude Opus 4.7',
     'claude-opus-4-6': 'Claude Opus 4.6',
     'claude-sonnet-4-6': 'Claude Sonnet 4.6',
     'claude-haiku-4-6': 'Claude Haiku 4.6',
     'claude-opus-4-5-20251101': 'Claude Opus 4.5',
+    'claude-opus-4-5': 'Claude Opus 4.5',
+    'claude-opus-4-1-20250805': 'Claude Opus 4.1',
     'claude-opus-4-20250514': 'Claude Opus 4',
     'claude-sonnet-4-5-20250929': 'Claude Sonnet 4.5',
+    'claude-sonnet-4-5': 'Claude Sonnet 4.5',
     'claude-sonnet-4-20250514': 'Claude Sonnet 4',
     'claude-haiku-4-5-20251001': 'Claude Haiku 4.5',
+    'claude-haiku-4-5': 'Claude Haiku 4.5',
+    'claude-3-5-haiku-20241022': 'Claude Haiku 3.5',
     # AWS Bedrock model IDs - Sonnet
     'eu.anthropic.claude-sonnet-4-5-20250929-v1:0': 'Claude Sonnet 4.5 (Bedrock EU)',
     'us.anthropic.claude-sonnet-4-5-20250929-v1:0': 'Claude Sonnet 4.5 (Bedrock US)',
@@ -40,77 +53,18 @@ MODEL_DISPLAY_NAMES = {
 
 def get_model_display_name(model_id: str) -> str:
     """Get friendly display name for a model ID."""
-    return MODEL_DISPLAY_NAMES.get(model_id, model_id)
+    if model_id in MODEL_DISPLAY_NAMES:
+        return MODEL_DISPLAY_NAMES[model_id]
+
+    from ..utils.pricing import _normalize_model_id
+    return MODEL_DISPLAY_NAMES.get(_normalize_model_id(model_id), model_id)
 
 
-# Claude API pricing by model (as of 2025)
-# https://www.anthropic.com/pricing
-MODEL_PRICING = {
-    # Short-form model IDs used by Claude Code CLI (subagents, fast mode)
-    'claude-opus-4-6': {
-        'input_per_mtok': 5.00,
-        'output_per_mtok': 25.00,
-        'cache_write_per_mtok': 6.25,
-        'cache_read_per_mtok': 0.50,
-    },
-    'claude-sonnet-4-6': {
-        'input_per_mtok': 3.00,
-        'output_per_mtok': 15.00,
-        'cache_write_per_mtok': 3.75,
-        'cache_read_per_mtok': 0.30,
-    },
-    'claude-haiku-4-6': {
-        'input_per_mtok': 1.00,
-        'output_per_mtok': 5.00,
-        'cache_write_per_mtok': 1.25,
-        'cache_read_per_mtok': 0.10,
-    },
-    # Opus 4.5
-    'claude-opus-4-5-20251101': {
-        'input_per_mtok': 5.00,
-        'output_per_mtok': 25.00,
-        'cache_write_per_mtok': 6.25,
-        'cache_read_per_mtok': 0.50,
-    },
-    # Sonnet 4.5
-    'claude-sonnet-4-5-20250929': {
-        'input_per_mtok': 3.00,
-        'output_per_mtok': 15.00,
-        'cache_write_per_mtok': 3.75,
-        'cache_read_per_mtok': 0.30,
-    },
-    # Haiku 4.5
-    'claude-haiku-4-5-20251001': {
-        'input_per_mtok': 1.00,
-        'output_per_mtok': 5.00,
-        'cache_write_per_mtok': 1.25,
-        'cache_read_per_mtok': 0.10,
-    },
-    # Opus 4
-    'claude-opus-4-20250514': {
-        'input_per_mtok': 15.00,
-        'output_per_mtok': 75.00,
-        'cache_write_per_mtok': 18.75,
-        'cache_read_per_mtok': 1.50,
-    },
-}
-
-# Add Bedrock pricing aliases for models across regions
-def _add_bedrock_aliases(model_id: str, bedrock_model_id_base: str) -> None:
-    """Add regional Bedrock aliases (EU, US, default) for a model."""
-    for region in ['eu', 'us', '']:
-        prefix = f'{region}.anthropic' if region else 'anthropic'
-        bedrock_id = f'{prefix}.{bedrock_model_id_base}'
-        MODEL_PRICING[bedrock_id] = MODEL_PRICING[model_id]
-
-
-_add_bedrock_aliases('claude-sonnet-4-5-20250929', 'claude-sonnet-4-5-20250929-v1:0')
-_add_bedrock_aliases('claude-opus-4-5-20251101', 'claude-opus-4-5-20251101-v1:0')
-_add_bedrock_aliases('claude-opus-4-20250514', 'claude-opus-4-20250514-v1:0')
-_add_bedrock_aliases('claude-haiku-4-5-20251001', 'claude-haiku-4-5-20251001-v1:0')
-
-# Default pricing (Sonnet 4.5)
-DEFAULT_PRICING = MODEL_PRICING['claude-sonnet-4-5-20250929']
+# Pricing lives in utils.pricing (single source of truth, synced with
+# https://platform.claude.com/docs/en/about-claude/pricing). MODEL_PRICING,
+# DEFAULT_PRICING, and resolve_model_pricing are re-exported above for
+# backward compatibility. resolve_model_pricing() handles dated IDs,
+# Bedrock/Vertex prefixes, and model-family fallbacks.
 
 
 @dataclass
@@ -195,7 +149,7 @@ class TokenAnalyzer:
         """
         if self.pricing_settings and model:
             return self.pricing_settings.get_pricing_for_model(model)
-        return MODEL_PRICING.get(model, DEFAULT_PRICING)
+        return resolve_model_pricing(model)
 
     def calculate_cost(self, tokens: TokenUsage, model: Optional[str] = None) -> CostBreakdown:
         """

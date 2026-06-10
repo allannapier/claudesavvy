@@ -5,13 +5,13 @@
 {% block main_content %}
 <div class="space-y-8">
     <!-- Page Title and Time Filter -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="min-w-0">
             <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p class="mt-2 text-gray-600">Overview of your Claude Code usage and analytics</p>
         </div>
 
-        <div class="flex gap-2 items-center">
+        <div class="flex gap-2 items-center shrink-0">
             {% with current_url='/api/dashboard', target_id='dashboard-content', storage_key='cs_period_dashboard', default_period=period|default('today') %}
                 {% include 'partials/time_filter.html' %}
             {% endwith %}

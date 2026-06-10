@@ -1,0 +1,150 @@
+<!-- Harness Evaluation Leaderboard (HTMX partial)
+     Context:
+       - evaluation: dict from DashboardService.get_harness_evaluation()
+       - period: current period string (for context)
+-->
+{% set grade_color = {'A': '#2ec27e', 'B': '#0770E3', 'C': '#f59e0b', 'D': '#fb923c', 'F': '#ef4444'} %}
+
+{% if not evaluation or evaluation.session_count == 0 %}
+<div class="bg-white rounded-xl border border-gray-200 p-10 text-center">
+    <svg class="w-10 h-10 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.4">
+        <path d="M9 17v-6m3 6v-2m3 2v-4M5 21h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2z"/>
+    </svg>
+    <p class="text-sm text-gray-500">No scored sessions in this window.</p>
+    <p class="text-xs text-gray-400 mt-1">{{ evaluation.period_description if evaluation else 'Adjust the time range to score more sessions.' }}</p>
+</div>
+{% else %}
+<div class="space-y-5">
+
+    <!-- Aggregate strip -->
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        {% set avg = evaluation.average_score %}
+        {% set avg_color = '#2ec27e' if avg >= 80 else ('#f59e0b' if avg >= 60 else '#ef4444') %}
+        {% set med = evaluation.median_score %}
+        {% set med_color = '#2ec27e' if med >= 80 else ('#f59e0b' if med >= 60 else '#ef4444') %}
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <div class="text-xs font-medium text-gray-500">Average score</div>
+            <div class="text-2xl font-bold mt-1" style="color: {{ avg_color }};">{{ avg }}</div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <div class="text-xs font-medium text-gray-500">Median score</div>
+            <div class="text-2xl font-bold mt-1" style="color: {{ med_color }};">{{ med }}</div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <div class="text-xs font-medium text-gray-500">Sessions scored</div>
+            <div class="text-2xl font-bold text-gray-900 mt-1">{{ evaluation.session_count }}</div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <div class="text-xs font-medium text-gray-500">Best</div>
+            <div class="text-2xl font-bold text-gray-900 mt-1">{{ evaluation.best_score }}</div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <div class="text-xs font-medium text-gray-500">Worst</div>
+            <div class="text-2xl font-bold text-gray-900 mt-1">{{ evaluation.worst_score }}</div>
+        </div>
+    </div>
+
+    <!-- Grade distribution stacked bar + issue counts -->
+    <div class="space-y-3">
+        <!-- Stacked bar grade distribution -->
+        {% set total = evaluation.session_count %}
+        {% if total > 0 %}
+        <div>
+            <div class="flex items-center gap-2 mb-1.5">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Grade distribution</span>
+            </div>
+            <div class="flex h-5 rounded-lg overflow-hidden gap-px">
+                {% for g in ['A', 'B', 'C', 'D', 'F'] %}
+                {% set n = evaluation.grade_distribution.get(g, 0) %}
+                {% if n > 0 %}
+                {% set pct = (n / total * 100) | round(1) %}
+                <div class="flex items-center justify-center text-[10px] font-bold text-white transition-all"
+                     style="width: {{ pct }}%; background: {{ grade_color[g] }};"
+                     title="{{ g }}: {{ n }} session{{ 's' if n != 1 else '' }} ({{ pct }}%)">
+                    {% if pct > 8 %}{{ g }}{{ n }}{% endif %}
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            <!-- Legend -->
+            <div class="flex flex-wrap items-center gap-3 mt-2">
+                {% for g in ['A', 'B', 'C', 'D', 'F'] %}
+                {% set n = evaluation.grade_distribution.get(g, 0) %}
+                <span class="inline-flex items-center gap-1 text-xs font-semibold"
+                      style="color: {{ grade_color[g] }};">
+                    <span class="w-2 h-2 rounded-sm inline-block" style="background: {{ grade_color[g] }};"></span>
+                    {{ g }}&nbsp;<span class="font-mono opacity-70">{{ n }}</span>
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Issue counts -->
+        {% set ic = evaluation.issue_counts %}
+        {% set issue_labels = [
+            ('tool_errors', 'tool errors'),
+            ('user_rejections', 'rejections'),
+            ('duplicate_commands', 'dup cmds'),
+            ('repeated_reads', 'repeat reads'),
+            ('scriptability', 'scriptability'),
+        ] %}
+        <div class="flex flex-wrap items-center gap-2">
+            {% for key, label in issue_labels %}
+            {% if ic[key] %}
+            <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-red-50 text-red-600">
+                <span class="font-semibold">{{ ic[key] }}</span> {{ label }}
+            </span>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Leaderboard (worst-first) + detail panel -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+                <span class="text-sm font-semibold text-gray-800">Sessions worth fixing</span>
+                <span class="ml-auto text-xs font-mono text-gray-400">worst first</span>
+            </div>
+            <ul class="divide-y divide-gray-50 max-h-[28rem] overflow-y-auto">
+                {% for s in evaluation.sessions %}
+                {% set gc = grade_color.get(s.grade, '#6b7280') %}
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/{{ s.session_id }}"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors focus:outline-none focus:bg-blue-50">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: {{ gc }}18; color: {{ gc }};">{{ s.grade }}</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">{{ s.score }}</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">{{ s.project_label }}</span>
+                                {% if s.low_activity %}
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                {% endif %}
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">{{ s.prompt or 'No prompt captured' }}</div>
+                        </div>
+                        <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">{{ s.headline }}</span>
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Detail panel -->
+        <div id="harness-session-panel" class="bg-white rounded-xl border border-gray-200 p-6 flex items-center justify-center text-center">
+            <div class="text-gray-400">
+                <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.4">
+                    <path d="M9 5l7 7-7 7"/>
+                </svg>
+                <p class="text-sm">Select a session to see its score breakdown and tuning suggestions.</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endif %}

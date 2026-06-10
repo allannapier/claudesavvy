@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Claude Code statusline: shows 24h usage stats."""
+"""Claude Code statusline: today's and month-to-date usage stats."""
 import glob
 import json
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from pathlib import Path
 
 # ANSI colors
@@ -15,10 +15,14 @@ BOLD   = "\033[1m"
 DIM    = "\033[2m"
 
 
+# Per-MTok rates, synced with https://platform.claude.com/docs/en/about-claude/pricing
 PRICING = {
-    "opus":   {"input": 15.0,  "output": 75.0,  "cache_write": 18.75, "cache_read": 1.50},
-    "sonnet": {"input": 3.0,   "output": 15.0,  "cache_write": 3.75,  "cache_read": 0.30},
-    "haiku":  {"input": 0.80,  "output": 4.0,   "cache_write": 1.00,  "cache_read": 0.08},
+    "fable":       {"input": 10.0, "output": 50.0, "cache_write": 12.50, "cache_read": 1.00},
+    "opus":        {"input": 5.0,  "output": 25.0, "cache_write": 6.25,  "cache_read": 0.50},
+    "opus_legacy": {"input": 15.0, "output": 75.0, "cache_write": 18.75, "cache_read": 1.50},
+    "sonnet":      {"input": 3.0,  "output": 15.0, "cache_write": 3.75,  "cache_read": 0.30},
+    "haiku":       {"input": 1.0,  "output": 5.0,  "cache_write": 1.25,  "cache_read": 0.10},
+    "haiku_3_5":   {"input": 0.80, "output": 4.0,  "cache_write": 1.00,  "cache_read": 0.08},
 }
 
 
@@ -26,8 +30,16 @@ def get_pricing(model: str) -> dict:
     if not model:
         return PRICING["sonnet"]
     m = model.lower()
+    if "fable" in m or "mythos" in m:
+        return PRICING["fable"]
     if "opus" in m:
+        # Opus 4.1 and earlier (incl. Claude 3 Opus) use legacy $15/$75 rates;
+        # "opus-4-2" matches the dated Opus 4 ID "claude-opus-4-20250514"
+        if "opus-4-1" in m or "opus-4-2" in m or "opus-4-0" in m or "3-opus" in m:
+            return PRICING["opus_legacy"]
         return PRICING["opus"]
+    if "3-5-haiku" in m or "haiku-3-5" in m:
+        return PRICING["haiku_3_5"]
     if "haiku" in m:
         return PRICING["haiku"]
     return PRICING["sonnet"]
@@ -42,9 +54,15 @@ def fmt_tokens(n: int) -> str:
 
 
 def main():
-    now = datetime.now(timezone.utc)
-    cutoff_24h = now - timedelta(hours=24)
-    cutoff_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    # Match the dashboard's "today" / "this month" windows: local calendar
+    # boundaries, converted to UTC for comparison with message timestamps.
+    now_local = datetime.now().astimezone()
+    cutoff_today = now_local.replace(
+        hour=0, minute=0, second=0, microsecond=0
+    ).astimezone(timezone.utc)
+    cutoff_month = now_local.replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    ).astimezone(timezone.utc)
     claude_dir = Path.home() / ".claude"
 
     pattern = str(claude_dir / "projects" / "**" / "*.jsonl")
@@ -109,7 +127,7 @@ def main():
 
                     month_cost += cost
 
-                    if ts >= cutoff_24h:
+                    if ts >= cutoff_today:
                         sid = obj.get("sessionId", "")
                         if sid:
                             day_sessions.add(sid)

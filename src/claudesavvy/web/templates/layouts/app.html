@@ -1,146 +1,203 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="min-h-screen flex flex-col bg-gray-50">
-    <!-- Navigation Bar -->
-    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50" x-data="{ mobileMenuOpen: false }">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <!-- Logo -->
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-[#0770E3] flex items-center justify-center">
-                        <span class="text-white font-bold text-lg">CS</span>
-                    </div>
-                    <span class="text-xl font-bold text-gray-900">ClaudeSavvy</span>
-                </div>
+{% set _path = request.path %}
 
-                <!-- Desktop Navigation Links -->
-                <div class="hidden md:flex gap-1">
-                    <a href="/" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100 transition-colors">
-                        Dashboard
-                    </a>
-                    <a href="/tokens" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100 transition-colors">
-                        Tokens
-                    </a>
-                    <a href="/projects" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100 transition-colors">
-                        Projects
-                    </a>
-                    <a href="/files" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100 transition-colors">
-                        Files
-                    </a>
-                    <a href="/integrations" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100 transition-colors">
-                        Integrations
-                    </a>
-                    <a href="/features" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100 transition-colors">
-                        Features
-                    </a>
-                    <a href="/subagents" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100 transition-colors">
-                        Sub-Agents
-                    </a>
-                    <a href="/teams" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100 transition-colors">
-                        Teams
-                    </a>
-                    <a href="/conversations" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100 transition-colors">
-                        Conversations
-                    </a>
-                    <a href="/configuration" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100 transition-colors">
-                        Configuration
-                    </a>
-                    <a href="/settings" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100 transition-colors">
-                        Settings
-                    </a>
-                </div>
+{# Determine active nav item from current path #}
+{% if _path == '/' or _path == '/dashboard' %}
+  {% set _active = 'dashboard' %}
+{% elif _path.startswith('/tokens') %}
+  {% set _active = 'tokens' %}
+{% elif _path.startswith('/conversations') %}
+  {% set _active = 'conversations' %}
+{% elif _path.startswith('/harness') %}
+  {% set _active = 'harness' %}
+{% elif _path.startswith('/subagents') %}
+  {% set _active = 'subagents' %}
+{% elif _path.startswith('/integrations') %}
+  {% set _active = 'mcps' %}
+{% elif _path.startswith('/features') %}
+  {% set _active = 'features' %}
+{% elif _path.startswith('/projects') %}
+  {% set _active = 'projects' %}
+{% elif _path.startswith('/files') %}
+  {% set _active = 'files' %}
+{% elif _path.startswith('/teams') %}
+  {% set _active = 'teams' %}
+{% elif _path.startswith('/configuration') %}
+  {% set _active = 'configuration' %}
+{% elif _path.startswith('/settings') %}
+  {% set _active = 'settings' %}
+{% else %}
+  {% set _active = '' %}
+{% endif %}
 
-                <!-- Mobile menu button -->
-                <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden p-2 rounded-md text-gray-700 hover:bg-gray-100">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
-                </button>
+<div class="min-h-screen flex bg-gray-50">
+
+    <!-- Left Sidebar -->
+    <aside class="w-60 shrink-0 bg-white border-r border-gray-200 flex flex-col sticky top-0 h-screen overflow-y-auto z-40">
+
+        <!-- Logo + Brand -->
+        <div class="flex items-center gap-2.5 px-5 py-5 pb-4">
+            <div class="w-8 h-8 rounded-lg bg-[#0770E3] flex items-center justify-center shrink-0">
+                <span class="text-white font-bold text-sm">CS</span>
+            </div>
+            <div>
+                <div class="text-sm font-bold text-gray-900 leading-tight">ClaudeSavvy</div>
+                <div class="text-xs text-gray-400 font-mono leading-tight">usage analytics</div>
+            </div>
+        </div>
+
+        <!-- Nav Groups -->
+        <nav class="flex-1 px-3 pb-4 space-y-5">
+
+            <!-- Costs & Usage -->
+            <div>
+                <div class="px-2 mb-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Costs &amp; Usage</span>
+                </div>
+                <div class="space-y-0.5">
+                    {% set items = [
+                        ('/', 'dashboard', 'Dashboard',
+                         '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>'),
+                        ('/conversations', 'conversations', 'Conversations',
+                         '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M21 12a8 8 0 1 1-3.2-6.4L21 4l-1.3 3.4A8 8 0 0 1 21 12Z"/><path d="M8 11h8M8 14h5"/></svg>'),
+                        ('/tokens', 'tokens', 'Tokens',
+                         '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="9" cy="9" r="6"/><circle cx="15" cy="15" r="6"/></svg>'),
+                    ] %}
+                    {% for href, key, label, icon in items %}
+                    {% set is_active = _active == key %}
+                    <a href="{{ href }}" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        {{ 'bg-blue-50 text-[#0770E3] font-semibold' if is_active else 'text-gray-600 hover:text-gray-900 hover:bg-gray-100' }}">
+                        {% if is_active %}<span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#0770E3] rounded-r-full -ml-3"></span>{% endif %}
+                        {{ icon | safe }}
+                        <span class="flex-1 leading-none">{{ label }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
             </div>
 
-            <!-- Mobile Navigation Menu -->
-            <div x-show="mobileMenuOpen" class="md:hidden pb-4 space-y-1" x-transition>
-                <a href="/" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100">
-                    Dashboard
-                </a>
-                <a href="/tokens" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100">
-                    Tokens
-                </a>
-                <a href="/projects" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100">
-                    Projects
-                </a>
-                <a href="/files" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100">
-                    Files
-                </a>
-                <a href="/integrations" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100">
-                    Integrations
-                </a>
-                <a href="/features" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100">
-                    Features
-                </a>
-                <a href="/subagents" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100">
-                    Sub-Agents
-                </a>
-                <a href="/teams" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100">
-                    Teams
-                </a>
-                <a href="/conversations" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100">
-                    Conversations
-                </a>
-                <a href="/configuration" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100">
-                    Configuration
-                </a>
-                <a href="/settings" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#0770E3] hover:bg-gray-100">
-                    Settings
+            <!-- Harness -->
+            <div>
+                <div class="px-2 mb-1 flex items-center gap-1.5">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Harness</span>
+                    <span class="text-[8px] font-bold tracking-wide px-1 py-0.5 rounded bg-[#0770E3] text-white leading-none">NEW</span>
+                </div>
+                <div class="space-y-0.5">
+                    {% set harness_items = [
+                        ('/harness', 'harness', 'Overview',
+                         '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M6 8.5v3a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-3"/><path d="M12 14.5v1"/></svg>'),
+                        ('/subagents', 'subagents', 'Sub-Agents',
+                         '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>'),
+                        ('/teams', 'teams', 'Teams',
+                         '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M14 14a4 4 0 0 1 6 5"/></svg>'),
+                        ('/integrations', 'mcps', 'MCP Servers',
+                         '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M4 7v10l8 4 8-4V7l-8-4-8 4Z"/><path d="m4 7 8 4 8-4"/><path d="M12 11v10"/></svg>'),
+                        ('/features', 'features', 'Tools & Features',
+                         '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6a1.4 1.4 0 0 0 2 2l6-6a4 4 0 0 0 5.4-5.4l-2.4 2.4-2-2 2.4-2.4Z"/></svg>'),
+                        ('/configuration', 'configuration', 'Configuration',
+                         '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>'),
+                    ] %}
+                    {% for href, key, label, icon in harness_items %}
+                    {% set is_active = _active == key %}
+                    <a href="{{ href }}" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        {{ 'bg-blue-50 text-[#0770E3] font-semibold' if is_active else 'text-gray-600 hover:text-gray-900 hover:bg-gray-100' }}">
+                        {% if is_active %}<span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#0770E3] rounded-r-full -ml-3"></span>{% endif %}
+                        {{ icon | safe }}
+                        <span class="flex-1 leading-none">{{ label }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Workspace -->
+            <div>
+                <div class="px-2 mb-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Workspace</span>
+                </div>
+                <div class="space-y-0.5">
+                    {% set workspace_items = [
+                        ('/projects', 'projects', 'Projects',
+                         '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>'),
+                        ('/files', 'files', 'Files',
+                         '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/></svg>'),
+                    ] %}
+                    {% for href, key, label, icon in workspace_items %}
+                    {% set is_active = _active == key %}
+                    <a href="{{ href }}" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        {{ 'bg-blue-50 text-[#0770E3] font-semibold' if is_active else 'text-gray-600 hover:text-gray-900 hover:bg-gray-100' }}">
+                        {% if is_active %}<span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#0770E3] rounded-r-full -ml-3"></span>{% endif %}
+                        {{ icon | safe }}
+                        <span class="flex-1 leading-none">{{ label }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- System -->
+            <div>
+                <div class="px-2 mb-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">System</span>
+                </div>
+                <div class="space-y-0.5">
+                    {% set system_items = [
+                        ('/settings', 'settings', 'Settings',
+                         '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z"/></svg>'),
+                    ] %}
+                    {% for href, key, label, icon in system_items %}
+                    {% set is_active = _active == key %}
+                    <a href="{{ href }}" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        {{ 'bg-blue-50 text-[#0770E3] font-semibold' if is_active else 'text-gray-600 hover:text-gray-900 hover:bg-gray-100' }}">
+                        {% if is_active %}<span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#0770E3] rounded-r-full -ml-3"></span>{% endif %}
+                        {{ icon | safe }}
+                        <span class="flex-1 leading-none">{{ label }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="px-4 py-4 border-t border-gray-100">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center text-xs font-bold shrink-0">
+                    CS
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs font-semibold text-gray-700 truncate">ClaudeSavvy</div>
+                    <div class="text-[10px] text-gray-400">Open-source · MIT</div>
+                </div>
+                <a href="https://github.com/allannapier/claudesavvy" target="_blank" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
                 </a>
             </div>
         </div>
-    </nav>
+    </aside>
 
-    <!-- Main Content Area -->
-    <main class="flex-1">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Right Side: Main Content + Footer -->
+    <div class="flex-1 flex flex-col min-w-0">
+        <main class="flex-1 px-8 py-8">
             {% block main_content %}{% endblock %}
-        </div>
-    </main>
+        </main>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 mt-auto">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-                <!-- Left side: Brand and description -->
-                <div class="flex items-center gap-3">
-                    <div class="w-6 h-6 rounded bg-[#0770E3] flex items-center justify-center">
-                        <span class="text-white font-bold text-sm">CS</span>
-                    </div>
-                    <div>
-                        <span class="font-bold text-gray-900">ClaudeSavvy</span>
-                        <p class="text-xs text-gray-500">Open-source usage tracking for Claude Code</p>
-                    </div>
-                </div>
-
-                <!-- Right side: Links -->
-                <div class="flex items-center gap-6 text-sm">
-                    <a href="https://github.com/allannapier/claudesavvy" target="_blank" class="text-gray-600 hover:text-[#0770E3] flex items-center gap-1">
-                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                        </svg>
+        <!-- Footer -->
+        <footer class="bg-white border-t border-gray-200 px-8 py-5">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+                <p class="text-xs text-gray-400">Open-source usage tracking for Claude Code · MIT License</p>
+                <div class="flex items-center gap-5 text-xs text-gray-500">
+                    <a href="https://github.com/allannapier/claudesavvy" target="_blank" class="hover:text-[#0770E3] flex items-center gap-1 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
                         GitHub
                     </a>
                     <span class="text-gray-300">|</span>
-                    <a href="https://github.com/anthropics/claude-code" target="_blank" class="text-gray-600 hover:text-[#0770E3]">
-                        Claude Code
-                    </a>
+                    <a href="https://github.com/anthropics/claude-code" target="_blank" class="hover:text-[#0770E3] transition-colors">Claude Code</a>
                     <span class="text-gray-300">|</span>
-                    <a href="https://claude.ai" target="_blank" class="text-gray-600 hover:text-[#0770E3]">
-                        Claude.ai
-                    </a>
-                    <span class="text-gray-300">|</span>
-                    <span class="text-gray-500">MIT License</span>
+                    <a href="https://claude.ai" target="_blank" class="hover:text-[#0770E3] transition-colors">Claude.ai</a>
                 </div>
             </div>
-        </div>
-    </footer>
+        </footer>
+    </div>
+
 </div>
 {% endblock %}

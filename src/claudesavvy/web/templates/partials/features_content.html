@@ -80,7 +80,7 @@
                 <p class="text-sm text-gray-500 mt-1">Click a row to see detailed token breakdown by conversation</p>
             </div>
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
+                <table data-enhance="table" class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tool Name</th>
@@ -95,7 +95,7 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        {% for tool in features.tool_usage[:20] %}
+                        {% for tool in features.tool_usage[:100] %}
                         <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
                             hx-get="/api/tool/{{ tool.name }}?period={{ period|default('all') }}"
                             hx-target="#tool-detail-panel"

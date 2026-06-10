@@ -6,16 +6,20 @@
        - show_realtime:   bool — include 15m option (default: false)
        - storage_key:     localStorage key for per-page persistence (default: no persistence)
        - default_period:  server-rendered default period value (default: 'today')
+       - projects:        list of {value, label} — when provided (non-empty), renders a
+                          project select BEFORE the period select; "All projects" is value ""
 -->
 {% set api_url = current_url|default('/api/dashboard') %}
 {% set content_target = target_id|default('dashboard-content') %}
 {% set _show_15m = show_realtime|default(false) %}
 {% set _storage_key = storage_key|default('') %}
 {% set _default_period = default_period|default('today') %}
+{% set _projects = projects|default([]) %}
 
 <div
     x-data="{
         selectedPeriod: '{{ _default_period }}',
+        selectedProject: '',
         showCustom: false,
         customStart: '',
         customEnd: '',
@@ -26,6 +30,11 @@
             const stored = raw && legacyMap[raw] ? legacyMap[raw] : raw;
             const valid = ['15min','today','this_week','7days','this_month','3months','all','custom'];
             {% if not _show_15m %}valid.splice(valid.indexOf('15min'), 1);{% endif %}
+            {% if _projects %}
+            const storedProject = localStorage.getItem('{{ _storage_key }}_project') || '';
+            this.selectedProject = storedProject;
+            {% endif %}
+            let willFire = false;
             if (stored && valid.includes(stored)) {
                 this.selectedPeriod = stored;
                 if (stored === 'custom') {
@@ -38,11 +47,18 @@
                     }
                 }
                 if (stored !== '{{ _default_period }}' && stored !== 'custom') {
+                    willFire = true;
                     this.$nextTick(() => this._fire(stored));
                 } else if (stored === 'custom' && this.customStart && this.customEnd) {
+                    willFire = true;
                     this.$nextTick(() => this._fire('custom'));
                 }
             }
+            {% if _projects %}
+            if (storedProject && !willFire) {
+                this.$nextTick(() => this._fire(this.selectedPeriod));
+            }
+            {% endif %}
             {% endif %}
         },
         _fire(period) {
@@ -51,6 +67,11 @@
             if (period === 'custom' && this.customStart && this.customEnd) {
                 url += '&start=' + this.customStart + '&end=' + this.customEnd;
             }
+            {% if _projects %}
+            if (this.selectedProject) {
+                url += '&project=' + encodeURIComponent(this.selectedProject);
+            }
+            {% endif %}
             htmx.ajax('GET', url, {target: '#{{ content_target }}', swap: 'innerHTML'});
         },
         select(period) {
@@ -59,6 +80,14 @@
             {% if _storage_key %}localStorage.setItem('{{ _storage_key }}', period);{% endif %}
             if (period !== 'custom') { this._fire(period); }
         },
+        {% if _projects %}
+        selectProject(p) {
+            this.selectedProject = p;
+            {% if _storage_key %}localStorage.setItem('{{ _storage_key }}_project', p);{% endif %}
+            if (this.selectedPeriod === 'custom' && (!this.customStart || !this.customEnd)) return;
+            this._fire(this.selectedPeriod);
+        },
+        {% endif %}
         applyCustom() {
             if (!this.customStart || !this.customEnd) return;
             {% if _storage_key %}
@@ -70,6 +99,19 @@
     }"
     class="flex flex-wrap items-center gap-2"
 >
+    {% if _projects %}
+    <!-- Project select -->
+    <select
+        @change="selectProject($event.target.value)"
+        :value="selectedProject"
+        aria-label="Project"
+        class="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3] cursor-pointer"
+    >
+        <option value="">All projects</option>
+        {% for p in _projects %}<option value="{{ p.value }}">{{ p.label }}</option>{% endfor %}
+    </select>
+    {% endif %}
+
     <!-- Period select -->
     <select
         @change="select($event.target.value)"
