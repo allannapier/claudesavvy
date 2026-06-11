@@ -1439,7 +1439,6 @@ class DashboardService:
         cost_map = self._get_session_cost_map(time_filter)
         for r in records:
             self._attach_wasted_cost(r, cost_map.get(r["session_id"]))
-
         # Aggregate over reliably-graded sessions only: low-activity sessions
         # score an automatic 100 and would inflate the averages.
         graded = [r for r in records if not r.get("low_activity")] or records
@@ -1559,7 +1558,11 @@ class DashboardService:
             Dict with 'grade' and 'score', or None if not found / error.
         """
         cache: Dict[str, tuple] = getattr(self, "_session_grade_cache", {})
-        for path in self.paths.get_project_session_files():
+        paths = getattr(self, "paths", None)
+        if paths is None:
+            return None
+
+        for path in paths.get_project_session_files():
             if path.stem == session_id or path.stem.startswith(session_id):
                 try:
                     mtime = path.stat().st_mtime
