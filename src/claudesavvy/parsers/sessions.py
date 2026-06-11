@@ -116,6 +116,9 @@ class SessionMessage:
     usage: Optional[TokenUsage] = None
     model: Optional[str] = None
     team_name: Optional[str] = None
+    # True only for user messages carrying actual text (a human prompt),
+    # not the role="user" entries that merely deliver tool results.
+    is_prompt: bool = False
 
     @cached_property
     def datetime(self) -> Optional[datetime]:
@@ -159,6 +162,17 @@ class SessionMessage:
         # Get team name from top level (present when Teams feature is invoked)
         team_name = data.get("teamName")
 
+        is_prompt = False
+        if role == "user":
+            content = message.get("content")
+            if isinstance(content, str):
+                is_prompt = bool(content.strip())
+            elif isinstance(content, list):
+                is_prompt = any(
+                    isinstance(block, dict) and block.get("type") == "text"
+                    for block in content
+                )
+
         return cls(
             role=role,
             timestamp=data.get("timestamp", ""),
@@ -167,6 +181,7 @@ class SessionMessage:
             usage=usage,
             model=model,
             team_name=team_name,
+            is_prompt=is_prompt,
         )
 
 
@@ -702,6 +717,7 @@ class SessionParser:
                     "end_time": None,
                     "message_count": 0,
                     "turn_count": 0,
+                    "prompt_count": 0,
                     "total_tokens": TokenUsage(),
                     "model_usage": {},
                     "peak_context_tokens": 0,
@@ -726,6 +742,8 @@ class SessionParser:
 
             if message.role == "user":
                 c["turn_count"] += 1
+                if message.is_prompt:
+                    c["prompt_count"] += 1
 
             if message.usage:
                 c["total_tokens"] += message.usage
@@ -778,6 +796,7 @@ class SessionParser:
                     "duration_minutes": round(duration_minutes, 1),
                     "message_count": c["message_count"],
                     "turn_count": c["turn_count"],
+                    "prompt_count": c["prompt_count"],
                     "total_tokens": total_tokens,
                     "model_usage": c["model_usage"],
                     "peak_context_tokens": c["peak_context_tokens"],

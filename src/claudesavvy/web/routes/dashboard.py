@@ -107,9 +107,18 @@ def _build_preview_data(service: Any, time_filter: Optional[TimeFilter]) -> Dict
         "total_operations": file_data.get("total_operations", 0),
     }
 
-    integrations_preview: Dict[str, Any] = service.get_integration_summary(
-        time_filter=time_filter
-    )
+    # Use the same transcript-derived source as the /integrations page so the
+    # preview and the page agree on whether MCP servers were active.
+    mcp_data: Dict[str, Any] = service.get_mcp_integrations(time_filter=time_filter)
+    integrations_preview: Dict[str, Any] = {
+        "has_integrations": mcp_data.get("total_servers", 0) > 0,
+        "total_servers": mcp_data.get("total_servers", 0),
+        "total_tool_calls": mcp_data.get("total_calls", 0),
+        "top_servers": [
+            {"server_name": s["server_name"], "tool_call_count": s["total_calls"]}
+            for s in mcp_data.get("servers", [])[:1]
+        ],
+    }
 
     top_tools: Dict[str, Any] = service.get_top_tools(limit=1, time_filter=time_filter)
     features_preview: Dict[str, Any] = {

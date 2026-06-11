@@ -36,7 +36,7 @@
                 <td class="px-6 py-3 text-sm font-medium truncate max-w-[160px]" title="{{ project.name }}">
                     <a href="/projects" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">{{ project.name }}</a>
                 </td>
-                <td class="px-6 py-3 text-sm text-gray-900 text-right font-semibold">${{ project.total_cost|default(0)|float|round(2) }}</td>
+                <td class="px-6 py-3 text-sm text-gray-900 text-right font-semibold">${{ "%.2f"|format(project.total_cost|default(0)|float) }}</td>
                 <td class="px-6 py-3 text-sm text-gray-500 text-right">{{ project.sessions|default(0)|int }}</td>
             </tr>
             {% endfor %}

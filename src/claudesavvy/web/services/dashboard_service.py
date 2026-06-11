@@ -1015,14 +1015,16 @@ class DashboardService:
                 time_filter
             )._features_analyzer
 
-        top_tools = analyzer.get_top_tools(limit=limit)
+        # Totals must cover every tool, not just the `limit` shown, so the
+        # dashboard preview's "total tool calls" is the real total.
+        all_tools = analyzer.get_top_tools(limit=10**9)
 
         total_tokens = 0
         total_cost = 0.0
         total_calls = 0
         tools_data = []
 
-        for name, stats in top_tools:
+        for name, stats in all_tools:
             # Calculate cost using default Sonnet pricing
             # Note: Tool-level token tracking doesn't include model info, so we use default rates
             pricing = DEFAULT_PRICING  # Tools don't track which model was used
@@ -1044,6 +1046,8 @@ class DashboardService:
             total_cost += tool_cost
             total_calls += stats.invocation_count
 
+            if len(tools_data) >= limit:
+                continue
             tools_data.append(
                 {
                     "tool_name": name,
@@ -1401,7 +1405,7 @@ class DashboardService:
         start = time_filter.start_time if time_filter else None
         end = time_filter.end_time if time_filter else None
 
-        records: List[Dict[str, Any]] = []
+        candidates: List[tuple] = []
         for path in self.paths.get_project_session_files():
             if project is not None and path.parent.name != project:
                 continue
@@ -1414,13 +1418,24 @@ class DashboardService:
                 continue
             if end is not None and when > end:
                 continue
+            candidates.append((mtime, path))
+
+        # Most recent first, so the limit keeps the newest sessions rather
+        # than whatever filesystem iteration order happened to yield.
+        candidates.sort(key=lambda c: c[0], reverse=True)
+
+        records: List[Dict[str, Any]] = []
+        for _, path in candidates:
             record = harness_quality.evaluate_file(path)
             if record is not None:
                 records.append(record)
             if len(records) >= limit:
                 break
 
-        scores = [r["score"] for r in records]
+        # Aggregate over reliably-graded sessions only: low-activity sessions
+        # score an automatic 100 and would inflate the averages.
+        graded = [r for r in records if not r.get("low_activity")] or records
+        scores = [r["score"] for r in graded]
         grade_dist: Dict[str, int] = {}
         for r in records:
             grade_dist[r["grade"]] = grade_dist.get(r["grade"], 0) + 1
@@ -2164,6 +2179,7 @@ class DashboardService:
                     "duration_str": duration_str,
                     "message_count": c["message_count"],
                     "turn_count": c["turn_count"],
+                    "prompt_count": c.get("prompt_count", 0),
                     "total_tokens": total_tokens.total_tokens,
                     "input_tokens": total_tokens.input_tokens,
                     "output_tokens": total_tokens.output_tokens,
@@ -2189,6 +2205,12 @@ class DashboardService:
             if conversations
             else 0.0
         )
+        # Real human prompts only — excludes tool-result user messages.
+        avg_prompts = (
+            sum(c.get("prompt_count", 0) for c in conversations) / len(conversations)
+            if conversations
+            else 0.0
+        )
 
         most_expensive = conversations[0] if conversations else None
 
@@ -2200,8 +2222,11 @@ class DashboardService:
                 "avg_cost": round(avg_cost, 4),
                 "max_cost": round(max_cost, 4),
                 "avg_messages": round(avg_messages, 1),
+                "avg_prompts": round(avg_prompts, 1),
                 "most_expensive_session": most_expensive["session_id"][:8] if most_expensive else "",
                 "most_expensive_cost": most_expensive["total_cost"] if most_expensive else 0.0,
+                "most_expensive_project": most_expensive.get("project_name", "") if most_expensive else "",
+                "most_expensive_date": most_expensive.get("start_date", "") if most_expensive else "",
             },
         }
 

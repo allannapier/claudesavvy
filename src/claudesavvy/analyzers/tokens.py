@@ -84,12 +84,28 @@ class CostBreakdown:
     @property
     def cache_savings(self) -> float:
         """
-        Calculate savings from cache hits.
-        Savings = what cache reads would have cost as regular input - actual cache read cost
+        Calculate net savings from prompt caching.
+
+        Savings = (what cache reads would have cost as regular input
+                   - actual cache read cost)
+                  - the premium paid to write the cache in the first place
+                    (cache writes cost more than regular input).
+
+        Can be negative when little of what was cached got re-read.
         """
         # If cache reads were regular input tokens instead
-        regular_cost = (self.cache_read_cost / DEFAULT_PRICING['cache_read_per_mtok']) * DEFAULT_PRICING['input_per_mtok']
-        return regular_cost - self.cache_read_cost
+        regular_read_cost = (
+            self.cache_read_cost / DEFAULT_PRICING['cache_read_per_mtok']
+        ) * DEFAULT_PRICING['input_per_mtok']
+        read_savings = regular_read_cost - self.cache_read_cost
+
+        # Premium paid over regular input pricing to create cache entries
+        regular_write_cost = (
+            self.cache_write_cost / DEFAULT_PRICING['cache_write_per_mtok']
+        ) * DEFAULT_PRICING['input_per_mtok']
+        write_premium = self.cache_write_cost - regular_write_cost
+
+        return read_savings - write_premium
 
 
 @dataclass

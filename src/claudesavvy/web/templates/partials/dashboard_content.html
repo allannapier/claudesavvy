@@ -3,31 +3,33 @@
 {% from "components/card.html" import stat_card %}
 
 {{ stat_card(
-    label="Cache Hit Rate",
-    value=(tokens.cache_hit_rate|default(0)|float|round(1))|string ~ "%",
-    subtitle="Tokens served from cache",
-    icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>',
-    link="/tokens"
-) }}
-
-{{ stat_card(
-    label="Top Conversation Cost",
-    value="$" ~ (conversations_preview.most_expensive_cost|default(0.0)|float|round(2)),
-    subtitle=conversations_preview.most_expensive_project|default("")|truncate(30, True, "…"),
-    icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>',
-    link="/conversations"
-) }}
-
-{{ stat_card(
     label="Total Cost",
-    value="$" ~ (tokens.total_cost|default(0.0)|float|round(2)),
+    value="$" ~ ("%.2f"|format(tokens.total_cost|default(0.0)|float)),
     icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
     link="/tokens"
 ) }}
 
 {{ stat_card(
+    label="Top Conversation Cost",
+    value="$" ~ ("%.2f"|format(conversations_preview.most_expensive_cost|default(0.0)|float)),
+    subtitle=conversations_preview.most_expensive_project|default("")|truncate(30, True, "…"),
+    icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>',
+    link="/conversations"
+) }}
+
+{% set _cw_pct = ((tokens.cache_creation_cost|default(0.0)|float / tokens.total_cost|float * 100) | round(0) | int) if tokens.total_cost|default(0.0)|float > 0 else 0 %}
+{{ stat_card(
+    label="Cache Write Cost",
+    value="$" ~ ("%.2f"|format(tokens.cache_creation_cost|default(0.0)|float)),
+    subtitle=_cw_pct|string ~ "% of spend — re-caching context",
+    icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-3-3v6"></path></svg>',
+    link="/tokens"
+) }}
+
+{{ stat_card(
     label="Cache Savings",
-    value="$" ~ (tokens.cache_savings|default(0.0)|float|round(2)),
+    value="$" ~ ("%.2f"|format(tokens.cache_savings|default(0.0)|float)),
+    subtitle="Net of cache-write premium",
     icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>',
     link="/tokens"
 ) }}
@@ -66,7 +68,7 @@
         <tbody class="divide-y divide-gray-200">
             {% for conv in conversations_preview.recent %}
             {% set _peak_ctx = conv.peak_context_tokens|default(0)|int %}
-            {% set ctx_pct = (_peak_ctx / 200000 * 100) | round(0) | int %}
+            {% set ctx_pct = [((_peak_ctx / 200000 * 100) | round(0) | int), 100] | min %}
             {% set ctx_blocks = (ctx_pct / 10) | round(0, 'floor') | int %}
             <tr class="hover:bg-gray-50 transition-colors">
                 <td class="px-6 py-3 text-sm font-medium truncate max-w-[160px]" title="{{ conv.project_name }}">
@@ -76,7 +78,7 @@
                     {{ conv.start_date }} {{ conv.start_time_str }}
                 </td>
                 <td class="px-6 py-3 text-sm text-gray-500 text-right hidden sm:table-cell">{{ conv.turn_count }}</td>
-                <td class="px-6 py-3 text-sm font-semibold text-right {% if conv.total_cost > 1.0 %}text-red-600{% else %}text-gray-900{% endif %}">${{ conv.total_cost|float|round(2) }}</td>
+                <td class="px-6 py-3 text-sm font-semibold text-right {% if conv.total_cost > 1.0 %}text-red-600{% else %}text-gray-900{% endif %}">${{ "%.2f"|format(conv.total_cost|float) }}</td>
                 <td class="px-6 py-3 text-xs font-mono hidden lg:table-cell">
                     {% if ctx_pct > 0 %}
                     <span class="{% if ctx_pct >= 75 %}text-red-500{% elif ctx_pct >= 50 %}text-amber-500{% else %}text-gray-400{% endif %}" title="{{ ctx_pct }}% of context used">
@@ -138,7 +140,7 @@
                 {% if subagents_preview.type_breakdown %}
                 <p class="text-xs text-gray-400 mt-1">Top type: {{ subagents_preview.type_breakdown[0].type }} ({{ subagents_preview.type_breakdown[0].count }})</p>
                 {% endif %}
-                <p class="text-xs text-gray-400">${{ subagents_preview.total_cost|default(0)|float|round(2) }} total cost</p>
+                <p class="text-xs text-gray-400">${{ "%.2f"|format(subagents_preview.total_cost|default(0)|float) }} total cost</p>
                 {% else %}
                 <p class="text-sm text-gray-400">No sub-agent usage in this period</p>
                 {% endif %}
@@ -213,7 +215,7 @@
                 <p class="text-sm text-gray-600">
                     <span class="font-medium text-gray-900">{{ conversations_preview.total_count }}</span> conversation{{ 's' if conversations_preview.total_count != 1 else '' }}
                 </p>
-                <p class="text-xs text-gray-400 mt-1">Priciest: ${{ conversations_preview.most_expensive_cost|default(0)|float|round(2) }}</p>
+                <p class="text-xs text-gray-400 mt-1">Priciest: ${{ "%.2f"|format(conversations_preview.most_expensive_cost|default(0)|float) }}</p>
                 <p class="text-xs text-gray-400">Context growth &amp; cost analytics</p>
                 {% else %}
                 <p class="text-sm text-gray-400">No conversation data in this period</p>
@@ -238,7 +240,7 @@
                     <span class="font-medium text-gray-900">{{ projects.total_projects }}</span> active project{{ 's' if projects.total_projects != 1 else '' }}
                 </p>
                 <p class="text-xs text-gray-400 mt-1">Most active: {{ projects.most_active_project }}</p>
-                <p class="text-xs text-gray-400">${{ projects.total_cost|default(0)|float|round(2) }} total spend</p>
+                <p class="text-xs text-gray-400">${{ "%.2f"|format(projects.total_cost|default(0)|float) }} total spend</p>
                 {% else %}
                 <p class="text-sm text-gray-400">No project data in this period</p>
                 {% endif %}
@@ -275,8 +277,8 @@
                             <div class="bg-[#0770E3] h-2 rounded-full transition-all" style="width: {{ model.cost_percentage|default(0) }}%"></div>
                         </div>
                         <div class="flex justify-between mt-1">
-                            <span class="text-xs text-gray-500">{{ model.total_tokens|default(0)|int }} tokens</span>
-                            <span class="text-xs text-gray-500">${{ model.cost|default(0.0)|float|round(2) }}</span>
+                            <span class="text-xs text-gray-500">{{ model.total_tokens|default(0)|format_compact }} tokens</span>
+                            <span class="text-xs text-gray-500">${{ "%.2f"|format(model.cost|default(0.0)|float) }}</span>
                         </div>
                     </div>
                 </div>

@@ -120,37 +120,45 @@ class ToolUsageParser:
                         if not time_filter.matches_iso_string(timestamp):
                             continue
 
-                    # Get token usage for this message
+                    # Get token usage for this message. A message with N
+                    # tool_use blocks gets its usage split N ways so summing
+                    # across tools never counts the same turn more than once.
                     usage = message.get('usage', {})
-                    input_tokens = usage.get('input_tokens', 0)
-                    output_tokens = usage.get('output_tokens', 0)
-                    cache_read = usage.get('cache_read_input_tokens', 0)
-                    cache_write = usage.get('cache_creation_input_tokens', 0)
+                    tool_items = [
+                        item for item in content
+                        if isinstance(item, dict) and item.get('type') == 'tool_use'
+                    ]
+                    n_tools = len(tool_items)
+                    if n_tools == 0:
+                        continue
+                    input_tokens = usage.get('input_tokens', 0) // n_tools
+                    output_tokens = usage.get('output_tokens', 0) // n_tools
+                    cache_read = usage.get('cache_read_input_tokens', 0) // n_tools
+                    cache_write = usage.get('cache_creation_input_tokens', 0) // n_tools
 
                     # Extract tool uses from content
-                    for item in content:
-                        if item.get('type') == 'tool_use':
-                            tool_name = item.get('name', '')
-                            tool_input = item.get('input', {})
+                    for item in tool_items:
+                        tool_name = item.get('name', '')
+                        tool_input = item.get('input', {})
 
-                            invocation = ToolInvocation(
-                                tool_name=tool_name,
-                                timestamp=timestamp,
-                                session_id=session_id,
-                                project=project,
-                                input_params=tool_input,
-                                input_tokens=input_tokens,
-                                output_tokens=output_tokens,
-                                cache_read_tokens=cache_read,
-                                cache_write_tokens=cache_write
-                            )
+                        invocation = ToolInvocation(
+                            tool_name=tool_name,
+                            timestamp=timestamp,
+                            session_id=session_id,
+                            project=project,
+                            input_params=tool_input,
+                            input_tokens=input_tokens,
+                            output_tokens=output_tokens,
+                            cache_read_tokens=cache_read,
+                            cache_write_tokens=cache_write
+                        )
 
-                            # Extract sub-agent info if this is a Task tool
-                            if tool_name == 'Task':
-                                invocation.subagent_type = tool_input.get('subagent_type', '')
-                                invocation.description = tool_input.get('description', '')
+                        # Extract sub-agent info if this is a Task tool
+                        if tool_name == 'Task':
+                            invocation.subagent_type = tool_input.get('subagent_type', '')
+                            invocation.description = tool_input.get('description', '')
 
-                            yield invocation
+                        yield invocation
 
                 except (json.JSONDecodeError, ValueError, KeyError):
                     # Skip malformed lines

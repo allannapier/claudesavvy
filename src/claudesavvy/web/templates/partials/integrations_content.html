@@ -22,7 +22,7 @@
 
     {{ stat_card(
         label="Total Cost",
-        value="$" + (integrations.total_cost|default(0.0)|float|round(2)|string),
+        value="$" + ("%.2f"|format(integrations.total_cost|default(0.0)|float)),
         icon='<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
     ) }}
 </div>
@@ -34,7 +34,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
         </svg>
         <p class="text-sm text-blue-700">
-            <strong>Pricing note:</strong> MCP costs are estimated using Claude Sonnet 4.5 rates, as per-tool model tracking is not available.
+            <strong>Pricing note:</strong> Costs show each server's share of the turns its tools appeared in — a turn's tokens (including cached context) are split evenly across its tool calls. Priced at Claude Sonnet 4.5 rates, as per-tool model tracking is not available.
         </p>
     </div>
 </div>
@@ -53,7 +53,7 @@
                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tools</th>
                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Calls</th>
                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Tokens</th>
-                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Est. Cost</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" title="This server's share of the cost of turns its tools appeared in">Turn Cost Share</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -74,7 +74,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{{ server.tool_count }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{{ server.total_calls }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{{ server.total_tokens|default(0)|int }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-[#0770E3]">${{ server.total_cost|default(0.0)|float|round(2) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-[#0770E3]">${{ "%.2f"|format(server.total_cost|default(0.0)|float) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

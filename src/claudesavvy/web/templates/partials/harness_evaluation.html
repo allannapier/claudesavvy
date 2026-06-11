@@ -82,18 +82,21 @@
 
         <!-- Issue counts -->
         {% set ic = evaluation.issue_counts %}
+        {# issue_counts values are the number of SESSIONS exhibiting each issue,
+           not the number of occurrences — label them accordingly. #}
         {% set issue_labels = [
             ('tool_errors', 'tool errors'),
             ('user_rejections', 'rejections'),
-            ('duplicate_commands', 'dup cmds'),
-            ('repeated_reads', 'repeat reads'),
-            ('scriptability', 'scriptability'),
+            ('duplicate_commands', 'duplicate commands'),
+            ('repeated_reads', 'repeated reads'),
+            ('scriptability', 'scriptability issues'),
         ] %}
         <div class="flex flex-wrap items-center gap-2">
             {% for key, label in issue_labels %}
             {% if ic[key] %}
-            <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-red-50 text-red-600">
-                <span class="font-semibold">{{ ic[key] }}</span> {{ label }}
+            <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-red-50 text-red-600"
+                  title="{{ ic[key] }} of {{ total }} scored sessions had {{ label }}">
+                <span class="font-semibold">{{ ic[key] }}</span> session{{ 's' if ic[key] != 1 else '' }} with {{ label }}
             </span>
             {% endif %}
             {% endfor %}

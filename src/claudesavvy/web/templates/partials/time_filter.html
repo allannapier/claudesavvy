@@ -6,15 +6,17 @@
        - show_realtime:   bool — include 15m option (default: false)
        - storage_key:     localStorage key for per-page persistence (default: no persistence)
        - default_period:  server-rendered default period value (default: 'today')
-       - projects:        list of {value, label} — when provided (non-empty), renders a
-                          project select BEFORE the period select; "All projects" is value ""
+       - filter_projects: list of {value, label} — when provided (non-empty), renders a
+                          project select BEFORE the period select; "All projects" is value "".
+                          Deliberately NOT named "projects": pages commonly have a global
+                          `projects` template variable that would leak into this include.
 -->
 {% set api_url = current_url|default('/api/dashboard') %}
 {% set content_target = target_id|default('dashboard-content') %}
 {% set _show_15m = show_realtime|default(false) %}
 {% set _storage_key = storage_key|default('') %}
 {% set _default_period = default_period|default('today') %}
-{% set _projects = projects|default([]) %}
+{% set _projects = filter_projects|default([]) %}
 
 <div
     x-data="{
