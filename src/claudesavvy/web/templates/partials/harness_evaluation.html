@@ -17,11 +17,19 @@
 <div class="space-y-5">
 
     <!-- Aggregate strip -->
-    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {% set avg = evaluation.average_score %}
         {% set avg_color = '#2ec27e' if avg >= 80 else ('#f59e0b' if avg >= 60 else '#ef4444') %}
         {% set med = evaluation.median_score %}
         {% set med_color = '#2ec27e' if med >= 80 else ('#f59e0b' if med >= 60 else '#ef4444') %}
+        <div class="bg-white rounded-xl border border-red-200 p-4"
+             title="Errored calls, duplicate commands, and repeat reads priced at each session's average cost per tool call">
+            <div class="text-xs font-medium text-red-500">Est. wasted spend</div>
+            <div class="text-2xl font-bold mt-1 text-red-600">${{ "%.2f"|format(evaluation.total_wasted_cost|default(0.0)) }}</div>
+            {% if evaluation.total_session_cost %}
+            <div class="text-[10px] text-gray-400 mt-0.5">{{ evaluation.waste_pct }}% of ${{ "%.2f"|format(evaluation.total_session_cost) }} scored</div>
+            {% endif %}
+        </div>
         <div class="bg-white rounded-xl border border-gray-200 p-4">
             <div class="text-xs font-medium text-gray-500">Average score</div>
             <div class="text-2xl font-bold mt-1" style="color: {{ avg_color }};">{{ avg }}</div>
@@ -108,7 +116,7 @@
         <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
                 <span class="text-sm font-semibold text-gray-800">Sessions worth fixing</span>
-                <span class="ml-auto text-xs font-mono text-gray-400">worst first</span>
+                <span class="ml-auto text-xs font-mono text-gray-400">most $ wasted first</span>
             </div>
             <ul class="divide-y divide-gray-50 max-h-[28rem] overflow-y-auto">
                 {% for s in evaluation.sessions %}
@@ -131,7 +139,15 @@
                             </div>
                             <div class="text-xs text-gray-500 truncate">{{ s.prompt or 'No prompt captured' }}</div>
                         </div>
-                        <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">{{ s.headline }}</span>
+                        <div class="text-right shrink-0">
+                            {% if s.wasted_cost and s.wasted_cost > 0 %}
+                            <div class="text-xs font-semibold text-red-600 whitespace-nowrap"
+                                 title="≈ ${{ '%.2f'|format(s.wasted_cost) }} of ${{ '%.2f'|format(s.session_cost|default(0.0)) }} session cost wasted">
+                                −${{ "%.2f"|format(s.wasted_cost) }}
+                            </div>
+                            {% endif %}
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">{{ s.headline }}</span>
+                        </div>
                     </button>
                 </li>
                 {% endfor %}

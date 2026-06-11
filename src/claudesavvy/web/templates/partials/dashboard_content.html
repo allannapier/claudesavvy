@@ -35,6 +35,12 @@
 ) }}
 </div>
 
+<!-- Wasted-spend callout (lazy-loaded; scoring transcripts is too slow for first paint) -->
+<div hx-get="/api/harness/waste-card?period={{ period|default('today') }}"
+     hx-trigger="load"
+     hx-swap="innerHTML"
+     class="mt-6"></div>
+
 <!-- Charts Row: Cost Over Time + Cost Breakdown -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
     {% include 'partials/dashboard_charts.html' %}

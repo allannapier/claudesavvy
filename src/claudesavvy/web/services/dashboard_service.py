@@ -1432,6 +1432,14 @@ class DashboardService:
             if len(records) >= limit:
                 break
 
+        # Attach estimated wasted spend: wasteful calls (errors, extra
+        # duplicate commands, extra re-reads) priced at the session's average
+        # cost per tool call. An estimate, but it converts quality issues
+        # into the unit users actually care about.
+        cost_map = self._get_session_cost_map(time_filter)
+        for r in records:
+            self._attach_wasted_cost(r, cost_map.get(r["session_id"]))
+
         # Aggregate over reliably-graded sessions only: low-activity sessions
         # score an automatic 100 and would inflate the averages.
         graded = [r for r in records if not r.get("low_activity")] or records
@@ -1473,8 +1481,17 @@ class DashboardService:
         else:
             median_score = 0.0
 
-        # Worst-first: that's what's worth fixing.
-        leaderboard = sorted(records, key=lambda r: r["score"])
+        # Most-dollars-wasted first — a low score on a $0.20 session matters
+        # less than a mediocre score on a $40 one. Score ascending as a
+        # tie-break so unmatched (zero-cost) sessions still sort worst-first.
+        leaderboard = sorted(
+            records, key=lambda r: (-r.get("wasted_cost", 0.0), r["score"])
+        )
+
+        total_wasted = round(sum(r.get("wasted_cost", 0.0) for r in records), 2)
+        total_session_cost = round(
+            sum(r.get("session_cost", 0.0) for r in records), 2
+        )
 
         return {
             "period_description": (
@@ -1488,7 +1505,49 @@ class DashboardService:
             "worst_score": min(scores) if scores else 0,
             "grade_distribution": grade_dist,
             "issue_counts": issue_counts,
+            "total_wasted_cost": total_wasted,
+            "total_session_cost": total_session_cost,
+            "waste_pct": round(total_wasted / total_session_cost * 100, 1)
+            if total_session_cost > 0
+            else 0.0,
         }
+
+    def _get_session_cost_map(
+        self, time_filter: Optional[TimeFilter] = None
+    ) -> Dict[str, float]:
+        """Map of session_id -> total conversation cost for the window."""
+        try:
+            analytics = self.get_conversation_analytics(
+                time_filter=time_filter, limit=10**9
+            )
+        except Exception:
+            logger.warning("Could not build session cost map", exc_info=True)
+            return {}
+        return {
+            c["session_id"]: c["total_cost"]
+            for c in analytics.get("conversations", [])
+        }
+
+    @staticmethod
+    def _attach_wasted_cost(
+        record: Dict[str, Any], session_cost: Optional[float]
+    ) -> None:
+        """Annotate a harness record with session_cost / wasted_cost ($)."""
+        m = record.get("metrics", {})
+        d = record.get("detail", {})
+        dup_extra = sum(n - 1 for n in d.get("duplicates", {}).values())
+        read_extra = sum(n - 1 for n in d.get("repeat_reads", {}).values())
+        wasteful_calls = m.get("tool_errors", 0) + dup_extra + read_extra
+
+        record["session_cost"] = round(session_cost, 2) if session_cost else 0.0
+        total_calls = m.get("total_tool_calls", 0)
+        if session_cost and total_calls and wasteful_calls:
+            per_call = session_cost / total_calls
+            record["wasted_cost"] = round(
+                min(session_cost, wasteful_calls * per_call), 2
+            )
+        else:
+            record["wasted_cost"] = 0.0
 
     def _get_session_grade(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Grade/score for a session, cached by (path, mtime).
@@ -1539,6 +1598,9 @@ class DashboardService:
             if path.stem == session_id or path.stem.startswith(session_id):
                 record = harness_quality.evaluate_file(path)
                 if record is not None:
+                    detail = self.get_conversation_detail(path.stem)
+                    cost = detail.get("total_cost") if detail else None
+                    self._attach_wasted_cost(record, cost)
                     record["tuning_report"] = harness_quality.format_tuning_report(record)
                 return record
         return None

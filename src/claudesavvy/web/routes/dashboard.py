@@ -563,6 +563,28 @@ def api_harness_evaluation() -> str:
         )
 
 
+@dashboard_bp.route("/api/harness/waste-card")
+def api_harness_waste_card() -> str:
+    """HTMX endpoint: lazy-loaded dashboard callout for estimated wasted spend."""
+    from flask import request
+
+    try:
+        service = current_app.dashboard_service
+        period = request.args.get("period", "today")
+        time_filter = get_time_filter_from_period(
+            period, start=request.args.get("start"), end=request.args.get("end")
+        )
+        evaluation = service.get_harness_evaluation(time_filter=time_filter)
+        return render_template(
+            "partials/harness_waste_card.html",
+            evaluation=evaluation,
+        )
+    except Exception as e:
+        logger.error(f"Error loading waste card: {e}", exc_info=True)
+        # Non-essential callout: fail silent rather than break the dashboard
+        return ""
+
+
 @dashboard_bp.route("/api/harness/session/<session_id>")
 def api_harness_session(session_id: str) -> str:
     """HTMX endpoint: detail for a single scored session."""

@@ -573,6 +573,13 @@ def format_tuning_report(record: dict) -> str:
         f"{m['total_tool_calls']} tool calls, {m['bash_calls']} bash calls, "
         f"{m.get('read_calls', 0)} file reads, {m['subagent_count']} subagents",
     ]
+    if record.get("session_cost"):
+        lines.append(
+            f"Cost: ${record['session_cost']:.2f} session total, "
+            f"~${record.get('wasted_cost', 0.0):.2f} estimated waste "
+            "(errors, duplicate commands, re-reads priced at the session's "
+            "average cost per tool call)"
+        )
     if record.get("low_activity"):
         lines.append("Note: fewer than 3 tool calls — grade is not reliable.")
 
