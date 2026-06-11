@@ -13,14 +13,14 @@
     customEnd: '',
     init() {
         const legacyMap = { week: '7days', month: 'this_month', '1hour': '15min' };
-        const raw = localStorage.getItem('cs_period_tokens');
+        const raw = localStorage.getItem('cs_period');
         const stored = raw && legacyMap[raw] ? legacyMap[raw] : raw;
         const validPeriods = ['15min','today','this_week','7days','this_month','3months','all','custom'];
         if (stored && validPeriods.includes(stored)) {
             this.selectedPeriod = stored;
             if (stored === 'custom') {
-                this.customStart = localStorage.getItem('cs_period_tokens_start') || '';
-                this.customEnd   = localStorage.getItem('cs_period_tokens_end')   || '';
+                this.customStart = localStorage.getItem('cs_period_start') || '';
+                this.customEnd   = localStorage.getItem('cs_period_end')   || '';
                 if (this.customStart && this.customEnd) {
                     this.showCustom = true;
                 } else {
@@ -46,13 +46,13 @@
     select(period) {
         this.selectedPeriod = period;
         this.showCustom = (period === 'custom');
-        localStorage.setItem('cs_period_tokens', period);
+        localStorage.setItem('cs_period', period);
         if (period !== 'custom') { this._reload(period); }
     },
     applyCustom() {
         if (!this.customStart || !this.customEnd) return;
-        localStorage.setItem('cs_period_tokens_start', this.customStart);
-        localStorage.setItem('cs_period_tokens_end',   this.customEnd);
+        localStorage.setItem('cs_period_start', this.customStart);
+        localStorage.setItem('cs_period_end',   this.customEnd);
         this._reload('custom');
     }
 }">

@@ -12,7 +12,7 @@
             <p class="mt-2 text-gray-600">Token exchange analytics for Task tool sub-agent invocations</p>
         </div>
 
-        {% with current_url='/api/subagents', target_id='subagents-content', show_realtime=true, storage_key='cs_period_subagents', default_period=period|default('today') %}
+        {% with current_url='/api/subagents', target_id='subagents-content', show_realtime=true, storage_key='cs_period', default_period=period|default('today') %}
             {% include 'partials/time_filter.html' %}
         {% endwith %}
     </div>
