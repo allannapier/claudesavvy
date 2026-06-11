@@ -12,7 +12,7 @@
         </div>
 
         <div class="flex gap-2 items-center shrink-0">
-            {% with current_url='/api/dashboard', target_id='dashboard-content', storage_key='cs_period_dashboard', default_period=period|default('today') %}
+            {% with current_url='/api/dashboard', target_id='dashboard-content', storage_key='cs_period', default_period=period|default('today') %}
                 {% include 'partials/time_filter.html' %}
             {% endwith %}
 
