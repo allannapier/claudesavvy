@@ -1558,9 +1558,9 @@ class DashboardService:
             Dict with 'grade' and 'score', or None if not found / error.
         """
         cache: Dict[str, tuple] = getattr(self, "_session_grade_cache", {})
-        paths = getattr(self, "paths", None)
-        if paths is None:
+        if not hasattr(self, "paths"):
             return None
+        paths = self.paths
 
         for path in paths.get_project_session_files():
             if path.stem == session_id or path.stem.startswith(session_id):
