@@ -111,8 +111,10 @@
         </div>
     </div>
 
-    <!-- Leaderboard (worst-first) + detail panel -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <!-- Leaderboard (most $ wasted first) + detail panel -->
+    {% set first_id = evaluation.sessions[0].session_id if evaluation.sessions else '' %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5"
+         x-data="{ sel: '{{ first_id }}' }">
         <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
                 <span class="text-sm font-semibold text-gray-800">Sessions worth fixing</span>
@@ -126,7 +128,10 @@
                             hx-get="/api/harness/session/{{ s.session_id }}"
                             hx-target="#harness-session-panel"
                             hx-swap="innerHTML"
-                            class="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors focus:outline-none focus:bg-blue-50">
+                            {% if loop.first %}hx-trigger="load, click"{% endif %}
+                            @click="sel = '{{ s.session_id }}'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === '{{ s.session_id }}' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
                         <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
                               style="background: {{ gc }}18; color: {{ gc }};">{{ s.grade }}</span>
                         <div class="min-w-0 flex-1">
@@ -154,13 +159,13 @@
             </ul>
         </div>
 
-        <!-- Detail panel -->
-        <div id="harness-session-panel" class="bg-white rounded-xl border border-gray-200 p-6 flex items-center justify-center text-center">
-            <div class="text-gray-400">
-                <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.4">
-                    <path d="M9 5l7 7-7 7"/>
+        <!-- Detail panel — pre-populated via auto-fired first-row load -->
+        <div id="harness-session-panel" class="bg-white rounded-xl border border-gray-200 overflow-auto">
+            <div class="p-8 flex items-center justify-center text-gray-400">
+                <svg class="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
                 </svg>
-                <p class="text-sm">Select a session to see its score breakdown and tuning suggestions.</p>
             </div>
         </div>
     </div>
