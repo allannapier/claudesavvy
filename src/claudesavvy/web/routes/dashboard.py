@@ -92,6 +92,7 @@ def _build_preview_data(service: Any, time_filter: Optional[TimeFilter]) -> Dict
         "total_count": conv_analytics.get("summary", {}).get("total_conversations", 0),
         "most_expensive_cost": conv_analytics.get("summary", {}).get("most_expensive_cost", 0),
         "most_expensive_project": convs[0].get("project_name", "") if convs else "",
+        "most_expensive_session_id": conv_analytics.get("summary", {}).get("most_expensive_session_id", ""),
     }
 
     subagents_preview: Dict[str, Any] = service.get_subagent_summary(
@@ -442,6 +443,28 @@ def features() -> str:
         return render_template("pages/features.html", features={})
 
 
+def _annotate_feature_usage(features: Dict[str, Any], usage: Dict[str, Any]) -> None:
+    """Stamp each skill/agent/MCP config item with its 30-day call count.
+
+    Runtime names can be namespaced (e.g. 'plugin:skill'), so fall back to
+    matching on the last ':'-separated segment.
+    """
+    def _match(name: str, counter: Dict[str, int]) -> int:
+        if name in counter:
+            return counter[name]
+        short = name.split(":")[-1]
+        for used, n in counter.items():
+            if used.split(":")[-1] == short:
+                return n
+        return 0
+
+    for key in ("skills", "agents", "mcps"):
+        counter = usage.get(key, {})
+        for item in features.get(key) or []:
+            if isinstance(item, dict):
+                item["used_count"] = _match(item.get("name", ""), counter)
+
+
 def _project_scoped(features):
     """Return a copy of features containing only project-sourced items.
 
@@ -505,6 +528,29 @@ def harness() -> str:
             "commands": sum(_count(f, "commands") for f in all_features_list),
         }
 
+        # 30-day usage so the inventory shows dead weight vs. earning items
+        try:
+            usage = service.get_harness_usage(window_days=30)
+        except Exception:
+            logger.warning("Could not compute harness usage", exc_info=True)
+            usage = {"skills": {}, "agents": {}, "mcps": {}, "window_days": 30}
+        for f in all_features_list:
+            _annotate_feature_usage(f, usage)
+
+        def _used(key):
+            return sum(
+                1
+                for f in all_features_list
+                for item in (f.get(key) or [])
+                if isinstance(item, dict) and item.get("used_count")
+            )
+
+        harness_used = {
+            "skills": _used("skills"),
+            "agents": _used("agents"),
+            "mcps": _used("mcps"),
+        }
+
         default_period = "7days"
         time_filter = get_time_filter_from_period(default_period)
         evaluation = service.get_harness_evaluation(time_filter=time_filter)
@@ -517,6 +563,7 @@ def harness() -> str:
             user_features=user_features,
             project_repos=project_repos,
             harness_totals=harness_totals,
+            harness_used=harness_used,
             evaluation=evaluation,
             period=default_period,
             harness_projects=harness_projects,
@@ -531,6 +578,7 @@ def harness() -> str:
             user_features={},
             project_repos=[],
             harness_totals={"skills": 0, "agents": 0, "mcps": 0, "plugins": 0, "hooks": 0, "commands": 0},
+            harness_used={},
             evaluation=None,
             period="7days",
             harness_projects=[],

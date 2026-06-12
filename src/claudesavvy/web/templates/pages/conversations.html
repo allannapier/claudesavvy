@@ -72,5 +72,15 @@
             window.dispatchEvent(new CustomEvent('open-conv-detail'));
         }
     });
+
+    // Deep link: /conversations?session=<id> opens that conversation's detail.
+    // period=all so the lookup succeeds regardless of the page's time filter.
+    document.addEventListener('DOMContentLoaded', function() {
+        const sid = new URLSearchParams(window.location.search).get('session');
+        if (sid && /^[\w-]+$/.test(sid)) {
+            htmx.ajax('GET', '/api/conversation/' + encodeURIComponent(sid) + '?period=all',
+                      {target: '#conversation-detail-panel', swap: 'innerHTML'});
+        }
+    });
 </script>
 {% endblock %}
