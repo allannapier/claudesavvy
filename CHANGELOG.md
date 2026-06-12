@@ -4,6 +4,8 @@ All notable changes to ClaudeSavvy will be documented in this file.
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-06-12
+
 ### Added
 - **New**: Settings → Pricing now lists every built-in model up front (models found in your session data are badged "In use"), so applicable rates are visible before a model is ever used
 - **New**: "Sync prices from anthropic.com" button on the Settings page — fetches the published pricing page and stores current rates locally; synced prices become the new defaults while custom per-model overrides still take precedence
