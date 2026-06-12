@@ -76,6 +76,42 @@ def get_time_filter_from_period(
     return TimeFilter.from_preset("today")
 
 
+def _compute_cost_deltas(
+    service: Any,
+    time_filter: Optional[TimeFilter],
+    token_summary: Dict[str, Any],
+) -> Dict[str, Optional[int]]:
+    """Percent change vs the equivalent previous period for the cost cards.
+
+    Returns None values for all-time windows (no previous period) or when
+    the previous period had no meaningful spend to compare against.
+    """
+    deltas: Dict[str, Optional[int]] = {"total_cost": None, "cache_write": None}
+    if time_filter is None or time_filter.start_time is None:
+        return deltas
+    try:
+        prev = service.get_token_summary(
+            time_filter=time_filter.get_previous_period()
+        )
+    except Exception:
+        logger.warning("Could not compute previous-period costs", exc_info=True)
+        return deltas
+
+    def _pct(cur: float, prior: float) -> Optional[int]:
+        if prior and prior > 0.005:
+            return round((cur - prior) / prior * 100)
+        return None
+
+    deltas["total_cost"] = _pct(
+        token_summary.get("total_cost", 0.0), prev.get("total_cost", 0.0)
+    )
+    deltas["cache_write"] = _pct(
+        token_summary.get("cache_creation_cost", 0.0),
+        prev.get("cache_creation_cost", 0.0),
+    )
+    return deltas
+
+
 def _build_preview_data(service: Any, time_filter: Optional[TimeFilter]) -> Dict[str, Any]:
     """Build preview data for the dashboard navigation hub cards."""
     conv_analytics: Dict[str, Any] = service.get_conversation_analytics(
@@ -83,7 +119,8 @@ def _build_preview_data(service: Any, time_filter: Optional[TimeFilter]) -> Dict
     )
     convs = conv_analytics.get("conversations", [])
     recent_conversations = sorted(
-        convs,
+        # Hide zero-cost noise rows (e.g. sessions that never called the API)
+        (c for c in convs if c.get("total_cost", 0) >= 0.01),
         key=lambda x: x.get("start_time") or datetime.min.replace(tzinfo=timezone.utc),
         reverse=True,
     )[:5]
@@ -188,6 +225,7 @@ def index() -> str:
 
         # Preview data for navigation hub cards
         previews = _build_preview_data(service, time_filter)
+        deltas = _compute_cost_deltas(service, time_filter, token_summary)
 
         logger.debug("Dashboard data fetched successfully")
 
@@ -201,6 +239,7 @@ def index() -> str:
             cost_trend=cost_trend,
             project_cost_trend=project_cost_trend,
             period="today",
+            deltas=deltas,
             **previews,
         )
 
@@ -865,6 +904,7 @@ def api_dashboard() -> str:
         )
 
         previews = _build_preview_data(service, time_filter)
+        deltas = _compute_cost_deltas(service, time_filter, token_summary)
 
         # Render partial template
         return render_template(
@@ -876,6 +916,7 @@ def api_dashboard() -> str:
             cost_trend=cost_trend,
             project_cost_trend=project_cost_trend,
             period=period,
+            deltas=deltas,
             **previews,
         )
 

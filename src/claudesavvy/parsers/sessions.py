@@ -800,6 +800,10 @@ class SessionParser:
                     "total_tokens": total_tokens,
                     "model_usage": c["model_usage"],
                     "peak_context_tokens": c["peak_context_tokens"],
+                    # 1M-context model variants are tagged "[1m]" in the model id
+                    "context_limit": 1_000_000
+                    if any("[1m]" in m for m in c["model_usage"])
+                    else 200_000,
                     "context_per_turn": c["context_per_turn"],
                     "cache_efficiency": round(cache_efficiency, 1),
                 }

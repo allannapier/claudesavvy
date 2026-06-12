@@ -76,7 +76,8 @@
                 const contextData = {{ conv.context_per_turn|tojson|safe }};
                 const labels = contextData.map((_, i) => 'Turn ' + (i + 1));
                 const dataK = contextData.map(v => Math.round(v / 1000));
-                const limit200K = 200;
+                const limitK = {{ (conv.context_limit|default(200000) / 1000) | int }};
+                const limitLabel = limitK >= 1000 ? (limitK / 1000) + 'M limit' : limitK + 'K limit';
 
                 new Chart(ctx, {
                     type: 'line',
@@ -93,8 +94,8 @@
                                 pointRadius: contextData.length > 30 ? 0 : 3,
                             },
                             {
-                                label: '200K limit',
-                                data: Array(contextData.length).fill(limit200K),
+                                label: limitLabel,
+                                data: Array(contextData.length).fill(limitK),
                                 borderColor: '#EF4444',
                                 borderDash: [6, 3],
                                 borderWidth: 1.5,
@@ -125,8 +126,8 @@
                             tooltip: {
                                 callbacks: {
                                     label: function(ctx) {
-                                        if (ctx.dataset.label === '200K limit') return '200K limit';
-                                        return ctx.dataset.label + ': ' + ctx.raw + 'K (' + (ctx.raw / 200 * 100).toFixed(0) + '% of limit)';
+                                        if (ctx.dataset.label === limitLabel) return limitLabel;
+                                        return ctx.dataset.label + ': ' + ctx.raw + 'K (' + (ctx.raw / limitK * 100).toFixed(0) + '% of limit)';
                                     }
                                 }
                             }
