@@ -214,8 +214,19 @@
                                 {% for item in items[:6] %}
                                 <li class="px-4 py-2.5 flex items-start gap-2">
                                     <span class="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style="background: {{ color }};"></span>
-                                    <div class="min-w-0">
-                                        <div class="text-xs font-semibold text-gray-800 truncate">{{ item.name }}</div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs font-semibold text-gray-800 truncate">{{ item.name }}</span>
+                                            {% if item.used_count is defined %}
+                                            {% if item.used_count %}
+                                            <span class="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0"
+                                                  title="Invoked {{ item.used_count }} time{{ 's' if item.used_count != 1 else '' }} in the last 30 days">{{ item.used_count }}× 30d</span>
+                                            {% else %}
+                                            <span class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0"
+                                                  title="No invocations seen in the last 30 days">no use 30d</span>
+                                            {% endif %}
+                                            {% endif %}
+                                        </div>
                                         {% if item.description %}
                                         <div class="text-xs text-gray-400 truncate">{{ item.description[:80] }}{% if item.description|length > 80 %}…{% endif %}</div>
                                         {% endif %}

@@ -453,10 +453,9 @@ def _annotate_feature_usage(features: Dict[str, Any], usage: Dict[str, Any]) -> 
         if name in counter:
             return counter[name]
         short = name.split(":")[-1]
-        for used, n in counter.items():
-            if used.split(":")[-1] == short:
-                return n
-        return 0
+        return sum(
+            n for used, n in counter.items() if used.split(":")[-1] == short
+        )
 
     for key in ("skills", "agents", "mcps"):
         counter = usage.get(key, {})

@@ -1524,10 +1524,14 @@ class DashboardService:
             Dict with 'skills', 'agents', 'mcps' (name -> call count) and
             'window_days'.
         """
-        from datetime import date, timedelta
+        from datetime import timedelta
 
-        end = date.today()
-        start = end - timedelta(days=window_days)
+        # UTC to match the rest of the service; from_range is inclusive of
+        # both endpoints, so subtract window_days - 1 to span exactly
+        # window_days calendar days.
+        window_days = max(window_days, 1)
+        end = datetime.now(timezone.utc).date()
+        start = end - timedelta(days=window_days - 1)
         time_filter = TimeFilter.from_range(start, end)
 
         skills: Dict[str, int] = {}
