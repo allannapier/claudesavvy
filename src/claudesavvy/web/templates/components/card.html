@@ -38,7 +38,7 @@
 
 
 {# Card Grid - Stat Card variant for displaying key metrics #}
-{% macro stat_card(label, value, trend=None, trend_label=None, subtitle=None, icon=None, class="", truncate_value=False, link=None) %}
+{% macro stat_card(label, value, trend=None, trend_label=None, subtitle=None, icon=None, class="", truncate_value=False, link=None, trend_up_is_bad=False) %}
 {% if link %}<a href="{{ link }}" class="block">{% endif %}
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 {{ 'hover:shadow-md hover:border-[#0770E3] transition-all duration-200 cursor-pointer' if link else '' }} {{ class }}">
     <div class="flex items-start justify-between gap-3">
@@ -48,9 +48,10 @@
             {% if subtitle %}
             <p class="mt-1 text-xs text-gray-500 truncate">{{ subtitle }}</p>
             {% endif %}
-            {% if trend and trend_label %}
-            <p class="mt-2 text-sm {{ 'text-green-600' if trend > 0 else 'text-red-600' }}">
-                <span class="font-medium">{{ '+' if trend > 0 else '' }}{{ trend }}%</span>
+            {% if trend is not none and trend_label %}
+            {% set _trend_good = (trend < 0) if trend_up_is_bad else (trend > 0) %}
+            <p class="mt-2 text-sm {{ 'text-gray-500' if trend == 0 else ('text-green-600' if _trend_good else 'text-red-600') }}">
+                <span class="font-medium">{{ '▲' if trend > 0 else ('▼' if trend < 0 else '•') }} {{ '+' if trend > 0 else '' }}{{ trend }}%</span>
                 <span class="text-gray-600">{{ trend_label }}</span>
             </p>
             {% endif %}

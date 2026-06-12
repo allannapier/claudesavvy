@@ -58,7 +58,8 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for conv in conversations %}
-                {% set peak_pct = [((conv.peak_context_tokens / 200000 * 100) | round(0) | int), 100] | min %}
+                {% set _ctx_limit = conv.context_limit|default(200000)|int %}
+                {% set peak_pct = [((conv.peak_context_tokens / _ctx_limit * 100) | round(0) | int), 100] | min %}
                 {% set bar_filled = [((peak_pct / 100 * 8) | round(0) | int), 8] | min %}
                 {% set bar_empty = 8 - bar_filled %}
                 <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
@@ -93,7 +94,7 @@
                         <span class="font-mono {% if peak_pct > 75 %}text-red-600{% elif peak_pct > 50 %}text-yellow-600{% else %}text-green-600{% endif %}">
                             {{ conv.peak_context_tokens|format_compact }}
                         </span>
-                        <span class="ml-1 font-mono text-xs text-gray-400" title="{{ peak_pct }}% of 200K limit">
+                        <span class="ml-1 font-mono text-xs text-gray-400" title="{{ peak_pct }}% of {{ (_ctx_limit / 1000) | int }}K limit">
                             {% for _ in range(bar_filled) %}▓{% endfor %}{% for _ in range(bar_empty) %}░{% endfor %}
                         </span>
                         {% else %}
