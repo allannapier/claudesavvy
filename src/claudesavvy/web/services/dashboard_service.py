@@ -1511,6 +1511,58 @@ class DashboardService:
             else 0.0,
         }
 
+    def get_harness_usage(self, window_days: int = 30) -> Dict[str, Any]:
+        """
+        Which harness components were actually used recently.
+
+        Scans tool invocations in the last `window_days` and returns
+        invocation counters for skills (Skill tool), sub-agent types
+        (Task tool), and MCP server names — so the harness inventory can
+        show dead weight vs. components that earn their context.
+
+        Returns:
+            Dict with 'skills', 'agents', 'mcps' (name -> call count) and
+            'window_days'.
+        """
+        from datetime import timedelta
+
+        # UTC to match the rest of the service; from_range is inclusive of
+        # both endpoints, so subtract window_days - 1 to span exactly
+        # window_days calendar days.
+        window_days = max(window_days, 1)
+        end = datetime.now(timezone.utc).date()
+        start = end - timedelta(days=window_days - 1)
+        time_filter = TimeFilter.from_range(start, end)
+
+        skills: Dict[str, int] = {}
+        agents: Dict[str, int] = {}
+        mcps: Dict[str, int] = {}
+
+        parser = self._features_analyzer.tool_parser
+        for inv in parser.parse_all(time_filter=time_filter):
+            name = inv.tool_name
+            if name == "Skill":
+                skill = ""
+                if isinstance(inv.input_params, dict):
+                    skill = str(inv.input_params.get("skill") or "")
+                if skill:
+                    skills[skill] = skills.get(skill, 0) + 1
+            elif name == "Task":
+                agent = inv.subagent_type or ""
+                if agent:
+                    agents[agent] = agents.get(agent, 0) + 1
+            elif name.startswith("mcp__"):
+                server = self._extract_mcp_server_name(name)
+                if server:
+                    mcps[server] = mcps.get(server, 0) + 1
+
+        return {
+            "skills": skills,
+            "agents": agents,
+            "mcps": mcps,
+            "window_days": window_days,
+        }
+
     def _get_session_cost_map(
         self, time_filter: Optional[TimeFilter] = None
     ) -> Dict[str, float]:
@@ -2289,6 +2341,7 @@ class DashboardService:
                 "avg_messages": round(avg_messages, 1),
                 "avg_prompts": round(avg_prompts, 1),
                 "most_expensive_session": most_expensive["session_id"][:8] if most_expensive else "",
+                "most_expensive_session_id": most_expensive["session_id"] if most_expensive else "",
                 "most_expensive_cost": most_expensive["total_cost"] if most_expensive else 0.0,
                 "most_expensive_project": most_expensive.get("project_name", "") if most_expensive else "",
                 "most_expensive_date": most_expensive.get("start_date", "") if most_expensive else "",

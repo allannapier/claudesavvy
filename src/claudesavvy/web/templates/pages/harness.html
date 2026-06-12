@@ -50,14 +50,14 @@
     <!-- Summary KPI Row -->
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {% set counts = [
-            ('Skills',   harness_totals.skills,   '#2ec27e', '<path d="M12 2 14 8h6l-5 4 2 6-5-3.5L7 18l2-6-5-4h6Z"/>'),
-            ('Sub-Agents', harness_totals.agents, '#0770E3', '<circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/>'),
-            ('MCP Servers', harness_totals.mcps,  '#8b5cf6', '<path d="M4 7v10l8 4 8-4V7l-8-4-8 4Z"/><path d="m4 7 8 4 8-4"/><path d="M12 11v10"/>'),
-            ('Plugins',  harness_totals.plugins,  '#f59e0b', '<path d="M9 3v3H6a2 2 0 0 0-2 2v3h3a2 2 0 0 1 0 4H4v3a2 2 0 0 0 2 2h3v-3a2 2 0 0 1 4 0v3h3a2 2 0 0 0 2-2v-3h3a2 2 0 0 0 0-4h-3V8a2 2 0 0 0-2-2h-3V3"/>'),
-            ('Hooks',    harness_totals.hooks,    '#ef4444', '<path d="M12 4v8a4 4 0 1 1-4 4"/><circle cx="12" cy="3.5" r="1.5"/>'),
-            ('Commands', harness_totals.commands, '#6b7280', '<path d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>'),
+            ('Skills',   harness_totals.skills,   harness_used.get('skills'),  '#2ec27e', '<path d="M12 2 14 8h6l-5 4 2 6-5-3.5L7 18l2-6-5-4h6Z"/>'),
+            ('Sub-Agents', harness_totals.agents, harness_used.get('agents'),  '#0770E3', '<circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/>'),
+            ('MCP Servers', harness_totals.mcps,  harness_used.get('mcps'),    '#8b5cf6', '<path d="M4 7v10l8 4 8-4V7l-8-4-8 4Z"/><path d="m4 7 8 4 8-4"/><path d="M12 11v10"/>'),
+            ('Plugins',  harness_totals.plugins,  none, '#f59e0b', '<path d="M9 3v3H6a2 2 0 0 0-2 2v3h3a2 2 0 0 1 0 4H4v3a2 2 0 0 0 2 2h3v-3a2 2 0 0 1 4 0v3h3a2 2 0 0 0 2-2v-3h3a2 2 0 0 0 0-4h-3V8a2 2 0 0 0-2-2h-3V3"/>'),
+            ('Hooks',    harness_totals.hooks,    none, '#ef4444', '<path d="M12 4v8a4 4 0 1 1-4 4"/><circle cx="12" cy="3.5" r="1.5"/>'),
+            ('Commands', harness_totals.commands, none, '#6b7280', '<path d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>'),
         ] %}
-        {% for label, count, color, icon_path in counts %}
+        {% for label, count, used, color, icon_path in counts %}
         <div class="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-medium text-gray-500">{{ label }}</span>
@@ -66,6 +66,12 @@
                 </div>
             </div>
             <div class="text-2xl font-bold text-gray-900">{{ count }}</div>
+            {% if used is not none and count %}
+            <div class="text-[10px] {{ 'text-emerald-600' if used else 'text-gray-400' }}"
+                 title="Components with at least one invocation in the last 30 days">
+                {{ used }} of {{ count }} used in 30d
+            </div>
+            {% endif %}
         </div>
         {% endfor %}
     </div>
@@ -128,8 +134,19 @@
                             {% for item in items[:5] %}
                             <li class="px-4 py-2.5 flex items-start gap-2">
                                 <span class="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style="background: {{ color }};"></span>
-                                <div class="min-w-0">
-                                    <div class="text-xs font-semibold text-gray-800 truncate">{{ item.name }}</div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-xs font-semibold text-gray-800 truncate">{{ item.name }}</span>
+                                        {% if item.used_count is defined %}
+                                        {% if item.used_count %}
+                                        <span class="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0"
+                                              title="Invoked {{ item.used_count }} time{{ 's' if item.used_count != 1 else '' }} in the last 30 days">{{ item.used_count }}× 30d</span>
+                                        {% else %}
+                                        <span class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0"
+                                              title="No invocations seen in the last 30 days">no use 30d</span>
+                                        {% endif %}
+                                        {% endif %}
+                                    </div>
                                     {% if item.description %}
                                     <div class="text-xs text-gray-400 truncate">{{ item.description[:80] }}{% if item.description|length > 80 %}…{% endif %}</div>
                                     {% endif %}
@@ -197,8 +214,19 @@
                                 {% for item in items[:6] %}
                                 <li class="px-4 py-2.5 flex items-start gap-2">
                                     <span class="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style="background: {{ color }};"></span>
-                                    <div class="min-w-0">
-                                        <div class="text-xs font-semibold text-gray-800 truncate">{{ item.name }}</div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs font-semibold text-gray-800 truncate">{{ item.name }}</span>
+                                            {% if item.used_count is defined %}
+                                            {% if item.used_count %}
+                                            <span class="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0"
+                                                  title="Invoked {{ item.used_count }} time{{ 's' if item.used_count != 1 else '' }} in the last 30 days">{{ item.used_count }}× 30d</span>
+                                            {% else %}
+                                            <span class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0"
+                                                  title="No invocations seen in the last 30 days">no use 30d</span>
+                                            {% endif %}
+                                            {% endif %}
+                                        </div>
                                         {% if item.description %}
                                         <div class="text-xs text-gray-400 truncate">{{ item.description[:80] }}{% if item.description|length > 80 %}…{% endif %}</div>
                                         {% endif %}
