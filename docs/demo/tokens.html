@@ -479,6 +479,8 @@
                     
                     <option value="claude-sonnet-4-5-20251022" >Claude Sonnet 4.5</option>
                     
+                    <option value="claude-haiku-4-5-20251001" >Claude Haiku 4.5</option>
+                    
                 </select>
             </div>
 
@@ -530,7 +532,7 @@
     <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0 overflow-hidden">
             <p class="text-sm font-medium text-gray-600 truncate">Input Tokens</p>
-            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="55.5K">55.5K</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="100.7K">100.7K</p>
             
             <p class="mt-1 text-xs text-gray-500 truncate">New (non-cached)</p>
             
@@ -552,7 +554,7 @@
     <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0 overflow-hidden">
             <p class="text-sm font-medium text-gray-600 truncate">Output Tokens</p>
-            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="27.2K">27.2K</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="49.1K">49.1K</p>
             
             
         </div>
@@ -572,7 +574,7 @@
     <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0 overflow-hidden">
             <p class="text-sm font-medium text-gray-600 truncate">Total Input*</p>
-            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="882.6K">882.6K</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="1.47M">1.47M</p>
             
             <p class="mt-1 text-xs text-gray-500 truncate">Incl. cache (Portkey)</p>
             
@@ -594,9 +596,9 @@
     <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0 overflow-hidden">
             <p class="text-sm font-medium text-gray-600 truncate">Cache Reads</p>
-            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="742.8K">742.8K</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="1.25M">1.25M</p>
             
-            <p class="mt-1 text-xs text-gray-500 truncate">89.8% hit rate</p>
+            <p class="mt-1 text-xs text-gray-500 truncate">91.0% hit rate</p>
             
             
         </div>
@@ -616,9 +618,9 @@
     <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0 overflow-hidden">
             <p class="text-sm font-medium text-gray-600 truncate">Total Cost</p>
-            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$1.11">$1.11</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$1.15">$1.15</p>
             
-            <p class="mt-1 text-xs text-gray-500 truncate">Saved $1.94</p>
+            <p class="mt-1 text-xs text-gray-500 truncate">Saved $1.88</p>
             
             
         </div>
@@ -682,19 +684,40 @@
                     <td class="px-4 py-4 whitespace-nowrap">
                         <div class="text-sm font-medium text-gray-900">Claude Sonnet 4.5</div>
                     </td>
-                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-900">55.5K</td>
-                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-900">27.2K</td>
-                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-500">84.3K</td>
-                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-500">742.8K</td>
-                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-600 bg-blue-50">882.6K</td>
-                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-900">909.8K</td>
-                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right font-medium text-[#0770E3]">$1.11</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-900">41.6K</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-900">22.9K</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-500">49.0K</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-500">452.5K</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-600 bg-blue-50">543.2K</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-900">566.1K</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right font-medium text-[#0770E3]">$0.79</td>
                     <td class="px-3 py-4 whitespace-nowrap text-sm text-right">
                         <div class="flex items-center justify-end gap-1">
                             <div class="w-12 bg-gray-200 rounded-full h-2">
-                                <div class="bg-[#0770E3] h-2 rounded-full" style="width: 100.0%"></div>
+                                <div class="bg-[#0770E3] h-2 rounded-full" style="width: 68.5%"></div>
                             </div>
-                            <span class="text-gray-600 w-10 text-xs">100.0%</span>
+                            <span class="text-gray-600 w-10 text-xs">68.5%</span>
+                        </div>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">Claude Haiku 4.5</div>
+                    </td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-900">59.1K</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-900">26.2K</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-500">75.0K</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-500">795.5K</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-600 bg-blue-50">929.6K</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right text-gray-900">955.8K</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right font-medium text-[#0770E3]">$0.36</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-right">
+                        <div class="flex items-center justify-end gap-1">
+                            <div class="w-12 bg-gray-200 rounded-full h-2">
+                                <div class="bg-[#0770E3] h-2 rounded-full" style="width: 31.5%"></div>
+                            </div>
+                            <span class="text-gray-600 w-10 text-xs">31.5%</span>
                         </div>
                     </td>
                 </tr>
@@ -715,15 +738,15 @@
         <div class="space-y-4">
             <div class="flex justify-between items-center">
                 <span class="text-gray-600">Input Cost</span>
-                <span class="font-medium text-gray-900">$0.17</span>
+                <span class="font-medium text-gray-900">$0.18</span>
             </div>
             <div class="flex justify-between items-center">
                 <span class="text-gray-600">Output Cost</span>
-                <span class="font-medium text-gray-900">$0.41</span>
+                <span class="font-medium text-gray-900">$0.47</span>
             </div>
             <div class="flex justify-between items-center">
                 <span class="text-gray-600">Cache Creation Cost</span>
-                <span class="font-medium text-gray-900">$0.32</span>
+                <span class="font-medium text-gray-900">$0.28</span>
             </div>
             <div class="flex justify-between items-center">
                 <span class="text-gray-600">Cache Read Cost</span>
@@ -732,7 +755,7 @@
             <div class="border-t pt-4">
                 <div class="flex justify-between items-center">
                     <span class="text-lg font-semibold text-gray-900">Total Cost</span>
-                    <span class="text-lg font-bold text-[#0770E3]">$1.11</span>
+                    <span class="text-lg font-bold text-[#0770E3]">$1.15</span>
                 </div>
             </div>
         </div>
@@ -743,19 +766,19 @@
         <div class="space-y-4">
             <div class="flex justify-between items-center">
                 <span class="text-gray-600">Cache Creation</span>
-                <span class="font-medium text-gray-900">84262</span>
+                <span class="font-medium text-gray-900">124054</span>
             </div>
             <div class="flex justify-between items-center">
                 <span class="text-gray-600">Cache Reads</span>
-                <span class="font-medium text-gray-900">742828</span>
+                <span class="font-medium text-gray-900">1248055</span>
             </div>
             <div class="flex justify-between items-center">
                 <span class="text-gray-600">Cache Hit Rate</span>
-                <span class="font-medium text-green-600">89.8%</span>
+                <span class="font-medium text-green-600">91.0%</span>
             </div>
             <div class="flex justify-between items-center">
                 <span class="text-gray-600">Cache Savings</span>
-                <span class="font-medium text-green-600">$1.94</span>
+                <span class="font-medium text-green-600">$1.88</span>
             </div>
         </div>
     </div>

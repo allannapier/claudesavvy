@@ -596,12 +596,12 @@
     <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0 overflow-hidden">
             <p class="text-sm font-medium text-gray-600 truncate">Total Cost</p>
-            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$1.11">$1.11</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$1.15">$1.15</p>
             
             
             
-            <p class="mt-2 text-sm text-green-600">
-                <span class="font-medium">▼ -21%</span>
+            <p class="mt-2 text-sm text-red-600">
+                <span class="font-medium">▲ +203%</span>
                 <span class="text-gray-600">vs previous period</span>
             </p>
             
@@ -622,7 +622,7 @@
     <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0 overflow-hidden">
             <p class="text-sm font-medium text-gray-600 truncate">Top Conversation Cost</p>
-            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$0.69">$0.69</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$0.79">$0.79</p>
             
             <p class="mt-1 text-xs text-gray-500 truncate">claudesavvy</p>
             
@@ -645,14 +645,14 @@
     <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0 overflow-hidden">
             <p class="text-sm font-medium text-gray-600 truncate">Cache Write Cost</p>
-            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$0.32">$0.32</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$0.28">$0.28</p>
             
-            <p class="mt-1 text-xs text-gray-500 truncate">29% of spend — re-caching context</p>
+            <p class="mt-1 text-xs text-gray-500 truncate">24% of spend — re-caching context</p>
             
             
             
-            <p class="mt-2 text-sm text-green-600">
-                <span class="font-medium">▼ -3%</span>
+            <p class="mt-2 text-sm text-red-600">
+                <span class="font-medium">▲ +211%</span>
                 <span class="text-gray-600">vs previous period</span>
             </p>
             
@@ -673,7 +673,7 @@
     <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0 overflow-hidden">
             <p class="text-sm font-medium text-gray-600 truncate">Cache Savings</p>
-            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$1.94">$1.94</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$1.88">$1.88</p>
             
             <p class="mt-1 text-xs text-gray-500 truncate">Net of cache-write premium</p>
             
@@ -748,7 +748,7 @@
         const tokenCtx = document.getElementById('costTrendChart');
         if (tokenCtx) {
             const costLabels = ["Today"];
-            const costDatasets = {"cache": [0.5388], "input": [0.1664], "output": [0.4086], "total": [1.1139]};
+            const costDatasets = {"cache": [0.493], "input": [0.1839], "output": [0.4749], "total": [1.1517]};
 
             if (costLabels && costLabels.length > 0) {
                 new Chart(tokenCtx, {
@@ -834,9 +834,9 @@
         // Cost Pie Chart
         const pieCtx = document.getElementById('costPieChart');
         if (pieCtx) {
-            const inputCost = 0.17;
-            const outputCost = 0.41;
-            const cacheCost = 0.32;
+            const inputCost = 0.18;
+            const outputCost = 0.47;
+            const cacheCost = 0.28;
             const cacheReadCost = 0.22;
 
             new Chart(pieCtx, {
@@ -929,15 +929,23 @@
                 <td class="px-6 py-3 text-sm font-medium truncate max-w-[160px]" title="claudesavvy">
                     <a href="projects.html" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">claudesavvy</a>
                 </td>
-                <td class="px-6 py-3 text-sm text-gray-900 text-right font-semibold">$0.69</td>
+                <td class="px-6 py-3 text-sm text-gray-900 text-right font-semibold">$0.79</td>
                 <td class="px-6 py-3 text-sm text-gray-500 text-right">1</td>
             </tr>
             
             <tr class="hover:bg-gray-50 transition-colors">
-                <td class="px-6 py-3 text-sm font-medium truncate max-w-[160px]" title="data-pipeline">
-                    <a href="projects.html" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">data-pipeline</a>
+                <td class="px-6 py-3 text-sm font-medium truncate max-w-[160px]" title="my-saas-app">
+                    <a href="projects.html" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">my-saas-app</a>
                 </td>
-                <td class="px-6 py-3 text-sm text-gray-900 text-right font-semibold">$0.43</td>
+                <td class="px-6 py-3 text-sm text-gray-900 text-right font-semibold">$0.23</td>
+                <td class="px-6 py-3 text-sm text-gray-500 text-right">1</td>
+            </tr>
+            
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-3 text-sm font-medium truncate max-w-[160px]" title="blog">
+                    <a href="projects.html" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">blog</a>
+                </td>
+                <td class="px-6 py-3 text-sm text-gray-900 text-right font-semibold">$0.14</td>
                 <td class="px-6 py-3 text-sm text-gray-500 text-right">1</td>
             </tr>
             
@@ -964,7 +972,7 @@
         const projectCostCtx = document.getElementById('projectCostTrendChart');
         if (projectCostCtx) {
             const projectLabels = ["Today"];
-            const projectDatasets = [{"borderColor": "#0770E3", "color": "#0770E3", "data": [0.6872], "label": "claudesavvy"}, {"borderColor": "#34D399", "color": "#34D399", "data": [0.4267], "label": "data-pipeline"}];
+            const projectDatasets = [{"borderColor": "#0770E3", "color": "#0770E3", "data": [0.7885], "label": "claudesavvy"}, {"borderColor": "#34D399", "color": "#34D399", "data": [0.2257], "label": "my-saas-app"}, {"borderColor": "#F59E0B", "color": "#F59E0B", "data": [0.1375], "label": "blog"}];
 
             // Only create chart if we have data
             if (projectLabels && projectLabels.length > 0 && projectDatasets && projectDatasets.length > 0) {
@@ -1046,7 +1054,7 @@
     <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
         <h3 class="text-lg font-semibold text-gray-900">Recent Conversations</h3>
         <a href="conversations.html" class="text-sm text-[#0770E3] hover:underline flex items-center gap-1">
-            View all 2 conversations
+            View all 3 conversations
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
         </a>
     </div>
@@ -1067,14 +1075,36 @@
             
             
             <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-3 text-sm font-medium truncate max-w-[160px]" title="my-saas-app">
+                    <a href="/conversations?session=demo-session-0009" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">my-saas-app</a>
+                </td>
+                <td class="px-6 py-3 text-sm text-gray-500 hidden md:table-cell whitespace-nowrap">
+                    Jun 20 04:56
+                </td>
+                <td class="px-6 py-3 text-sm text-gray-500 text-right hidden sm:table-cell">41</td>
+                <td class="px-6 py-3 text-sm font-semibold text-right text-gray-900">$0.23</td>
+                <td class="px-6 py-3 text-xs font-mono hidden lg:table-cell">
+                    
+                    <span class="text-gray-400" title="23% of 200K context limit">
+                        ▓▓░░░░░░░░ 23%
+                    </span>
+                    
+                </td>
+            </tr>
+            
+            
+            
+            
+            
+            <tr class="hover:bg-gray-50 transition-colors">
                 <td class="px-6 py-3 text-sm font-medium truncate max-w-[160px]" title="claudesavvy">
                     <a href="/conversations?session=demo-session-0001" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">claudesavvy</a>
                 </td>
                 <td class="px-6 py-3 text-sm text-gray-500 hidden md:table-cell whitespace-nowrap">
-                    Jun 20 02:53
+                    Jun 20 03:18
                 </td>
-                <td class="px-6 py-3 text-sm text-gray-500 text-right hidden sm:table-cell">14</td>
-                <td class="px-6 py-3 text-sm font-semibold text-right text-gray-900">$0.69</td>
+                <td class="px-6 py-3 text-sm text-gray-500 text-right hidden sm:table-cell">37</td>
+                <td class="px-6 py-3 text-sm font-semibold text-right text-gray-900">$0.79</td>
                 <td class="px-6 py-3 text-xs font-mono hidden lg:table-cell">
                     
                     <span class="text-gray-400" title="24% of 200K context limit">
@@ -1089,18 +1119,18 @@
             
             
             <tr class="hover:bg-gray-50 transition-colors">
-                <td class="px-6 py-3 text-sm font-medium truncate max-w-[160px]" title="data-pipeline">
-                    <a href="/conversations?session=demo-session-0014" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">data-pipeline</a>
+                <td class="px-6 py-3 text-sm font-medium truncate max-w-[160px]" title="blog">
+                    <a href="/conversations?session=demo-session-0017" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">blog</a>
                 </td>
                 <td class="px-6 py-3 text-sm text-gray-500 hidden md:table-cell whitespace-nowrap">
-                    Jun 20 01:52
+                    Jun 20 02:46
                 </td>
-                <td class="px-6 py-3 text-sm text-gray-500 text-right hidden sm:table-cell">13</td>
-                <td class="px-6 py-3 text-sm font-semibold text-right text-gray-900">$0.43</td>
+                <td class="px-6 py-3 text-sm text-gray-500 text-right hidden sm:table-cell">38</td>
+                <td class="px-6 py-3 text-sm font-semibold text-right text-gray-900">$0.14</td>
                 <td class="px-6 py-3 text-xs font-mono hidden lg:table-cell">
                     
-                    <span class="text-gray-400" title="17% of 200K context limit">
-                        ▓░░░░░░░░░ 17%
+                    <span class="text-gray-400" title="14% of 200K context limit">
+                        ▓░░░░░░░░░ 14%
                     </span>
                     
                 </td>
@@ -1129,14 +1159,30 @@
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between mb-1">
                             <span class="text-sm font-medium text-gray-900 truncate">Claude Sonnet 4.5</span>
-                            <span class="text-sm font-semibold text-[#0770E3]">100.0%</span>
+                            <span class="text-sm font-semibold text-[#0770E3]">68.5%</span>
                         </div>
                         <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-[#0770E3] h-2 rounded-full transition-all" style="width: 100.0%"></div>
+                            <div class="bg-[#0770E3] h-2 rounded-full transition-all" style="width: 68.5%"></div>
                         </div>
                         <div class="flex justify-between mt-1">
-                            <span class="text-xs text-gray-500">909.8K tokens</span>
-                            <span class="text-xs text-gray-500">$1.11</span>
+                            <span class="text-xs text-gray-500">566.1K tokens</span>
+                            <span class="text-xs text-gray-500">$0.79</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-medium text-gray-900 truncate">Claude Haiku 4.5</span>
+                            <span class="text-sm font-semibold text-[#0770E3]">31.5%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-[#0770E3] h-2 rounded-full transition-all" style="width: 31.5%"></div>
+                        </div>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-xs text-gray-500">955.8K tokens</span>
+                            <span class="text-xs text-gray-500">$0.36</span>
                         </div>
                     </div>
                 </div>
@@ -1165,9 +1211,9 @@
                 
                 <p class="text-sm text-gray-600">
                     <span class="font-medium text-gray-900">Read</span>
-                    called 13 times
+                    called 31 times
                 </p>
-                <p class="text-xs text-gray-400 mt-1">37 total tool calls</p>
+                <p class="text-xs text-gray-400 mt-1">94 total tool calls</p>
                 
                 <div class="mt-3 flex items-center text-[#0770E3] text-sm font-medium">
                     Explore tools <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
@@ -1204,12 +1250,12 @@
                 </div>
                 
                 <p class="text-sm text-gray-600">
-                    <span class="font-medium text-gray-900">5</span> files touched
+                    <span class="font-medium text-gray-900">28</span> files touched
                 </p>
                 
-                <p class="text-xs text-gray-400 mt-1 font-mono truncate" title="transform.py">Most edited: transform.py</p>
+                <p class="text-xs text-gray-400 mt-1 font-mono truncate" title="intro.md">Most edited: intro.md</p>
                 
-                <p class="text-xs text-gray-400">25 total operations</p>
+                <p class="text-xs text-gray-400">55 total operations</p>
                 
                 <div class="mt-3 flex items-center text-[#0770E3] text-sm font-medium">
                     Explore files <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
@@ -1228,12 +1274,12 @@
                 </div>
                 
                 <p class="text-sm text-gray-600">
-                    <span class="font-medium text-gray-900">1</span> MCP server
+                    <span class="font-medium text-gray-900">2</span> MCP servers
                 </p>
                 
-                <p class="text-xs text-gray-400 mt-1">Top: github (3 calls)</p>
+                <p class="text-xs text-gray-400 mt-1">Top: github (7 calls)</p>
                 
-                <p class="text-xs text-gray-400">3 total calls</p>
+                <p class="text-xs text-gray-400">8 total calls</p>
                 
                 <div class="mt-3 flex items-center text-[#0770E3] text-sm font-medium">
                     Explore integrations <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
@@ -1252,9 +1298,9 @@
                 </div>
                 
                 <p class="text-sm text-gray-600">
-                    <span class="font-medium text-gray-900">2</span> conversations
+                    <span class="font-medium text-gray-900">3</span> conversations
                 </p>
-                <p class="text-xs text-gray-400 mt-1">Priciest: $0.69</p>
+                <p class="text-xs text-gray-400 mt-1">Priciest: $0.79</p>
                 <p class="text-xs text-gray-400">Context growth &amp; cost analytics</p>
                 
                 <div class="mt-3 flex items-center text-[#0770E3] text-sm font-medium">
@@ -1274,10 +1320,10 @@
                 </div>
                 
                 <p class="text-sm text-gray-600">
-                    <span class="font-medium text-gray-900">2</span> active projects
+                    <span class="font-medium text-gray-900">3</span> active projects
                 </p>
-                <p class="text-xs text-gray-400 mt-1">Most active: data-pipeline</p>
-                <p class="text-xs text-gray-400">$1.11 total spend</p>
+                <p class="text-xs text-gray-400 mt-1">Most active: claudesavvy</p>
+                <p class="text-xs text-gray-400">$1.15 total spend</p>
                 
                 <div class="mt-3 flex items-center text-[#0770E3] text-sm font-medium">
                     Explore projects <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>

@@ -631,18 +631,18 @@
         <div class="bg-white rounded-xl border border-red-200 p-4"
              title="Errored calls, duplicate commands, and repeat reads priced at each session's average cost per tool call">
             <div class="text-xs font-medium text-red-500">Est. wasted spend</div>
-            <div class="text-2xl font-bold mt-1 text-red-600">$0.00</div>
+            <div class="text-2xl font-bold mt-1 text-red-600">$0.97</div>
             
-            <div class="text-[10px] text-gray-400 mt-0.5">0.0% of $5.77 scored</div>
+            <div class="text-[10px] text-gray-400 mt-0.5">20.4% of $4.75 scored</div>
             
         </div>
         <div class="bg-white rounded-xl border border-gray-200 p-4">
             <div class="text-xs font-medium text-gray-500">Average score</div>
-            <div class="text-2xl font-bold mt-1" style="color: #2ec27e;">100.0</div>
+            <div class="text-2xl font-bold mt-1" style="color: #2ec27e;">81.2</div>
         </div>
         <div class="bg-white rounded-xl border border-gray-200 p-4">
             <div class="text-xs font-medium text-gray-500">Median score</div>
-            <div class="text-2xl font-bold mt-1" style="color: #2ec27e;">100.0</div>
+            <div class="text-2xl font-bold mt-1" style="color: #2ec27e;">81.0</div>
         </div>
         <div class="bg-white rounded-xl border border-gray-200 p-4">
             <div class="text-xs font-medium text-gray-500">Sessions scored</div>
@@ -654,7 +654,7 @@
         </div>
         <div class="bg-white rounded-xl border border-gray-200 p-4">
             <div class="text-xs font-medium text-gray-500">Worst</div>
-            <div class="text-2xl font-bold text-gray-900 mt-1">100</div>
+            <div class="text-2xl font-bold text-gray-900 mt-1">53</div>
         </div>
     </div>
 
@@ -673,22 +673,50 @@
                 
                 
                 <div class="flex items-center justify-center text-[10px] font-bold text-white transition-all"
-                     style="width: 100.0%; background: #2ec27e;"
-                     title="A: 18 sessions (100.0%)">
-                    A18
+                     style="width: 22.2%; background: #2ec27e;"
+                     title="A: 4 sessions (22.2%)">
+                    A4
                 </div>
                 
                 
                 
                 
                 
+                <div class="flex items-center justify-center text-[10px] font-bold text-white transition-all"
+                     style="width: 33.3%; background: #0770E3;"
+                     title="B: 6 sessions (33.3%)">
+                    B6
+                </div>
                 
                 
                 
                 
                 
+                <div class="flex items-center justify-center text-[10px] font-bold text-white transition-all"
+                     style="width: 27.8%; background: #f59e0b;"
+                     title="C: 5 sessions (27.8%)">
+                    C5
+                </div>
                 
                 
+                
+                
+                
+                <div class="flex items-center justify-center text-[10px] font-bold text-white transition-all"
+                     style="width: 11.1%; background: #fb923c;"
+                     title="D: 2 sessions (11.1%)">
+                    D2
+                </div>
+                
+                
+                
+                
+                
+                <div class="flex items-center justify-center text-[10px] font-bold text-white transition-all"
+                     style="width: 5.6%; background: #ef4444;"
+                     title="F: 1 session (5.6%)">
+                    
+                </div>
                 
                 
             </div>
@@ -699,35 +727,35 @@
                 <span class="inline-flex items-center gap-1 text-xs font-semibold"
                       style="color: #2ec27e;">
                     <span class="w-2 h-2 rounded-sm inline-block" style="background: #2ec27e;"></span>
-                    A&nbsp;<span class="font-mono opacity-70">18</span>
+                    A&nbsp;<span class="font-mono opacity-70">4</span>
                 </span>
                 
                 
                 <span class="inline-flex items-center gap-1 text-xs font-semibold"
                       style="color: #0770E3;">
                     <span class="w-2 h-2 rounded-sm inline-block" style="background: #0770E3;"></span>
-                    B&nbsp;<span class="font-mono opacity-70">0</span>
+                    B&nbsp;<span class="font-mono opacity-70">6</span>
                 </span>
                 
                 
                 <span class="inline-flex items-center gap-1 text-xs font-semibold"
                       style="color: #f59e0b;">
                     <span class="w-2 h-2 rounded-sm inline-block" style="background: #f59e0b;"></span>
-                    C&nbsp;<span class="font-mono opacity-70">0</span>
+                    C&nbsp;<span class="font-mono opacity-70">5</span>
                 </span>
                 
                 
                 <span class="inline-flex items-center gap-1 text-xs font-semibold"
                       style="color: #fb923c;">
                     <span class="w-2 h-2 rounded-sm inline-block" style="background: #fb923c;"></span>
-                    D&nbsp;<span class="font-mono opacity-70">0</span>
+                    D&nbsp;<span class="font-mono opacity-70">2</span>
                 </span>
                 
                 
                 <span class="inline-flex items-center gap-1 text-xs font-semibold"
                       style="color: #ef4444;">
                     <span class="w-2 h-2 rounded-sm inline-block" style="background: #ef4444;"></span>
-                    F&nbsp;<span class="font-mono opacity-70">0</span>
+                    F&nbsp;<span class="font-mono opacity-70">1</span>
                 </span>
                 
             </div>
@@ -741,13 +769,38 @@
         <div class="flex flex-wrap items-center gap-2">
             
             
+            <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-red-50 text-red-600"
+                  title="14 of 18 scored sessions had tool errors">
+                <span class="font-semibold">14</span> sessions with tool errors
+            </span>
             
             
             
+            <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-red-50 text-red-600"
+                  title="10 of 18 scored sessions had rejections">
+                <span class="font-semibold">10</span> sessions with rejections
+            </span>
             
             
             
+            <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-red-50 text-red-600"
+                  title="14 of 18 scored sessions had duplicate commands">
+                <span class="font-semibold">14</span> sessions with duplicate commands
+            </span>
             
+            
+            
+            <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-red-50 text-red-600"
+                  title="15 of 18 scored sessions had repeated reads">
+                <span class="font-semibold">15</span> sessions with repeated reads
+            </span>
+            
+            
+            
+            <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-red-50 text-red-600"
+                  title="9 of 18 scored sessions had scriptability issues">
+                <span class="font-semibold">9</span> sessions with scriptability issues
+            </span>
             
             
         </div>
@@ -756,7 +809,7 @@
     <!-- Leaderboard (most $ wasted first) + detail panel -->
     
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5"
-         x-data="{ sel: 'demo-session-0018' }">
+         x-data="{ sel: 'demo-session-0008' }">
         <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
                 <span class="text-sm font-semibold text-gray-800">Sessions worth fixing</span>
@@ -767,144 +820,31 @@
                 
                 <li>
                     <button type="button"
-                            hx-get="/api/harness/session/demo-session-0018"
+                            hx-get="/api/harness/session/demo-session-0008"
                             hx-target="#harness-session-panel"
                             hx-swap="innerHTML"
                             hx-trigger="load, click"
-                            @click="sel = 'demo-session-0018'"
+                            @click="sel = 'demo-session-0008'"
                             class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
-                            :class="sel === 'demo-session-0018' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                            :class="sel === 'demo-session-0008' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
                         <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                              style="background: #f59e0b18; color: #f59e0b;">C</span>
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-900">100</span>
-                                <span class="text-xs text-gray-400 font-mono truncate">demo-blog</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                <span class="text-sm font-semibold text-gray-900">78</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
                                 
                             </div>
-                            <div class="text-xs text-gray-500 truncate">write an intro post about the project</div>
+                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
                         </div>
                         <div class="text-right shrink-0">
                             
-                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
-                        </div>
-                    </button>
-                </li>
-                
-                
-                <li>
-                    <button type="button"
-                            hx-get="/api/harness/session/demo-session-0017"
-                            hx-target="#harness-session-panel"
-                            hx-swap="innerHTML"
-                            
-                            @click="sel = 'demo-session-0017'"
-                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
-                            :class="sel === 'demo-session-0017' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
-                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-                              style="background: #2ec27e18; color: #2ec27e;">A</span>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-900">100</span>
-                                <span class="text-xs text-gray-400 font-mono truncate">demo-blog</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
-                                
+                            <div class="text-xs font-semibold text-red-600 whitespace-nowrap"
+                                 title="≈ $0.21 of $1.13 session cost wasted">
+                                −$0.21
                             </div>
-                            <div class="text-xs text-gray-500 truncate">write an intro post about the project</div>
-                        </div>
-                        <div class="text-right shrink-0">
                             
-                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
-                        </div>
-                    </button>
-                </li>
-                
-                
-                <li>
-                    <button type="button"
-                            hx-get="/api/harness/session/demo-session-0016"
-                            hx-target="#harness-session-panel"
-                            hx-swap="innerHTML"
-                            
-                            @click="sel = 'demo-session-0016'"
-                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
-                            :class="sel === 'demo-session-0016' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
-                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-                              style="background: #2ec27e18; color: #2ec27e;">A</span>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-900">100</span>
-                                <span class="text-xs text-gray-400 font-mono truncate">data-pipeline</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
-                                
-                            </div>
-                            <div class="text-xs text-gray-500 truncate">add error handling to the ETL pipeline</div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            
-                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
-                        </div>
-                    </button>
-                </li>
-                
-                
-                <li>
-                    <button type="button"
-                            hx-get="/api/harness/session/demo-session-0015"
-                            hx-target="#harness-session-panel"
-                            hx-swap="innerHTML"
-                            
-                            @click="sel = 'demo-session-0015'"
-                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
-                            :class="sel === 'demo-session-0015' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
-                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-                              style="background: #2ec27e18; color: #2ec27e;">A</span>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-900">100</span>
-                                <span class="text-xs text-gray-400 font-mono truncate">data-pipeline</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
-                                
-                            </div>
-                            <div class="text-xs text-gray-500 truncate">add error handling to the ETL pipeline</div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            
-                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
-                        </div>
-                    </button>
-                </li>
-                
-                
-                <li>
-                    <button type="button"
-                            hx-get="/api/harness/session/demo-session-0014"
-                            hx-target="#harness-session-panel"
-                            hx-swap="innerHTML"
-                            
-                            @click="sel = 'demo-session-0014'"
-                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
-                            :class="sel === 'demo-session-0014' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
-                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-                              style="background: #2ec27e18; color: #2ec27e;">A</span>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-900">100</span>
-                                <span class="text-xs text-gray-400 font-mono truncate">data-pipeline</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
-                                
-                            </div>
-                            <div class="text-xs text-gray-500 truncate">add error handling to the ETL pipeline</div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            
-                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">78 C · 4 err · 1 rej · 1 dup</span>
                         </div>
                     </button>
                 </li>
@@ -920,20 +860,404 @@
                             class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
                             :class="sel === 'demo-session-0013' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
                         <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                              style="background: #0770E318; color: #0770E3;">B</span>
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-sm font-semibold text-gray-900">81</span>
                                 <span class="text-xs text-gray-400 font-mono truncate">saas-app</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
                                 
                             </div>
                             <div class="text-xs text-gray-500 truncate">implement user authentication with JWT tokens</div>
                         </div>
                         <div class="text-right shrink-0">
                             
-                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                            <div class="text-xs font-semibold text-red-600 whitespace-nowrap"
+                                 title="≈ $0.19 of $1.39 session cost wasted">
+                                −$0.19
+                            </div>
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">81 B · 2 err · 1 rej · 2 dup</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0001"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0001'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0001' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #f59e0b18; color: #f59e0b;">C</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">72</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <div class="text-xs font-semibold text-red-600 whitespace-nowrap"
+                                 title="≈ $0.18 of $0.79 session cost wasted">
+                                −$0.18
+                            </div>
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">72 C · 3 err · 2 dup</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0014"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0014'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0014' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #ef444418; color: #ef4444;">F</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">53</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">data-pipeline</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add error handling to the ETL pipeline</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <div class="text-xs font-semibold text-red-600 whitespace-nowrap"
+                                 title="≈ $0.17 of $0.38 session cost wasted">
+                                −$0.17
+                            </div>
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">53 F · 7 err · 6 rej · 5 dup</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0016"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0016'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0016' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #0770E318; color: #0770E3;">B</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">84</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">data-pipeline</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add error handling to the ETL pipeline</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <div class="text-xs font-semibold text-red-600 whitespace-nowrap"
+                                 title="≈ $0.07 of $0.44 session cost wasted">
+                                −$0.07
+                            </div>
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">84 B · 2 err · 1 rej · 2 dup</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0009"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0009'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0009' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #fb923c18; color: #fb923c;">D</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">61</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">saas-app</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">implement user authentication with JWT tokens</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <div class="text-xs font-semibold text-red-600 whitespace-nowrap"
+                                 title="≈ $0.06 of $0.23 session cost wasted">
+                                −$0.06
+                            </div>
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">61 D · 3 err · 2 rej · 3 dup</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0007"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0007'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0007' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #f59e0b18; color: #f59e0b;">C</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">79</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <div class="text-xs font-semibold text-red-600 whitespace-nowrap"
+                                 title="≈ $0.05 of $0.25 session cost wasted">
+                                −$0.05
+                            </div>
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">79 C · 2 err · 1 rej · 2 dup</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0017"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0017'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0017' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #0770E318; color: #0770E3;">B</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">82</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-blog</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">write an intro post about the project</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <div class="text-xs font-semibold text-red-600 whitespace-nowrap"
+                                 title="≈ $0.04 of $0.14 session cost wasted">
+                                −$0.04
+                            </div>
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">82 B · 3 err · 1 rej · 1 dup</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0004"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0004'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0004' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #fb923c18; color: #fb923c;">D</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">64</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">64 D · 4 err · 3 rej · 3 dup</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0011"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0011'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0011' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #f59e0b18; color: #f59e0b;">C</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">77</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">saas-app</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">implement user authentication with JWT tokens</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">77 C · 5 err · 3 rej · 2 dup</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0015"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0015'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0015' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #f59e0b18; color: #f59e0b;">C</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">79</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">data-pipeline</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add error handling to the ETL pipeline</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">79 C · 3 err · 1 rej · 4 dup</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0005"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0005'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0005' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #0770E318; color: #0770E3;">B</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">81</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">81 B · 2 err · 1 dup</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0010"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0010'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0010' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #0770E318; color: #0770E3;">B</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">85</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">saas-app</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">implement user authentication with JWT tokens</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">85 B · 1 err · 1 dup</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0003"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0003'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0003' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #0770E318; color: #0770E3;">B</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">87</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">87 B · 2 err · 1 dup</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0018"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0018'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0018' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">99</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-blog</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">write an intro post about the project</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">99 A</span>
                         </div>
                     </button>
                 </li>
@@ -955,155 +1279,8 @@
                                 <span class="text-sm font-semibold text-gray-900">100</span>
                                 <span class="text-xs text-gray-400 font-mono truncate">saas-app</span>
                                 
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
-                                
                             </div>
                             <div class="text-xs text-gray-500 truncate">implement user authentication with JWT tokens</div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            
-                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
-                        </div>
-                    </button>
-                </li>
-                
-                
-                <li>
-                    <button type="button"
-                            hx-get="/api/harness/session/demo-session-0011"
-                            hx-target="#harness-session-panel"
-                            hx-swap="innerHTML"
-                            
-                            @click="sel = 'demo-session-0011'"
-                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
-                            :class="sel === 'demo-session-0011' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
-                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-                              style="background: #2ec27e18; color: #2ec27e;">A</span>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-900">100</span>
-                                <span class="text-xs text-gray-400 font-mono truncate">saas-app</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
-                                
-                            </div>
-                            <div class="text-xs text-gray-500 truncate">implement user authentication with JWT tokens</div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            
-                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
-                        </div>
-                    </button>
-                </li>
-                
-                
-                <li>
-                    <button type="button"
-                            hx-get="/api/harness/session/demo-session-0010"
-                            hx-target="#harness-session-panel"
-                            hx-swap="innerHTML"
-                            
-                            @click="sel = 'demo-session-0010'"
-                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
-                            :class="sel === 'demo-session-0010' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
-                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-                              style="background: #2ec27e18; color: #2ec27e;">A</span>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-900">100</span>
-                                <span class="text-xs text-gray-400 font-mono truncate">saas-app</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
-                                
-                            </div>
-                            <div class="text-xs text-gray-500 truncate">implement user authentication with JWT tokens</div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            
-                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
-                        </div>
-                    </button>
-                </li>
-                
-                
-                <li>
-                    <button type="button"
-                            hx-get="/api/harness/session/demo-session-0009"
-                            hx-target="#harness-session-panel"
-                            hx-swap="innerHTML"
-                            
-                            @click="sel = 'demo-session-0009'"
-                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
-                            :class="sel === 'demo-session-0009' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
-                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-                              style="background: #2ec27e18; color: #2ec27e;">A</span>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-900">100</span>
-                                <span class="text-xs text-gray-400 font-mono truncate">saas-app</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
-                                
-                            </div>
-                            <div class="text-xs text-gray-500 truncate">implement user authentication with JWT tokens</div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            
-                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
-                        </div>
-                    </button>
-                </li>
-                
-                
-                <li>
-                    <button type="button"
-                            hx-get="/api/harness/session/demo-session-0008"
-                            hx-target="#harness-session-panel"
-                            hx-swap="innerHTML"
-                            
-                            @click="sel = 'demo-session-0008'"
-                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
-                            :class="sel === 'demo-session-0008' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
-                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-                              style="background: #2ec27e18; color: #2ec27e;">A</span>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-900">100</span>
-                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
-                                
-                            </div>
-                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            
-                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
-                        </div>
-                    </button>
-                </li>
-                
-                
-                <li>
-                    <button type="button"
-                            hx-get="/api/harness/session/demo-session-0007"
-                            hx-target="#harness-session-panel"
-                            hx-swap="innerHTML"
-                            
-                            @click="sel = 'demo-session-0007'"
-                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
-                            :class="sel === 'demo-session-0007' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
-                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-                              style="background: #2ec27e18; color: #2ec27e;">A</span>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-900">100</span>
-                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
-                                
-                            </div>
-                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
                         </div>
                         <div class="text-right shrink-0">
                             
@@ -1128,95 +1305,6 @@
                             <div class="flex items-center gap-2">
                                 <span class="text-sm font-semibold text-gray-900">100</span>
                                 <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
-                                
-                            </div>
-                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            
-                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
-                        </div>
-                    </button>
-                </li>
-                
-                
-                <li>
-                    <button type="button"
-                            hx-get="/api/harness/session/demo-session-0005"
-                            hx-target="#harness-session-panel"
-                            hx-swap="innerHTML"
-                            
-                            @click="sel = 'demo-session-0005'"
-                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
-                            :class="sel === 'demo-session-0005' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
-                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-                              style="background: #2ec27e18; color: #2ec27e;">A</span>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-900">100</span>
-                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
-                                
-                            </div>
-                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            
-                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
-                        </div>
-                    </button>
-                </li>
-                
-                
-                <li>
-                    <button type="button"
-                            hx-get="/api/harness/session/demo-session-0004"
-                            hx-target="#harness-session-panel"
-                            hx-swap="innerHTML"
-                            
-                            @click="sel = 'demo-session-0004'"
-                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
-                            :class="sel === 'demo-session-0004' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
-                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-                              style="background: #2ec27e18; color: #2ec27e;">A</span>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-900">100</span>
-                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
-                                
-                            </div>
-                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            
-                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
-                        </div>
-                    </button>
-                </li>
-                
-                
-                <li>
-                    <button type="button"
-                            hx-get="/api/harness/session/demo-session-0003"
-                            hx-target="#harness-session-panel"
-                            hx-swap="innerHTML"
-                            
-                            @click="sel = 'demo-session-0003'"
-                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
-                            :class="sel === 'demo-session-0003' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
-                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-                              style="background: #2ec27e18; color: #2ec27e;">A</span>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-900">100</span>
-                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
                                 
                             </div>
                             <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
@@ -1244,37 +1332,6 @@
                             <div class="flex items-center gap-2">
                                 <span class="text-sm font-semibold text-gray-900">100</span>
                                 <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
-                                
-                            </div>
-                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            
-                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
-                        </div>
-                    </button>
-                </li>
-                
-                
-                <li>
-                    <button type="button"
-                            hx-get="/api/harness/session/demo-session-0001"
-                            hx-target="#harness-session-panel"
-                            hx-swap="innerHTML"
-                            
-                            @click="sel = 'demo-session-0001'"
-                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
-                            :class="sel === 'demo-session-0001' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
-                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
-                              style="background: #2ec27e18; color: #2ec27e;">A</span>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-900">100</span>
-                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
-                                
-                                <span class="text-[10px] text-gray-400 italic">low activity</span>
                                 
                             </div>
                             <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
