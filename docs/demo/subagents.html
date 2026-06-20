@@ -6,7 +6,7 @@
     <meta name="description" content="Claude Monitor - Track Claude Code usage and analytics">
     <meta name="theme-color" content="#0770E3">
 
-    <title>Conversations - ClaudeSavvy</title>
+    <title>Sub-Agents - ClaudeSavvy</title>
 
     <!-- Tailwind CSS 3.x -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -261,8 +261,8 @@
                     
                     
                     <a href="conversations.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
-                        bg-blue-50 text-[#0770E3] font-semibold">
-                        <span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#0770E3] rounded-r-full -ml-3"></span>
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M21 12a8 8 0 1 1-3.2-6.4L21 4l-1.3 3.4A8 8 0 0 1 21 12Z"/><path d="M8 11h8M8 14h5"/></svg>
                         <span class="flex-1 leading-none">Conversations</span>
                     </a>
@@ -297,8 +297,8 @@
                     
                     
                     <a href="subagents.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
-                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
-                        
+                        bg-blue-50 text-[#0770E3] font-semibold">
+                        <span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#0770E3] rounded-r-full -ml-3"></span>
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>
                         <span class="flex-1 leading-none">Sub-Agents</span>
                     </a>
@@ -407,15 +407,14 @@
     <div class="flex-1 flex flex-col min-w-0">
         <main class="flex-1 px-8 py-8">
             
-<div class="space-y-8" x-data="{ detailOpen: false }" @open-conv-detail.window="detailOpen = true" @keydown.escape.window="detailOpen = false">
+<div class="space-y-8">
     <!-- Page Title and Time Filter -->
     <div class="flex flex-wrap items-center justify-between gap-4">
         <div class="min-w-0">
-            <h1 class="text-3xl font-bold text-gray-900">Conversations</h1>
-            <p class="mt-2 text-gray-600">Per-conversation token spend, context growth, and cost analytics</p>
+            <h1 class="text-3xl font-bold text-gray-900">Sub-Agents</h1>
+            <p class="mt-2 text-gray-600">Token exchange analytics for Task tool sub-agent invocations</p>
         </div>
 
-        
         
             <!-- Time Filter Component
      Required context variables:
@@ -477,12 +476,12 @@
         },
         _fire(period) {
             if (period === 'custom' && (!this.customStart || !this.customEnd)) return;
-            let url = '/api/conversations?period=' + period;
+            let url = '/api/subagents?period=' + period;
             if (period === 'custom' && this.customStart && this.customEnd) {
                 url += '&start=' + this.customStart + '&end=' + this.customEnd;
             }
             
-            htmx.ajax('GET', url, {target: '#conversations-content', swap: 'innerHTML'});
+            htmx.ajax('GET', url, {target: '#subagents-content', swap: 'innerHTML'});
         },
         select(period) {
             this.selectedPeriod = period;
@@ -557,8 +556,8 @@
         
     </div>
 
-    <!-- Conversations Content (HTMX Target) -->
-    <div id="conversations-content">
+    <!-- Sub-Agents Content (HTMX Target) -->
+    <div id="subagents-content">
         
 
 <!-- Summary Cards -->
@@ -568,14 +567,34 @@
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6  ">
     <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0 overflow-hidden">
-            <p class="text-sm font-medium text-gray-600 truncate">Total Conversations</p>
-            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="9">9</p>
+            <p class="text-sm font-medium text-gray-600 truncate">Total Exchanges</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="0">0</p>
             
             
         </div>
         
         <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+        </div>
+        
+    </div>
+</div>
+
+
+
+    
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6  ">
+    <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-sm font-medium text-gray-600 truncate">Total Tokens</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="0">0</p>
+            
+            
+        </div>
+        
+        <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
         </div>
         
     </div>
@@ -589,7 +608,7 @@
     <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0 overflow-hidden">
             <p class="text-sm font-medium text-gray-600 truncate">Total Cost</p>
-            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$5.75">$5.75</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$0.00">$0.00</p>
             
             
         </div>
@@ -608,8 +627,8 @@
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6  ">
     <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0 overflow-hidden">
-            <p class="text-sm font-medium text-gray-600 truncate">Avg Cost / Conv.</p>
-            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$0.64">$0.64</p>
+            <p class="text-sm font-medium text-gray-600 truncate">Avg Tokens/Exchange</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="0">0</p>
             
             
         </div>
@@ -628,38 +647,16 @@
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6  ">
     <div class="flex items-start justify-between gap-3">
         <div class="flex-1 min-w-0 overflow-hidden">
-            <p class="text-sm font-medium text-gray-600 truncate">Most Expensive</p>
-            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$1.49">$1.49</p>
+            <p class="text-sm font-medium text-gray-600 truncate">Avg Duration</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="0s">0s</p>
             
-            <p class="mt-1 text-xs text-gray-500 truncate">claudesavvy · Jun 17</p>
-            
-            
-        </div>
-        
-        <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-        </div>
-        
-    </div>
-</div>
-
-
-
-    
-
-<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6  ">
-    <div class="flex items-start justify-between gap-3">
-        <div class="flex-1 min-w-0 overflow-hidden">
-            <p class="text-sm font-medium text-gray-600 truncate">Avg Prompts / Conv.</p>
-            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="16.1">16.1</p>
-            
-            <p class="mt-1 text-xs text-gray-500 truncate">Human prompts, not tool turns</p>
+            <p class="mt-1 text-xs text-gray-500 truncate">0 agent types</p>
             
             
         </div>
         
         <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         </div>
         
     </div>
@@ -668,556 +665,29 @@
 
 </div>
 
-<!-- Conversations Table -->
+<!-- Sub-Agent Type Breakdown -->
+
+
+<!-- Timeline Chart -->
+
+
+<!-- Detail Panel (loaded via HTMX) -->
+<div id="subagent-detail-panel" class="mt-8"></div>
+
+<!-- Exchanges Table -->
 
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mt-8">
-    <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900">Conversations</h3>
-        <p class="text-sm text-gray-500 mt-1">Sorted by cost — click a row to see context growth chart</p>
-    </div>
-    <div class="overflow-x-auto">
-        <table data-enhance="table" class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Started</th>
-                    <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                    <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Turns</th>
-                    <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Tokens</th>
-                    <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Peak Context</th>
-                    <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cache %</th>
-                    <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                
-                
-                
-                
-                
-                <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
-                    hx-get="/api/conversation/demo-session-0008?period=week"
-                    hx-target="#conversation-detail-panel"
-                    hx-swap="innerHTML">
-                    <td class="px-4 py-3 text-sm text-gray-900 max-w-[140px]">
-                        <div class="truncate font-medium" title="/home/demo/claudesavvy">claudesavvy</div>
-                        
-                        <div class="flex flex-wrap gap-1 mt-1">
-                            
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-600">Claude Opus 4.5</span>
-                            
-                        </div>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                        <div>Jun 17</div>
-                        <div class="text-xs text-gray-400">17:46</div>
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        24m
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600">
-                        17
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">
-                        768.6K
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-                        
-                        <span class="font-mono text-green-600">
-                            59.4K
-                        </span>
-                        <span class="ml-1 font-mono text-xs text-gray-400" title="30% of 200K limit">
-                            ▓▓░░░░░░
-                        </span>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        91.2%
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium whitespace-nowrap
-                        text-orange-600
-                        ">
-                        $1.4916
-                    </td>
-                </tr>
-                
-                
-                
-                
-                
-                <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
-                    hx-get="/api/conversation/demo-session-0009?period=week"
-                    hx-target="#conversation-detail-panel"
-                    hx-swap="innerHTML">
-                    <td class="px-4 py-3 text-sm text-gray-900 max-w-[140px]">
-                        <div class="truncate font-medium" title="/home/demo/my-saas-app">my-saas-app</div>
-                        
-                        <div class="flex flex-wrap gap-1 mt-1">
-                            
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-600">Claude Sonnet 4.5</span>
-                            
-                        </div>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                        <div>Jun 19</div>
-                        <div class="text-xs text-gray-400">22:37</div>
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        30m
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600">
-                        21
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">
-                        969.8K
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-                        
-                        <span class="font-mono text-green-600">
-                            60.8K
-                        </span>
-                        <span class="ml-1 font-mono text-xs text-gray-400" title="30% of 200K limit">
-                            ▓▓░░░░░░
-                        </span>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        93.1%
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium whitespace-nowrap
-                        text-orange-600
-                        ">
-                        $1.0056
-                    </td>
-                </tr>
-                
-                
-                
-                
-                
-                <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
-                    hx-get="/api/conversation/demo-session-0001?period=week"
-                    hx-target="#conversation-detail-panel"
-                    hx-swap="innerHTML">
-                    <td class="px-4 py-3 text-sm text-gray-900 max-w-[140px]">
-                        <div class="truncate font-medium" title="/home/demo/claudesavvy">claudesavvy</div>
-                        
-                        <div class="flex flex-wrap gap-1 mt-1">
-                            
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-600">Claude Sonnet 4.5</span>
-                            
-                        </div>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                        <div>Jun 20</div>
-                        <div class="text-xs text-gray-400">02:53</div>
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        19m
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600">
-                        14
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">
-                        580.1K
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-                        
-                        <span class="font-mono text-green-600">
-                            48.7K
-                        </span>
-                        <span class="ml-1 font-mono text-xs text-gray-400" title="24% of 200K limit">
-                            ▓▓░░░░░░
-                        </span>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        90.3%
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium whitespace-nowrap
-                        text-yellow-600
-                        ">
-                        $0.6872
-                    </td>
-                </tr>
-                
-                
-                
-                
-                
-                <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
-                    hx-get="/api/conversation/demo-session-0012?period=week"
-                    hx-target="#conversation-detail-panel"
-                    hx-swap="innerHTML">
-                    <td class="px-4 py-3 text-sm text-gray-900 max-w-[140px]">
-                        <div class="truncate font-medium" title="/home/demo/my-saas-app">my-saas-app</div>
-                        
-                        <div class="flex flex-wrap gap-1 mt-1">
-                            
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-600">Claude Sonnet 4.5</span>
-                            
-                        </div>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                        <div>Jun 14</div>
-                        <div class="text-xs text-gray-400">02:25</div>
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        18m
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600">
-                        13
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">
-                        390.4K
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-                        
-                        <span class="font-mono text-green-600">
-                            37.4K
-                        </span>
-                        <span class="ml-1 font-mono text-xs text-gray-400" title="19% of 200K limit">
-                            ▓▓░░░░░░
-                        </span>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        89.0%
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium whitespace-nowrap
-                        text-yellow-600
-                        ">
-                        $0.5371
-                    </td>
-                </tr>
-                
-                
-                
-                
-                
-                <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
-                    hx-get="/api/conversation/demo-session-0013?period=week"
-                    hx-target="#conversation-detail-panel"
-                    hx-swap="innerHTML">
-                    <td class="px-4 py-3 text-sm text-gray-900 max-w-[140px]">
-                        <div class="truncate font-medium" title="/home/demo/my-saas-app">my-saas-app</div>
-                        
-                        <div class="flex flex-wrap gap-1 mt-1">
-                            
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-600">Claude Sonnet 4.5</span>
-                            
-                        </div>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                        <div>Jun 18</div>
-                        <div class="text-xs text-gray-400">02:20</div>
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        18m
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600">
-                        13
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">
-                        370.4K
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-                        
-                        <span class="font-mono text-green-600">
-                            33.2K
-                        </span>
-                        <span class="ml-1 font-mono text-xs text-gray-400" title="17% of 200K limit">
-                            ▓░░░░░░░
-                        </span>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        89.2%
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium whitespace-nowrap
-                        text-yellow-600
-                        ">
-                        $0.5160
-                    </td>
-                </tr>
-                
-                
-                
-                
-                
-                <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
-                    hx-get="/api/conversation/demo-session-0014?period=week"
-                    hx-target="#conversation-detail-panel"
-                    hx-swap="innerHTML">
-                    <td class="px-4 py-3 text-sm text-gray-900 max-w-[140px]">
-                        <div class="truncate font-medium" title="/home/demo/data-pipeline">data-pipeline</div>
-                        
-                        <div class="flex flex-wrap gap-1 mt-1">
-                            
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-600">Claude Sonnet 4.5</span>
-                            
-                        </div>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                        <div>Jun 20</div>
-                        <div class="text-xs text-gray-400">01:52</div>
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        18m
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600">
-                        13
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">
-                        329.7K
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-                        
-                        <span class="font-mono text-green-600">
-                            33.2K
-                        </span>
-                        <span class="ml-1 font-mono text-xs text-gray-400" title="17% of 200K limit">
-                            ▓░░░░░░░
-                        </span>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        89.0%
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium whitespace-nowrap
-                        text-yellow-600
-                        ">
-                        $0.4267
-                    </td>
-                </tr>
-                
-                
-                
-                
-                
-                <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
-                    hx-get="/api/conversation/demo-session-0017?period=week"
-                    hx-target="#conversation-detail-panel"
-                    hx-swap="innerHTML">
-                    <td class="px-4 py-3 text-sm text-gray-900 max-w-[140px]">
-                        <div class="truncate font-medium" title="/home/demo/blog">blog</div>
-                        
-                        <div class="flex flex-wrap gap-1 mt-1">
-                            
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-600">Claude Sonnet 4.5</span>
-                            
-                        </div>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                        <div>Jun 19</div>
-                        <div class="text-xs text-gray-400">22:57</div>
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        25m
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600">
-                        18
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">
-                        342.8K
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-                        
-                        <span class="font-mono text-green-600">
-                            24.7K
-                        </span>
-                        <span class="ml-1 font-mono text-xs text-gray-400" title="12% of 200K limit">
-                            ▓░░░░░░░
-                        </span>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        92.0%
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium whitespace-nowrap
-                        text-yellow-600
-                        ">
-                        $0.4093
-                    </td>
-                </tr>
-                
-                
-                
-                
-                
-                <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
-                    hx-get="/api/conversation/demo-session-0007?period=week"
-                    hx-target="#conversation-detail-panel"
-                    hx-swap="innerHTML">
-                    <td class="px-4 py-3 text-sm text-gray-900 max-w-[140px]">
-                        <div class="truncate font-medium" title="/home/demo/claudesavvy">claudesavvy</div>
-                        
-                        <div class="flex flex-wrap gap-1 mt-1">
-                            
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-600">Claude Haiku 4.5</span>
-                            
-                        </div>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                        <div>Jun 16</div>
-                        <div class="text-xs text-gray-400">05:26</div>
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        28m
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600">
-                        20
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">
-                        1.02M
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-                        
-                        <span class="font-mono text-green-600">
-                            65.0K
-                        </span>
-                        <span class="ml-1 font-mono text-xs text-gray-400" title="33% of 200K limit">
-                            ▓▓▓░░░░░
-                        </span>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        92.7%
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium whitespace-nowrap
-                        text-yellow-600
-                        ">
-                        $0.3658
-                    </td>
-                </tr>
-                
-                
-                
-                
-                
-                <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
-                    hx-get="/api/conversation/demo-session-0018?period=week"
-                    hx-target="#conversation-detail-panel"
-                    hx-swap="innerHTML">
-                    <td class="px-4 py-3 text-sm text-gray-900 max-w-[140px]">
-                        <div class="truncate font-medium" title="/home/demo/blog">blog</div>
-                        
-                        <div class="flex flex-wrap gap-1 mt-1">
-                            
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-600">Claude Sonnet 4.5</span>
-                            
-                        </div>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                        <div>Jun 19</div>
-                        <div class="text-xs text-gray-400">04:45</div>
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        22m
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600">
-                        16
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 whitespace-nowrap">
-                        305.0K
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-                        
-                        <span class="font-mono text-green-600">
-                            23.1K
-                        </span>
-                        <span class="ml-1 font-mono text-xs text-gray-400" title="12% of 200K limit">
-                            ▓░░░░░░░
-                        </span>
-                        
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right text-gray-600 whitespace-nowrap">
-                        91.5%
-                    </td>
-                    <td class="px-4 py-3 text-sm text-right font-medium whitespace-nowrap
-                        text-yellow-600
-                        ">
-                        $0.3085
-                    </td>
-                </tr>
-                
-            </tbody>
-        </table>
+    <div class="px-6 py-12 text-center">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+        </svg>
+        <p class="mt-2 text-gray-500">No sub-agent exchanges found</p>
+        <p class="text-sm text-gray-400 mt-1">Use the Task tool in Claude Code to see sub-agent analytics</p>
     </div>
 </div>
 
-
-    </div>
-
-    <!-- Conversation Detail Modal -->
-    <div x-show="detailOpen"
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
-         x-transition:leave="transition ease-in duration-150"
-         x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0"
-         class="fixed inset-0 z-50 overflow-y-auto"
-         style="display:none">
-        <!-- Backdrop -->
-        <div class="fixed inset-0 bg-gray-900 bg-opacity-50" @click="detailOpen = false"></div>
-        <!-- Panel -->
-        <div class="relative flex items-start justify-center min-h-screen p-4 pt-16">
-            <div x-show="detailOpen"
-                 x-transition:enter="transition ease-out duration-200"
-                 x-transition:enter-start="opacity-0 translate-y-4"
-                 x-transition:enter-end="opacity-100 translate-y-0"
-                 x-transition:leave="transition ease-in duration-150"
-                 x-transition:leave-start="opacity-100 translate-y-0"
-                 x-transition:leave-end="opacity-0 translate-y-4"
-                 class="relative w-full max-w-3xl bg-white rounded-xl shadow-2xl max-h-[80vh] overflow-y-auto"
-                 @click.stop>
-                <!-- Close button -->
-                <button @click="detailOpen = false"
-                        class="absolute top-4 right-4 z-10 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-                <!-- HTMX target — lives here, outside #conversations-content -->
-                <div id="conversation-detail-panel" class="p-6">
-                    <!-- Loading state shown while HTMX fetches -->
-                    <div class="animate-pulse space-y-4">
-                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
-
-<script>
-    document.addEventListener('htmx:afterSwap', function(evt) {
-        if (evt.detail.target && evt.detail.target.id === 'conversation-detail-panel') {
-            window.dispatchEvent(new CustomEvent('open-conv-detail'));
-        }
-    });
-
-    // Deep link: /conversations?session=<id> opens that conversation's detail.
-    // period=all so the lookup succeeds regardless of the page's time filter.
-    document.addEventListener('DOMContentLoaded', function() {
-        const sid = new URLSearchParams(window.location.search).get('session');
-        if (sid && /^[\w-]+$/.test(sid)) {
-            htmx.ajax('GET', '/api/conversation/' + encodeURIComponent(sid) + '?period=all',
-                      {target: '#conversation-detail-panel', swap: 'innerHTML'});
-        }
-    });
-</script>
 
         </main>
 

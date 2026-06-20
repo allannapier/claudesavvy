@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Claude Monitor - Track Claude Code usage and analytics">
+    <meta name="theme-color" content="#0770E3">
+
+    <title>Agent Harness - ClaudeSavvy</title>
+
+    <!-- Tailwind CSS 3.x -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.11.1/dist/full.min.css" rel="stylesheet" type="text/css">
+
+    <!-- Alpine.js 3.x -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+    <!-- HTMX 2.0 -->
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+
+    <!-- HTMX Loading Indicator Configuration -->
+    <style>
+        /* Global loading bar at top of page */
+        #global-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #0770E3, #38bdf8, #0770E3);
+            background-size: 200% 100%;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 100ms ease-out;
+            animation: shimmer 1s ease-in-out infinite;
+            box-shadow: 0 0 10px rgba(7, 112, 227, 0.5);
+        }
+        
+        #global-loader.htmx-request,
+        #global-loader.loading {
+            opacity: 1;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* Show loading indicator during HTMX requests */
+        .htmx-indicator {
+            display: none;
+            opacity: 0;
+            transition: opacity 200ms ease-in;
+        }
+        .htmx-request .htmx-indicator {
+            display: inline-flex;
+            opacity: 1;
+        }
+        .htmx-request.htmx-indicator {
+            display: inline-flex;
+            opacity: 1;
+        }
+        
+        /* Dim content while loading */
+        .htmx-request .loading-content {
+            opacity: 0.5;
+            pointer-events: none;
+            transition: opacity 150ms ease-out;
+        }
+        
+        /* Clickable row loading state - more visible */
+        tr.htmx-request {
+            background: linear-gradient(90deg, rgba(7, 112, 227, 0.15) 0%, rgba(7, 112, 227, 0.05) 50%, rgba(7, 112, 227, 0.15) 100%) !important;
+            background-size: 200% 100%;
+            animation: row-shimmer 1s ease-in-out infinite;
+            position: relative;
+        }
+        
+        tr.htmx-request td {
+            opacity: 0.6;
+        }
+        
+        tr.htmx-request td:first-child::before {
+            content: '';
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #0770E3;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes row-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* Button loading state */
+        button.htmx-request, a.htmx-request {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        /* Spinning loader animation */
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Skeleton loading placeholder */
+        .skeleton-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+
+    <!-- Chart.js 4.x -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <!-- Chart.js date adapter for time scales -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+    <!-- Table search / sort / pagination -->
+    <script src="static/js/enhanced-tables.js" defer></script>
+
+    <!-- Custom brand color configuration for Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-blue': '#0770E3',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --brand-blue: #0770E3;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .btn-brand {
+            @apply bg-[#0770E3] hover:bg-[#0560c1] text-white font-medium transition-colors;
+        }
+
+        .text-brand {
+            @apply text-[#0770E3];
+        }
+
+        .border-brand {
+            @apply border-[#0770E3];
+        }
+    </style>
+
+    
+</head>
+<body class="bg-gray-50" hx-indicator="#global-loader"><div id="demo-banner" style="
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: #0770E3; color: #fff;
+    padding: 8px 16px; font-size: 13px;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    font-family: system-ui, sans-serif;
+">
+    <span>&#9432; Static demo &mdash; showing sample data. Settings are read-only.</span>
+    <a href="https://github.com/allannapier/claudesavvy#quick-start"
+       style="color:#fff; font-weight:600; text-decoration:underline;"
+       target="_blank">Install ClaudeSavvy</a>
+    <span>for live data and interactive filtering.</span>
+</div>
+<style>
+    /* Push page content below the fixed banner */
+    body { padding-top: 38px !important; }
+    /* Dim HTMX-driven controls (time filters, dynamic loaders) */
+    [hx-get], [data-hx-get] { pointer-events: none; opacity: 0.5; }
+    /* Disable all mutation controls: POST/PUT/DELETE HTMX, forms, save buttons */
+    [hx-post], [data-hx-post],
+    [hx-put],  [data-hx-put],
+    [hx-delete],[data-hx-delete] {
+        pointer-events: none !important;
+        opacity: 0.4 !important;
+        cursor: not-allowed !important;
+    }
+    form input:not([type="search"]):not([type="text"][readonly]),
+    form select,
+    form textarea {
+        pointer-events: none !important;
+        opacity: 0.5 !important;
+        background: #f3f4f6 !important;
+    }
+    form button[type="submit"],
+    form button:not([type="button"]) {
+        pointer-events: none !important;
+        opacity: 0.4 !important;
+        cursor: not-allowed !important;
+    }
+</style>
+
+    <!-- Global loading bar -->
+    <div id="global-loader"></div>
+    
+    
+
+
+
+
+  
+
+
+<div class="min-h-screen flex bg-gray-50">
+
+    <!-- Left Sidebar -->
+    <aside class="w-60 shrink-0 bg-white border-r border-gray-200 flex flex-col sticky top-0 h-screen overflow-y-auto z-40">
+
+        <!-- Logo + Brand -->
+        <div class="flex items-center gap-2.5 px-5 py-5 pb-4">
+            <div class="w-8 h-8 rounded-lg bg-[#0770E3] flex items-center justify-center shrink-0">
+                <span class="text-white font-bold text-sm">CS</span>
+            </div>
+            <div>
+                <div class="text-sm font-bold text-gray-900 leading-tight">ClaudeSavvy</div>
+                <div class="text-xs text-gray-400 font-mono leading-tight">usage analytics</div>
+            </div>
+        </div>
+
+        <!-- Nav Groups -->
+        <nav class="flex-1 px-3 pb-4 space-y-5">
+
+            <!-- Costs & Usage -->
+            <div>
+                <div class="px-2 mb-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Costs &amp; Usage</span>
+                </div>
+                <div class="space-y-0.5">
+                    
+                    
+                    
+                    <a href="index.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+                        <span class="flex-1 leading-none">Dashboard</span>
+                    </a>
+                    
+                    
+                    <a href="conversations.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M21 12a8 8 0 1 1-3.2-6.4L21 4l-1.3 3.4A8 8 0 0 1 21 12Z"/><path d="M8 11h8M8 14h5"/></svg>
+                        <span class="flex-1 leading-none">Conversations</span>
+                    </a>
+                    
+                    
+                    <a href="tokens.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="9" cy="9" r="6"/><circle cx="15" cy="15" r="6"/></svg>
+                        <span class="flex-1 leading-none">Tokens</span>
+                    </a>
+                    
+                </div>
+            </div>
+
+            <!-- Harness -->
+            <div>
+                <div class="px-2 mb-1 flex items-center gap-1.5">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Harness</span>
+                    <span class="text-[8px] font-bold tracking-wide px-1 py-0.5 rounded bg-[#0770E3] text-white leading-none">NEW</span>
+                </div>
+                <div class="space-y-0.5">
+                    
+                    
+                    
+                    <a href="harness.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        bg-blue-50 text-[#0770E3] font-semibold">
+                        <span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#0770E3] rounded-r-full -ml-3"></span>
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M6 8.5v3a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-3"/><path d="M12 14.5v1"/></svg>
+                        <span class="flex-1 leading-none">Overview</span>
+                    </a>
+                    
+                    
+                    <a href="subagents.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>
+                        <span class="flex-1 leading-none">Sub-Agents</span>
+                    </a>
+                    
+                    
+                    <a href="#" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M14 14a4 4 0 0 1 6 5"/></svg>
+                        <span class="flex-1 leading-none">Teams</span>
+                    </a>
+                    
+                    
+                    <a href="integrations.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M4 7v10l8 4 8-4V7l-8-4-8 4Z"/><path d="m4 7 8 4 8-4"/><path d="M12 11v10"/></svg>
+                        <span class="flex-1 leading-none">MCP Servers</span>
+                    </a>
+                    
+                    
+                    <a href="features.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6a1.4 1.4 0 0 0 2 2l6-6a4 4 0 0 0 5.4-5.4l-2.4 2.4-2-2 2.4-2.4Z"/></svg>
+                        <span class="flex-1 leading-none">Tools &amp; Features</span>
+                    </a>
+                    
+                    
+                    <a href="configuration.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>
+                        <span class="flex-1 leading-none">Configuration</span>
+                    </a>
+                    
+                </div>
+            </div>
+
+            <!-- Workspace -->
+            <div>
+                <div class="px-2 mb-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Workspace</span>
+                </div>
+                <div class="space-y-0.5">
+                    
+                    
+                    
+                    <a href="projects.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+                        <span class="flex-1 leading-none">Projects</span>
+                    </a>
+                    
+                    
+                    <a href="files.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/></svg>
+                        <span class="flex-1 leading-none">Files</span>
+                    </a>
+                    
+                </div>
+            </div>
+
+            <!-- System -->
+            <div>
+                <div class="px-2 mb-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">System</span>
+                </div>
+                <div class="space-y-0.5">
+                    
+                    
+                    
+                    <a href="settings.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+                        <span class="flex-1 leading-none">Settings</span>
+                    </a>
+                    
+                </div>
+            </div>
+
+        </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="px-4 py-4 border-t border-gray-100">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center text-xs font-bold shrink-0">
+                    CS
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs font-semibold text-gray-700 truncate">ClaudeSavvy</div>
+                    <div class="text-[10px] text-gray-400">Open-source · MIT</div>
+                </div>
+                <a href="https://github.com/allannapier/claudesavvy" target="_blank" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Right Side: Main Content + Footer -->
+    <div class="flex-1 flex flex-col min-w-0">
+        <main class="flex-1 px-8 py-8">
+            
+<div class="space-y-8">
+
+    <!-- Page Header -->
+    <div class="flex items-start justify-between flex-wrap gap-4">
+        <div>
+            <div class="flex items-center gap-2 mb-1.5">
+                <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Harness · Overview</span>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-900">Your Agent Harness</h1>
+            <p class="mt-2 text-gray-500 max-w-2xl">
+                Everything wired into Claude in this workspace — skills, sub-agents, MCP servers,
+                plugins, hooks, and guidance — at each scope level.
+            </p>
+        </div>
+        <div class="flex items-center gap-2 mt-1">
+            <a href="configuration.html"
+               class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7">
+                    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/>
+                    <path d="M14 3v5h5M9 13h6M9 17h6"/>
+                </svg>
+                Full Config
+            </a>
+        </div>
+    </div>
+
+    <!-- Session Quality Evaluation (most actionable — first) -->
+    <div class="space-y-4">
+        <div class="flex flex-wrap items-center gap-3">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Session quality</h2>
+                <p class="text-sm text-gray-500">How efficiently the harness ran your sessions — ranked by dollars wasted so you know what to tune first.</p>
+            </div>
+            <div class="ml-auto">
+                
+                <!-- Time Filter Component
+     Required context variables:
+       - current_url:     API endpoint URL (e.g. '/api/tokens')
+       - target_id:       HTMX target element ID (e.g. 'tokens-content')
+     Optional context variables:
+       - show_realtime:   bool — include 15m option (default: false)
+       - storage_key:     localStorage key for per-page persistence (default: no persistence)
+       - default_period:  server-rendered default period value (default: 'today')
+       - filter_projects: list of {value, label} — when provided (non-empty), renders a
+                          project select BEFORE the period select; "All projects" is value "".
+                          Deliberately NOT named "projects": pages commonly have a global
+                          `projects` template variable that would leak into this include.
+-->
+
+
+
+
+
+
+
+<div
+    x-data="{
+        selectedPeriod: '7days',
+        selectedProject: '',
+        showCustom: false,
+        customStart: '',
+        customEnd: '',
+        init() {
+            
+            const legacyMap = { week: '7days', month: 'this_month', '1hour': '15min' };
+            const raw = localStorage.getItem('harness_eval_period');
+            const stored = raw && legacyMap[raw] ? legacyMap[raw] : raw;
+            const valid = ['15min','today','this_week','7days','this_month','3months','all','custom'];
+            valid.splice(valid.indexOf('15min'), 1);
+            
+            const storedProject = localStorage.getItem('harness_eval_period_project') || '';
+            this.selectedProject = storedProject;
+            
+            let willFire = false;
+            if (stored && valid.includes(stored)) {
+                this.selectedPeriod = stored;
+                if (stored === 'custom') {
+                    this.customStart = localStorage.getItem('harness_eval_period_start') || '';
+                    this.customEnd   = localStorage.getItem('harness_eval_period_end')   || '';
+                    if (this.customStart && this.customEnd) {
+                        this.showCustom = true;
+                    } else {
+                        this.selectedPeriod = '7days';
+                    }
+                }
+                if (stored !== '7days' && stored !== 'custom') {
+                    willFire = true;
+                    this.$nextTick(() => this._fire(stored));
+                } else if (stored === 'custom' && this.customStart && this.customEnd) {
+                    willFire = true;
+                    this.$nextTick(() => this._fire('custom'));
+                }
+            }
+            
+            if (storedProject && !willFire) {
+                this.$nextTick(() => this._fire(this.selectedPeriod));
+            }
+            
+            
+        },
+        _fire(period) {
+            if (period === 'custom' && (!this.customStart || !this.customEnd)) return;
+            let url = '/api/harness/evaluation?period=' + period;
+            if (period === 'custom' && this.customStart && this.customEnd) {
+                url += '&start=' + this.customStart + '&end=' + this.customEnd;
+            }
+            
+            if (this.selectedProject) {
+                url += '&project=' + encodeURIComponent(this.selectedProject);
+            }
+            
+            htmx.ajax('GET', url, {target: '#harness-eval-content', swap: 'innerHTML'});
+        },
+        select(period) {
+            this.selectedPeriod = period;
+            this.showCustom = (period === 'custom');
+            localStorage.setItem('harness_eval_period', period);
+            if (period !== 'custom') { this._fire(period); }
+        },
+        
+        selectProject(p) {
+            this.selectedProject = p;
+            localStorage.setItem('harness_eval_period_project', p);
+            if (this.selectedPeriod === 'custom' && (!this.customStart || !this.customEnd)) return;
+            this._fire(this.selectedPeriod);
+        },
+        
+        applyCustom() {
+            if (!this.customStart || !this.customEnd) return;
+            
+            localStorage.setItem('harness_eval_period_start', this.customStart);
+            localStorage.setItem('harness_eval_period_end',   this.customEnd);
+            
+            this._fire('custom');
+        }
+    }"
+    class="flex flex-wrap items-center gap-2"
+>
+    
+    <!-- Project select -->
+    <select
+        @change="selectProject($event.target.value)"
+        :value="selectedProject"
+        aria-label="Project"
+        class="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3] cursor-pointer"
+    >
+        <option value="">All projects</option>
+        <option value="-home-demo-data-pipeline">data-pipeline</option><option value="-home-demo-blog">demo-blog</option><option value="-home-demo-claudesavvy">demo-claudesavvy</option><option value="-home-demo-my-saas-app">saas-app</option>
+    </select>
+    
+
+    <!-- Period select -->
+    <select
+        @change="select($event.target.value)"
+        :value="selectedPeriod"
+        aria-label="Time period"
+        class="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3] cursor-pointer"
+    >
+        
+        <option value="today">Today</option>
+        <option value="this_week">This week</option>
+        <option value="7days">Last 7 days</option>
+        <option value="this_month">This month</option>
+        <option value="3months">Last 3 months</option>
+        <option value="all">All time</option>
+        <option value="custom">Custom range…</option>
+    </select>
+
+    <!-- Custom date range inputs -->
+    <div x-show="showCustom" x-transition class="flex items-center gap-2">
+        <input
+            type="date"
+            x-model="customStart"
+            :max="customEnd || undefined"
+            aria-label="Custom range start date"
+            class="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]"
+        />
+        <span class="text-gray-400 text-sm">–</span>
+        <input
+            type="date"
+            x-model="customEnd"
+            :min="customStart || undefined"
+            @change="applyCustom()"
+            aria-label="Custom range end date"
+            class="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]"
+        />
+        <button
+            @click="applyCustom()"
+            :disabled="!customStart || !customEnd"
+            class="px-3 py-2 text-sm font-medium rounded-lg bg-[#0770E3] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >Apply</button>
+    </div>
+
+    <!-- Loading indicator -->
+    <span class="htmx-indicator text-[#0770E3]">
+        <svg class="w-5 h-5 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+            <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
+        </svg>
+    </span>
+</div>
+                
+            </div>
+        </div>
+        <div id="harness-eval-content">
+            <!-- Harness Evaluation Leaderboard (HTMX partial)
+     Context:
+       - evaluation: dict from DashboardService.get_harness_evaluation()
+       - period: current period string (for context)
+-->
+
+
+
+<div class="space-y-5">
+
+    <!-- Aggregate strip -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        
+        
+        
+        
+        <div class="bg-white rounded-xl border border-red-200 p-4"
+             title="Errored calls, duplicate commands, and repeat reads priced at each session's average cost per tool call">
+            <div class="text-xs font-medium text-red-500">Est. wasted spend</div>
+            <div class="text-2xl font-bold mt-1 text-red-600">$0.00</div>
+            
+            <div class="text-[10px] text-gray-400 mt-0.5">0.0% of $5.77 scored</div>
+            
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <div class="text-xs font-medium text-gray-500">Average score</div>
+            <div class="text-2xl font-bold mt-1" style="color: #2ec27e;">100.0</div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <div class="text-xs font-medium text-gray-500">Median score</div>
+            <div class="text-2xl font-bold mt-1" style="color: #2ec27e;">100.0</div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <div class="text-xs font-medium text-gray-500">Sessions scored</div>
+            <div class="text-2xl font-bold text-gray-900 mt-1">18</div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <div class="text-xs font-medium text-gray-500">Best</div>
+            <div class="text-2xl font-bold text-gray-900 mt-1">100</div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4">
+            <div class="text-xs font-medium text-gray-500">Worst</div>
+            <div class="text-2xl font-bold text-gray-900 mt-1">100</div>
+        </div>
+    </div>
+
+    <!-- Grade distribution stacked bar + issue counts -->
+    <div class="space-y-3">
+        <!-- Stacked bar grade distribution -->
+        
+        
+        <div>
+            <div class="flex items-center gap-2 mb-1.5">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Grade distribution</span>
+            </div>
+            <div class="flex h-5 rounded-lg overflow-hidden gap-px">
+                
+                
+                
+                
+                <div class="flex items-center justify-center text-[10px] font-bold text-white transition-all"
+                     style="width: 100.0%; background: #2ec27e;"
+                     title="A: 18 sessions (100.0%)">
+                    A18
+                </div>
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+            </div>
+            <!-- Legend -->
+            <div class="flex flex-wrap items-center gap-3 mt-2">
+                
+                
+                <span class="inline-flex items-center gap-1 text-xs font-semibold"
+                      style="color: #2ec27e;">
+                    <span class="w-2 h-2 rounded-sm inline-block" style="background: #2ec27e;"></span>
+                    A&nbsp;<span class="font-mono opacity-70">18</span>
+                </span>
+                
+                
+                <span class="inline-flex items-center gap-1 text-xs font-semibold"
+                      style="color: #0770E3;">
+                    <span class="w-2 h-2 rounded-sm inline-block" style="background: #0770E3;"></span>
+                    B&nbsp;<span class="font-mono opacity-70">0</span>
+                </span>
+                
+                
+                <span class="inline-flex items-center gap-1 text-xs font-semibold"
+                      style="color: #f59e0b;">
+                    <span class="w-2 h-2 rounded-sm inline-block" style="background: #f59e0b;"></span>
+                    C&nbsp;<span class="font-mono opacity-70">0</span>
+                </span>
+                
+                
+                <span class="inline-flex items-center gap-1 text-xs font-semibold"
+                      style="color: #fb923c;">
+                    <span class="w-2 h-2 rounded-sm inline-block" style="background: #fb923c;"></span>
+                    D&nbsp;<span class="font-mono opacity-70">0</span>
+                </span>
+                
+                
+                <span class="inline-flex items-center gap-1 text-xs font-semibold"
+                      style="color: #ef4444;">
+                    <span class="w-2 h-2 rounded-sm inline-block" style="background: #ef4444;"></span>
+                    F&nbsp;<span class="font-mono opacity-70">0</span>
+                </span>
+                
+            </div>
+        </div>
+        
+
+        <!-- Issue counts -->
+        
+        
+        
+        <div class="flex flex-wrap items-center gap-2">
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+        </div>
+    </div>
+
+    <!-- Leaderboard (most $ wasted first) + detail panel -->
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5"
+         x-data="{ sel: 'demo-session-0018' }">
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+                <span class="text-sm font-semibold text-gray-800">Sessions worth fixing</span>
+                <span class="ml-auto text-xs font-mono text-gray-400">most $ wasted first</span>
+            </div>
+            <ul class="divide-y divide-gray-50 max-h-[28rem] overflow-y-auto">
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0018"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            hx-trigger="load, click"
+                            @click="sel = 'demo-session-0018'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0018' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-blog</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">write an intro post about the project</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0017"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0017'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0017' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-blog</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">write an intro post about the project</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0016"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0016'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0016' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">data-pipeline</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add error handling to the ETL pipeline</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0015"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0015'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0015' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">data-pipeline</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add error handling to the ETL pipeline</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0014"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0014'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0014' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">data-pipeline</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add error handling to the ETL pipeline</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0013"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0013'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0013' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">saas-app</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">implement user authentication with JWT tokens</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0012"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0012'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0012' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">saas-app</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">implement user authentication with JWT tokens</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0011"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0011'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0011' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">saas-app</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">implement user authentication with JWT tokens</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0010"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0010'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0010' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">saas-app</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">implement user authentication with JWT tokens</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0009"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0009'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0009' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">saas-app</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">implement user authentication with JWT tokens</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0008"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0008'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0008' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0007"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0007'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0007' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0006"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0006'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0006' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0005"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0005'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0005' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0004"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0004'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0004' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0003"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0003'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0003' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0002"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0002'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0002' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+                
+                <li>
+                    <button type="button"
+                            hx-get="/api/harness/session/demo-session-0001"
+                            hx-target="#harness-session-panel"
+                            hx-swap="innerHTML"
+                            
+                            @click="sel = 'demo-session-0001'"
+                            class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors focus:outline-none"
+                            :class="sel === 'demo-session-0001' ? 'bg-blue-50 ring-1 ring-inset ring-[#0770E3]/20' : 'hover:bg-gray-50'">
+                        <span class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0"
+                              style="background: #2ec27e18; color: #2ec27e;">A</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900">100</span>
+                                <span class="text-xs text-gray-400 font-mono truncate">demo-claudesavvy</span>
+                                
+                                <span class="text-[10px] text-gray-400 italic">low activity</span>
+                                
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">add a --demo flag that loads sample data</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            
+                            <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap hidden sm:block">100 A</span>
+                        </div>
+                    </button>
+                </li>
+                
+            </ul>
+        </div>
+
+        <!-- Detail panel — pre-populated via auto-fired first-row load -->
+        <div id="harness-session-panel" class="bg-white rounded-xl border border-gray-200 overflow-auto">
+            <div class="p-8 flex items-center justify-center text-gray-400">
+                <svg class="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+        </div>
+    </div>
+
+    <!-- Summary KPI Row -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        
+        
+        <div class="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-gray-500">Skills</span>
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: #2ec27e18;">
+                    <svg class="w-4 h-4" fill="none" stroke="#2ec27e" viewBox="0 0 24 24" stroke-width="1.7"><path d="M12 2 14 8h6l-5 4 2 6-5-3.5L7 18l2-6-5-4h6Z"/></svg>
+                </div>
+            </div>
+            <div class="text-2xl font-bold text-gray-900">1</div>
+            
+            <div class="text-[10px] text-gray-400"
+                 title="Components with at least one invocation in the last 30 days">
+                0 of 1 used in 30d
+            </div>
+            
+        </div>
+        
+        <div class="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-gray-500">Sub-Agents</span>
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: #0770E318;">
+                    <svg class="w-4 h-4" fill="none" stroke="#0770E3" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>
+                </div>
+            </div>
+            <div class="text-2xl font-bold text-gray-900">0</div>
+            
+        </div>
+        
+        <div class="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-gray-500">MCP Servers</span>
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: #8b5cf618;">
+                    <svg class="w-4 h-4" fill="none" stroke="#8b5cf6" viewBox="0 0 24 24" stroke-width="1.7"><path d="M4 7v10l8 4 8-4V7l-8-4-8 4Z"/><path d="m4 7 8 4 8-4"/><path d="M12 11v10"/></svg>
+                </div>
+            </div>
+            <div class="text-2xl font-bold text-gray-900">0</div>
+            
+        </div>
+        
+        <div class="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-gray-500">Plugins</span>
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: #f59e0b18;">
+                    <svg class="w-4 h-4" fill="none" stroke="#f59e0b" viewBox="0 0 24 24" stroke-width="1.7"><path d="M9 3v3H6a2 2 0 0 0-2 2v3h3a2 2 0 0 1 0 4H4v3a2 2 0 0 0 2 2h3v-3a2 2 0 0 1 4 0v3h3a2 2 0 0 0 2-2v-3h3a2 2 0 0 0 0-4h-3V8a2 2 0 0 0-2-2h-3V3"/></svg>
+                </div>
+            </div>
+            <div class="text-2xl font-bold text-gray-900">0</div>
+            
+        </div>
+        
+        <div class="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-gray-500">Hooks</span>
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: #ef444418;">
+                    <svg class="w-4 h-4" fill="none" stroke="#ef4444" viewBox="0 0 24 24" stroke-width="1.7"><path d="M12 4v8a4 4 0 1 1-4 4"/><circle cx="12" cy="3.5" r="1.5"/></svg>
+                </div>
+            </div>
+            <div class="text-2xl font-bold text-gray-900">0</div>
+            
+        </div>
+        
+        <div class="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-gray-500">Commands</span>
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: #6b728018;">
+                    <svg class="w-4 h-4" fill="none" stroke="#6b7280" viewBox="0 0 24 24" stroke-width="1.7"><path d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/></svg>
+                </div>
+            </div>
+            <div class="text-2xl font-bold text-gray-900">0</div>
+            
+        </div>
+        
+    </div>
+
+    <!-- Scope Level Tabs -->
+    <div x-data="{ activeScope: 'user' }">
+
+        <!-- Tab Bar -->
+        <div class="flex items-center gap-1 border-b border-gray-200 mb-6">
+            
+            <button
+                @click="activeScope = 'user'"
+                :class="activeScope === 'user' ? 'border-[#0770E3] text-[#0770E3] font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                class="px-5 py-3 text-sm border-b-2 transition-colors -mb-px focus:outline-none">
+                User Level
+                <span class="ml-1 text-xs font-mono text-gray-400">~/.claude/</span>
+            </button>
+            
+            <button
+                @click="activeScope = 'project'"
+                :class="activeScope === 'project' ? 'border-[#0770E3] text-[#0770E3] font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                class="px-5 py-3 text-sm border-b-2 transition-colors -mb-px focus:outline-none">
+                Project Level
+                <span class="ml-1 text-xs font-mono text-gray-400">.claude/ per repo</span>
+            </button>
+            
+            <button
+                @click="activeScope = 'plugin'"
+                :class="activeScope === 'plugin' ? 'border-[#0770E3] text-[#0770E3] font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                class="px-5 py-3 text-sm border-b-2 transition-colors -mb-px focus:outline-none">
+                Plugin Level
+                <span class="ml-1 text-xs font-mono text-gray-400">External plugins</span>
+            </button>
+            
+        </div>
+
+        <!-- ── User Level ── -->
+        <div x-show="activeScope === 'user'" x-transition>
+            
+            <div class="space-y-6">
+                <div class="flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl">
+                    <svg class="w-5 h-5 text-[#0770E3] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9,22 9,12 15,12 15,22"/>
+                    </svg>
+                    <div>
+                        <span class="text-sm font-semibold text-blue-900">User configuration</span>
+                        <span class="ml-2 text-xs text-blue-500 font-mono">/root</span>
+                    </div>
+                    <a href="/configuration?repo=/root" class="ml-auto text-xs text-[#0770E3] hover:underline font-medium">Edit →</a>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    
+                    
+                    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                        <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+                            <div class="w-6 h-6 rounded-md flex items-center justify-center" style="background: #2ec27e18;">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="#2ec27e" viewBox="0 0 24 24" stroke-width="1.7"><path d="M12 2 14 8h6l-5 4 2 6-5-3.5L7 18l2-6-5-4h6Z"/></svg>
+                            </div>
+                            <span class="text-sm font-semibold text-gray-800">Skills</span>
+                            <span class="ml-auto text-xs font-mono text-gray-400">1</span>
+                        </div>
+                        <ul class="divide-y divide-gray-50">
+                            
+                            <li class="px-4 py-2.5 flex items-start gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style="background: #2ec27e;"></span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-xs font-semibold text-gray-800 truncate">session-start-hook</span>
+                                        
+                                        
+                                        <span class="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0"
+                                              title="No invocations seen in the last 30 days">no use 30d</span>
+                                        
+                                        
+                                    </div>
+                                    
+                                    <div class="text-xs text-gray-400 truncate">Creating and developing startup hooks for Claude Code on the web. Use when the u…</div>
+                                    
+                                </div>
+                            </li>
+                            
+                            
+                        </ul>
+                    </div>
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- ── Project Level ── -->
+        <div x-show="activeScope === 'project'" x-transition>
+            
+            <div class="text-center py-16 text-gray-400">
+                <svg class="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.3">
+                    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/>
+                </svg>
+                <p class="text-sm">No project-level configurations found.</p>
+            </div>
+            
+        </div>
+
+        <!-- ── Plugin Level ── -->
+        <div x-show="activeScope === 'plugin'" x-transition>
+            
+            
+            
+
+            
+            <div class="text-center py-16 text-gray-400">
+                <svg class="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.3">
+                    <path d="M9 3v3H6a2 2 0 0 0-2 2v3h3a2 2 0 0 1 0 4H4v3a2 2 0 0 0 2 2h3v-3a2 2 0 0 1 4 0v3h3a2 2 0 0 0 2-2v-3h3a2 2 0 0 0 0-4h-3V8a2 2 0 0 0-2-2h-3V3"/>
+                </svg>
+                <p class="text-sm">No plugins configured. Plugins are discovered from your <code class="bg-gray-100 px-1 rounded">.claude/settings.json</code>.</p>
+                <a href="https://github.com/anthropics/claude-code" target="_blank" class="mt-2 inline-block text-xs text-[#0770E3] hover:underline">
+                    Learn about Claude Code plugins →
+                </a>
+            </div>
+            
+        </div>
+
+    </div>
+
+    <!-- Quick Links to Harness Sections -->
+    <div>
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Drill into your harness</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            
+            <a href="subagents.html" class="bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 hover:shadow-sm transition-all group">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center mb-3" style="background: #0770E318;">
+                    <svg class="w-5 h-5" fill="none" stroke="#0770E3" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>
+                </div>
+                <div class="text-sm font-semibold text-gray-900 group-hover:text-[#0770E3] transition-colors">Sub-Agents</div>
+                <div class="text-xs text-gray-400 mt-0.5">Agent exchanges &amp; costs</div>
+            </a>
+            
+            <a href="integrations.html" class="bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 hover:shadow-sm transition-all group">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center mb-3" style="background: #8b5cf618;">
+                    <svg class="w-5 h-5" fill="none" stroke="#8b5cf6" viewBox="0 0 24 24" stroke-width="1.7"><path d="M4 7v10l8 4 8-4V7l-8-4-8 4Z"/><path d="m4 7 8 4 8-4"/><path d="M12 11v10"/></svg>
+                </div>
+                <div class="text-sm font-semibold text-gray-900 group-hover:text-[#0770E3] transition-colors">MCP Servers</div>
+                <div class="text-xs text-gray-400 mt-0.5">Tool calls across servers</div>
+            </a>
+            
+            <a href="features.html" class="bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 hover:shadow-sm transition-all group">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center mb-3" style="background: #2ec27e18;">
+                    <svg class="w-5 h-5" fill="none" stroke="#2ec27e" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6a1.4 1.4 0 0 0 2 2l6-6a4 4 0 0 0 5.4-5.4l-2.4 2.4-2-2 2.4-2.4Z"/></svg>
+                </div>
+                <div class="text-sm font-semibold text-gray-900 group-hover:text-[#0770E3] transition-colors">Tools &amp; Features</div>
+                <div class="text-xs text-gray-400 mt-0.5">Invocation counts &amp; timing</div>
+            </a>
+            
+            <a href="configuration.html" class="bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 hover:shadow-sm transition-all group">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center mb-3" style="background: #f59e0b18;">
+                    <svg class="w-5 h-5" fill="none" stroke="#f59e0b" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>
+                </div>
+                <div class="text-sm font-semibold text-gray-900 group-hover:text-[#0770E3] transition-colors">Configuration</div>
+                <div class="text-xs text-gray-400 mt-0.5">Skills, hooks, plugins &amp; more</div>
+            </a>
+            
+        </div>
+    </div>
+
+</div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t border-gray-200 px-8 py-5">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+                <p class="text-xs text-gray-400">Open-source usage tracking for Claude Code · MIT License</p>
+                <div class="flex items-center gap-5 text-xs text-gray-500">
+                    <a href="https://github.com/allannapier/claudesavvy" target="_blank" class="hover:text-[#0770E3] flex items-center gap-1 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                        GitHub
+                    </a>
+                    <span class="text-gray-300">|</span>
+                    <a href="https://github.com/anthropics/claude-code" target="_blank" class="hover:text-[#0770E3] transition-colors">Claude Code</a>
+                    <span class="text-gray-300">|</span>
+                    <a href="https://claude.ai" target="_blank" class="hover:text-[#0770E3] transition-colors">Claude.ai</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+</div>
+
+    
+    <!-- HTMX configuration -->
+    <script>
+        // Add loading class to body during any HTMX request
+        document.body.addEventListener('htmx:beforeRequest', function(evt) {
+            document.body.classList.add('htmx-requesting');
+        });
+
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            document.body.classList.remove('htmx-requesting');
+        });
+
+        // Handle failed requests
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            document.body.classList.remove('htmx-requesting');
+        });
+
+        // Show loading bar immediately on nav link clicks (full page navigations)
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a[href]');
+            if (!link || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            const href = link.getAttribute('href');
+            if (!href || href.startsWith('#') || href.startsWith('javascript:') || link.target === '_blank') return;
+            if (link.hasAttribute('hx-get') || link.hasAttribute('hx-post') ||
+                link.hasAttribute('hx-put') || link.hasAttribute('hx-patch') || link.hasAttribute('hx-delete')) return;
+            try {
+                const url = new URL(href, window.location.origin);
+                if (url.origin === window.location.origin) {
+                    // Skip hash-only navigations — they don't trigger pageshow so the loader would get stuck
+                    if (url.pathname === window.location.pathname &&
+                        url.search === window.location.search &&
+                        url.hash) return;
+                    document.getElementById('global-loader').classList.add('loading');
+                }
+            } catch(err) { /* Invalid URL – skip */ }
+        });
+
+        // Reset loader if navigation is cancelled (e.g. back-forward cache restore)
+        window.addEventListener('pageshow', function() {
+            document.getElementById('global-loader').classList.remove('loading');
+        });
+    </script>
+<script>
+/* Prevent HTMX API calls in static demo */
+document.addEventListener('htmx:beforeRequest', function(e) { e.preventDefault(); });
+</script>
+</body>
+</html>

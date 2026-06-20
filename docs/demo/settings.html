@@ -6,7 +6,7 @@
     <meta name="description" content="Claude Monitor - Track Claude Code usage and analytics">
     <meta name="theme-color" content="#0770E3">
 
-    <title>Files - Claude Monitor</title>
+    <title>Settings - LLM Monitor</title>
 
     <!-- Tailwind CSS 3.x -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -356,8 +356,8 @@
                     
                     
                     <a href="files.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
-                        bg-blue-50 text-[#0770E3] font-semibold">
-                        <span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#0770E3] rounded-r-full -ml-3"></span>
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/></svg>
                         <span class="flex-1 leading-none">Files</span>
                     </a>
@@ -375,8 +375,8 @@
                     
                     
                     <a href="settings.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
-                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
-                        
+                        bg-blue-50 text-[#0770E3] font-semibold">
+                        <span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#0770E3] rounded-r-full -ml-3"></span>
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z"/></svg>
                         <span class="flex-1 leading-none">Settings</span>
                     </a>
@@ -407,158 +407,342 @@
     <div class="flex-1 flex flex-col min-w-0">
         <main class="flex-1 px-8 py-8">
             
-<div class="space-y-8" x-data="{}">
-    <!-- Page Title and Time Filter -->
-    <div class="flex flex-wrap items-center justify-between gap-4">
-        <div class="min-w-0">
-            <h1 class="text-3xl font-bold text-gray-900">Files</h1>
-            <p class="mt-2 text-gray-600">File-level usage statistics and analytics</p>
+<div class="space-y-8" x-data="settingsApp()">
+    <!-- Page Title -->
+    <div class="flex items-center justify-between flex-wrap gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Settings</h1>
+            <p class="mt-2 text-gray-600">Configure pricing and application settings</p>
         </div>
 
-        
-            <!-- Time Filter Component
-     Required context variables:
-       - current_url:     API endpoint URL (e.g. '/api/tokens')
-       - target_id:       HTMX target element ID (e.g. 'tokens-content')
-     Optional context variables:
-       - show_realtime:   bool — include 15m option (default: false)
-       - storage_key:     localStorage key for per-page persistence (default: no persistence)
-       - default_period:  server-rendered default period value (default: 'today')
-       - filter_projects: list of {value, label} — when provided (non-empty), renders a
-                          project select BEFORE the period select; "All projects" is value "".
-                          Deliberately NOT named "projects": pages commonly have a global
-                          `projects` template variable that would leak into this include.
--->
+        <div class="flex gap-2">
+            <!-- Refresh Button -->
+            <button onclick="window.location.reload()"
+                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Refresh
+            </button>
+        </div>
+    </div>
 
+    <!-- Claude Code Status Line -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Claude Code Status Line</h2>
+                    <p class="mt-1 text-sm text-gray-600">
+                        Install a status line into Claude Code that shows today's cost, token usage, cache hit rate, and monthly spend — updated live.
+                    </p>
+                </div>
+                <span class="ml-4 shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-[#0770E3]/10 text-[#0770E3]">
+                    One-click install
+                </span>
+            </div>
+        </div>
+        <div class="p-6"
+             hx-get="/api/statusline/status"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+                Checking status…
+            </div>
+        </div>
+    </div>
 
+    <!-- Pricing Configuration Section -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-start justify-between flex-wrap gap-4">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Model Pricing Configuration</h2>
+                    <p class="mt-1 text-sm text-gray-600">
+                        Set custom pricing per million tokens for each model. Changes will be applied to all cost calculations.
+                    </p>
+                    <p class="mt-1 text-xs text-gray-500">
+                        Models marked <span class="font-medium">In use</span> appear in your session data; the rest show built-in defaults.
+                        <span x-show="syncedAt" x-cloak>Last synced from anthropic.com: <span x-text="formatSyncedAt()"></span>.</span>
+                    </p>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                    <button @click="syncPricing()"
+                            :disabled="syncStatus === 'syncing'"
+                            class="px-4 py-2 bg-[#0770E3] text-white rounded-lg hover:bg-[#0560c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 text-sm font-medium">
+                        <svg class="w-4 h-4" :class="syncStatus === 'syncing' ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        <span x-text="syncStatus === 'syncing' ? 'Syncing…' : 'Sync prices from anthropic.com'"></span>
+                    </button>
+                    <span x-show="syncStatus === 'synced'" x-cloak class="text-xs text-green-600" x-text="syncMessage"></span>
+                    <span x-show="syncStatus === 'error'" x-cloak class="text-xs text-red-600" x-text="syncMessage"></span>
+                </div>
+            </div>
+        </div>
 
+        <div class="p-6">
+            <!-- Custom Pricing Notice -->
+            <div x-show="hasCustomPricing" class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <p class="text-sm font-medium text-blue-800">Custom Pricing Active</p>
+                        <p class="text-sm text-blue-700 mt-1">
+                            You have <span x-text="Object.keys(customPricing).length"></span> model(s) with custom pricing configured.
+                        </p>
+                    </div>
+                </div>
+            </div>
 
+            <!-- Models Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <template x-for="(pricing, modelId) in allPricing" :key="modelId">
+                    <div class="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
+                         :class="customPricing[modelId] ? 'border-blue-300 bg-blue-50' : ''">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex-1">
+                                <h3 class="font-medium text-gray-900" x-text="getModelDisplayName(modelId)"></h3>
+                                <p class="text-xs text-gray-500 mt-1" x-text="modelId"></p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span x-show="usedModels.includes(modelId)"
+                                      class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                    In use
+                                </span>
+                                <span x-show="customPricing[modelId]"
+                                      class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                    Custom
+                                </span>
+                                <button x-show="customPricing[modelId]"
+                                        @click="resetModelPricing(modelId)"
+                                        class="text-xs text-red-600 hover:text-red-800 font-medium">
+                                    Reset to Default
+                                </button>
+                            </div>
+                        </div>
 
+                        <!-- Pricing Form -->
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">
+                                    Input (per million tokens)
+                                </label>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-gray-500 text-sm">$</span>
+                                    <input type="number"
+                                           step="0.01"
+                                           min="0"
+                                           x-model="editablePricing[modelId].input_per_mtok"
+                                           @change="updateModelPricing(modelId)"
+                                           class="flex-1 rounded border-gray-300 border py-1.5 px-3 text-sm focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]">
+                                </div>
+                            </div>
 
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">
+                                    Output (per million tokens)
+                                </label>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-gray-500 text-sm">$</span>
+                                    <input type="number"
+                                           step="0.01"
+                                           min="0"
+                                           x-model="editablePricing[modelId].output_per_mtok"
+                                           @change="updateModelPricing(modelId)"
+                                           class="flex-1 rounded border-gray-300 border py-1.5 px-3 text-sm focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]">
+                                </div>
+                            </div>
 
-<div
-    x-data="{
-        selectedPeriod: 'today',
-        selectedProject: '',
-        showCustom: false,
-        customStart: '',
-        customEnd: '',
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">
+                                    Cache Write (per million tokens)
+                                </label>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-gray-500 text-sm">$</span>
+                                    <input type="number"
+                                           step="0.01"
+                                           min="0"
+                                           x-model="editablePricing[modelId].cache_write_per_mtok"
+                                           @change="updateModelPricing(modelId)"
+                                           class="flex-1 rounded border-gray-300 border py-1.5 px-3 text-sm focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">
+                                    Cache Read (per million tokens)
+                                </label>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-gray-500 text-sm">$</span>
+                                    <input type="number"
+                                           step="0.01"
+                                           min="0"
+                                           x-model="editablePricing[modelId].cache_read_per_mtok"
+                                           @change="updateModelPricing(modelId)"
+                                           class="flex-1 rounded border-gray-300 border py-1.5 px-3 text-sm focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]">
+                                </div>
+                            </div>
+
+                            <!-- Status Message -->
+                            <div x-show="saveStatus[modelId]" class="text-xs">
+                                <span x-show="saveStatus[modelId] === 'saving'"
+                                      class="text-blue-600">Saving...</span>
+                                <span x-show="saveStatus[modelId] === 'saved'"
+                                      class="text-green-600">✓ Saved</span>
+                                <span x-show="saveStatus[modelId] === 'error'"
+                                      class="text-red-600">✗ Error saving</span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function settingsApp() {
+    return {
+        allPricing: {"claude-3-5-haiku": {"cache_read_per_mtok": 0.08, "cache_write_per_mtok": 1.0, "input_per_mtok": 0.8, "output_per_mtok": 4.0}, "claude-3-5-sonnet": {"cache_read_per_mtok": 0.3, "cache_write_per_mtok": 3.75, "input_per_mtok": 3.0, "output_per_mtok": 15.0}, "claude-3-7-sonnet": {"cache_read_per_mtok": 0.3, "cache_write_per_mtok": 3.75, "input_per_mtok": 3.0, "output_per_mtok": 15.0}, "claude-3-haiku": {"cache_read_per_mtok": 0.03, "cache_write_per_mtok": 0.3, "input_per_mtok": 0.25, "output_per_mtok": 1.25}, "claude-3-opus": {"cache_read_per_mtok": 1.5, "cache_write_per_mtok": 18.75, "input_per_mtok": 15.0, "output_per_mtok": 75.0}, "claude-3-sonnet": {"cache_read_per_mtok": 0.3, "cache_write_per_mtok": 3.75, "input_per_mtok": 3.0, "output_per_mtok": 15.0}, "claude-fable-5": {"cache_read_per_mtok": 1.0, "cache_write_per_mtok": 12.5, "input_per_mtok": 10.0, "output_per_mtok": 50.0}, "claude-haiku-4-5": {"cache_read_per_mtok": 0.1, "cache_write_per_mtok": 1.25, "input_per_mtok": 1.0, "output_per_mtok": 5.0}, "claude-haiku-4-5-20251001": {"cache_read_per_mtok": 0.1, "cache_write_per_mtok": 1.25, "input_per_mtok": 1.0, "output_per_mtok": 5.0}, "claude-haiku-4-6": {"cache_read_per_mtok": 0.1, "cache_write_per_mtok": 1.25, "input_per_mtok": 1.0, "output_per_mtok": 5.0}, "claude-mythos-5": {"cache_read_per_mtok": 1.0, "cache_write_per_mtok": 12.5, "input_per_mtok": 10.0, "output_per_mtok": 50.0}, "claude-opus-4": {"cache_read_per_mtok": 1.5, "cache_write_per_mtok": 18.75, "input_per_mtok": 15.0, "output_per_mtok": 75.0}, "claude-opus-4-0": {"cache_read_per_mtok": 1.5, "cache_write_per_mtok": 18.75, "input_per_mtok": 15.0, "output_per_mtok": 75.0}, "claude-opus-4-1": {"cache_read_per_mtok": 1.5, "cache_write_per_mtok": 18.75, "input_per_mtok": 15.0, "output_per_mtok": 75.0}, "claude-opus-4-5": {"cache_read_per_mtok": 0.5, "cache_write_per_mtok": 6.25, "input_per_mtok": 5.0, "output_per_mtok": 25.0}, "claude-opus-4-5-20251101": {"cache_read_per_mtok": 0.5, "cache_write_per_mtok": 6.25, "input_per_mtok": 5.0, "output_per_mtok": 25.0}, "claude-opus-4-6": {"cache_read_per_mtok": 0.5, "cache_write_per_mtok": 6.25, "input_per_mtok": 5.0, "output_per_mtok": 25.0}, "claude-opus-4-7": {"cache_read_per_mtok": 0.5, "cache_write_per_mtok": 6.25, "input_per_mtok": 5.0, "output_per_mtok": 25.0}, "claude-opus-4-8": {"cache_read_per_mtok": 0.5, "cache_write_per_mtok": 6.25, "input_per_mtok": 5.0, "output_per_mtok": 25.0}, "claude-sonnet-4": {"cache_read_per_mtok": 0.3, "cache_write_per_mtok": 3.75, "input_per_mtok": 3.0, "output_per_mtok": 15.0}, "claude-sonnet-4-0": {"cache_read_per_mtok": 0.3, "cache_write_per_mtok": 3.75, "input_per_mtok": 3.0, "output_per_mtok": 15.0}, "claude-sonnet-4-5": {"cache_read_per_mtok": 0.3, "cache_write_per_mtok": 3.75, "input_per_mtok": 3.0, "output_per_mtok": 15.0}, "claude-sonnet-4-5-20251022": {"cache_read_per_mtok": 0.3, "cache_write_per_mtok": 3.75, "input_per_mtok": 3.0, "output_per_mtok": 15.0}, "claude-sonnet-4-6": {"cache_read_per_mtok": 0.3, "cache_write_per_mtok": 3.75, "input_per_mtok": 3.0, "output_per_mtok": 15.0}},
+        customPricing: {},
+        hasCustomPricing: false,
+        usedModels: ["claude-haiku-4-5-20251001", "claude-opus-4-5-20251101", "claude-sonnet-4-5-20251022"],
+        displayNames: {"claude-3-5-haiku": "claude-3-5-haiku", "claude-3-5-sonnet": "claude-3-5-sonnet", "claude-3-7-sonnet": "claude-3-7-sonnet", "claude-3-haiku": "claude-3-haiku", "claude-3-opus": "claude-3-opus", "claude-3-sonnet": "claude-3-sonnet", "claude-fable-5": "Claude Fable 5", "claude-haiku-4-5": "Claude Haiku 4.5", "claude-haiku-4-5-20251001": "Claude Haiku 4.5", "claude-haiku-4-6": "Claude Haiku 4.6", "claude-mythos-5": "claude-mythos-5", "claude-opus-4": "claude-opus-4", "claude-opus-4-0": "claude-opus-4-0", "claude-opus-4-1": "claude-opus-4-1", "claude-opus-4-5": "Claude Opus 4.5", "claude-opus-4-5-20251101": "Claude Opus 4.5", "claude-opus-4-6": "Claude Opus 4.6", "claude-opus-4-7": "Claude Opus 4.7", "claude-opus-4-8": "Claude Opus 4.8", "claude-sonnet-4": "claude-sonnet-4", "claude-sonnet-4-0": "claude-sonnet-4-0", "claude-sonnet-4-5": "Claude Sonnet 4.5", "claude-sonnet-4-5-20251022": "Claude Sonnet 4.5", "claude-sonnet-4-6": "Claude Sonnet 4.6"},
+        syncedAt: null,
+        editablePricing: {},
+        saveStatus: {},
+        syncStatus: null,
+        syncMessage: '',
+
         init() {
-            
-            const legacyMap = { week: '7days', month: 'this_month', '1hour': '15min' };
-            const raw = localStorage.getItem('cs_period');
-            const stored = raw && legacyMap[raw] ? legacyMap[raw] : raw;
-            const valid = ['15min','today','this_week','7days','this_month','3months','all','custom'];
-            
-            
-            let willFire = false;
-            if (stored && valid.includes(stored)) {
-                this.selectedPeriod = stored;
-                if (stored === 'custom') {
-                    this.customStart = localStorage.getItem('cs_period_start') || '';
-                    this.customEnd   = localStorage.getItem('cs_period_end')   || '';
-                    if (this.customStart && this.customEnd) {
-                        this.showCustom = true;
-                    } else {
-                        this.selectedPeriod = 'today';
+            // Initialize editable pricing with current values
+            this.editablePricing = JSON.parse(JSON.stringify(this.allPricing));
+        },
+
+        getModelDisplayName(modelId) {
+            return this.displayNames[modelId] || modelId;
+        },
+
+        formatSyncedAt() {
+            if (!this.syncedAt) return '';
+            const d = new Date(this.syncedAt);
+            return isNaN(d) ? this.syncedAt : d.toLocaleString();
+        },
+
+        async syncPricing() {
+            this.syncStatus = 'syncing';
+            this.syncMessage = '';
+
+            try {
+                const response = await fetch('/api/settings/pricing/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    this.syncStatus = 'synced';
+                    this.syncMessage = '✓ Synced ' + data.model_count + ' models — reloading…';
+                    this.syncedAt = data.synced_at;
+                    // Reload so all displayed defaults reflect the synced prices
+                    setTimeout(() => window.location.reload(), 1200);
+                } else {
+                    this.syncStatus = 'error';
+                    this.syncMessage = '✗ ' + (data.error || 'Sync failed');
+                }
+            } catch (error) {
+                console.error('Error syncing pricing:', error);
+                this.syncStatus = 'error';
+                this.syncMessage = '✗ Sync failed — is this machine online?';
+            }
+        },
+
+        async updateModelPricing(modelId) {
+            const pricing = this.editablePricing[modelId];
+            this.saveStatus[modelId] = 'saving';
+
+            try {
+                const response = await fetch('/api/settings/pricing/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: modelId,
+                        input_per_mtok: parseFloat(pricing.input_per_mtok),
+                        output_per_mtok: parseFloat(pricing.output_per_mtok),
+                        cache_write_per_mtok: parseFloat(pricing.cache_write_per_mtok),
+                        cache_read_per_mtok: parseFloat(pricing.cache_read_per_mtok),
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    this.saveStatus[modelId] = 'saved';
+                    // Update custom pricing tracking
+                    if (!this.customPricing[modelId]) {
+                        this.customPricing[modelId] = pricing;
+                        this.hasCustomPricing = true;
                     }
+                    // Clear status after delay
+                    setTimeout(() => {
+                        if (this.saveStatus[modelId] === 'saved') {
+                            this.saveStatus[modelId] = null;
+                        }
+                    }, 2000);
+                } else {
+                    this.saveStatus[modelId] = 'error';
                 }
-                if (stored !== 'today' && stored !== 'custom') {
-                    willFire = true;
-                    this.$nextTick(() => this._fire(stored));
-                } else if (stored === 'custom' && this.customStart && this.customEnd) {
-                    willFire = true;
-                    this.$nextTick(() => this._fire('custom'));
+            } catch (error) {
+                console.error('Error updating pricing:', error);
+                this.saveStatus[modelId] = 'error';
+            }
+        },
+
+        async resetModelPricing(modelId) {
+            if (!confirm(`Reset pricing for ${this.getModelDisplayName(modelId)} to default values?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/settings/pricing/reset', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: modelId,
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update editable pricing to default
+                    this.editablePricing[modelId] = {...data.pricing};
+                    // Remove from custom pricing tracking
+                    delete this.customPricing[modelId];
+                    this.hasCustomPricing = Object.keys(this.customPricing).length > 0;
+                } else {
+                    alert('Failed to reset pricing: ' + (data.error || 'Unknown error'));
                 }
+            } catch (error) {
+                console.error('Error resetting pricing:', error);
+                alert('Failed to reset pricing. Please try again.');
             }
-            
-            
         },
-        _fire(period) {
-            if (period === 'custom' && (!this.customStart || !this.customEnd)) return;
-            let url = '/api/files?period=' + period;
-            if (period === 'custom' && this.customStart && this.customEnd) {
-                url += '&start=' + this.customStart + '&end=' + this.customEnd;
-            }
-            
-            htmx.ajax('GET', url, {target: '#files-content', swap: 'innerHTML'});
-        },
-        select(period) {
-            this.selectedPeriod = period;
-            this.showCustom = (period === 'custom');
-            localStorage.setItem('cs_period', period);
-            if (period !== 'custom') { this._fire(period); }
-        },
-        
-        applyCustom() {
-            if (!this.customStart || !this.customEnd) return;
-            
-            localStorage.setItem('cs_period_start', this.customStart);
-            localStorage.setItem('cs_period_end',   this.customEnd);
-            
-            this._fire('custom');
-        }
-    }"
-    class="flex flex-wrap items-center gap-2"
->
-    
-
-    <!-- Period select -->
-    <select
-        @change="select($event.target.value)"
-        :value="selectedPeriod"
-        aria-label="Time period"
-        class="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3] cursor-pointer"
-    >
-        <option value="15min">Last 15 min</option>
-        <option value="today">Today</option>
-        <option value="this_week">This week</option>
-        <option value="7days">Last 7 days</option>
-        <option value="this_month">This month</option>
-        <option value="3months">Last 3 months</option>
-        <option value="all">All time</option>
-        <option value="custom">Custom range…</option>
-    </select>
-
-    <!-- Custom date range inputs -->
-    <div x-show="showCustom" x-transition class="flex items-center gap-2">
-        <input
-            type="date"
-            x-model="customStart"
-            :max="customEnd || undefined"
-            aria-label="Custom range start date"
-            class="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]"
-        />
-        <span class="text-gray-400 text-sm">–</span>
-        <input
-            type="date"
-            x-model="customEnd"
-            :min="customStart || undefined"
-            @change="applyCustom()"
-            aria-label="Custom range end date"
-            class="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]"
-        />
-        <button
-            @click="applyCustom()"
-            :disabled="!customStart || !customEnd"
-            class="px-3 py-2 text-sm font-medium rounded-lg bg-[#0770E3] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-        >Apply</button>
-    </div>
-
-    <!-- Loading indicator -->
-    <span class="htmx-indicator text-[#0770E3]">
-        <svg class="w-5 h-5 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
-            <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
-        </svg>
-    </span>
-</div>
-        
-    </div>
-
-    <!-- Files Content (HTMX Target) -->
-    <div id="files-content" hx-get="/api/files?period=today" hx-trigger="load" hx-target="this" hx-swap="innerHTML"></div>
-</div>
+    };
+}
+</script>
 
         </main>
 
