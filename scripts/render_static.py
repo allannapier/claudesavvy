@@ -25,13 +25,17 @@ sys.path.insert(0, str(_ROOT / "src"))
 
 
 ROUTES = [
-    ("/",             "index.html",        "Dashboard"),
-    ("/tokens",       "tokens.html",       "Tokens"),
-    ("/projects",     "projects.html",     "Projects"),
-    ("/files",        "files.html",        "Files"),
-    ("/integrations", "integrations.html", "Integrations"),
-    ("/features",     "features.html",     "Features"),
-    ("/conversations","conversations.html","Conversations"),
+    ("/",              "index.html",         "Dashboard"),
+    ("/tokens",        "tokens.html",        "Tokens"),
+    ("/projects",      "projects.html",      "Projects"),
+    ("/files",         "files.html",         "Files"),
+    ("/integrations",  "integrations.html",  "Integrations"),
+    ("/features",      "features.html",      "Features"),
+    ("/conversations", "conversations.html", "Conversations"),
+    ("/harness",       "harness.html",       "Harness"),
+    ("/subagents",     "subagents.html",     "Sub-Agents"),
+    ("/configuration", "configuration.html", "Configuration"),
+    ("/settings",      "settings.html",      "Settings"),
 ]
 
 # Nav links that appear in every page sidebar
@@ -44,12 +48,12 @@ _NAV_REWRITES = {
     'href="/integrations"':  'href="integrations.html"',
     'href="/features"':      'href="features.html"',
     'href="/conversations"': 'href="conversations.html"',
-    # These pages exist but aren't in the static export
-    'href="/harness"':       'href="#"',
-    'href="/subagents"':     'href="#"',
+    'href="/harness"':       'href="harness.html"',
+    'href="/subagents"':     'href="subagents.html"',
+    'href="/configuration"': 'href="configuration.html"',
+    'href="/settings"':      'href="settings.html"',
+    # Teams has no static page
     'href="/teams"':         'href="#"',
-    'href="/configuration"': 'href="#"',
-    'href="/settings"':      'href="#"',
 }
 
 _DEMO_BANNER = """\
@@ -60,7 +64,7 @@ _DEMO_BANNER = """\
     display: flex; align-items: center; justify-content: center; gap: 12px;
     font-family: system-ui, sans-serif;
 ">
-    <span>&#9432; Static demo &mdash; showing sample data.</span>
+    <span>&#9432; Static demo &mdash; showing sample data. Settings are read-only.</span>
     <a href="https://github.com/allannapier/claudesavvy#quick-start"
        style="color:#fff; font-weight:600; text-decoration:underline;"
        target="_blank">Install ClaudeSavvy</a>
@@ -69,8 +73,29 @@ _DEMO_BANNER = """\
 <style>
     /* Push page content below the fixed banner */
     body { padding-top: 38px !important; }
-    /* Hide the HTMX time-filter controls in static mode */
+    /* Dim HTMX-driven controls (time filters, dynamic loaders) */
     [hx-get], [data-hx-get] { pointer-events: none; opacity: 0.5; }
+    /* Disable all mutation controls: POST/PUT/DELETE HTMX, forms, save buttons */
+    [hx-post], [data-hx-post],
+    [hx-put],  [data-hx-put],
+    [hx-delete],[data-hx-delete] {
+        pointer-events: none !important;
+        opacity: 0.4 !important;
+        cursor: not-allowed !important;
+    }
+    form input:not([type="search"]):not([type="text"][readonly]),
+    form select,
+    form textarea {
+        pointer-events: none !important;
+        opacity: 0.5 !important;
+        background: #f3f4f6 !important;
+    }
+    form button[type="submit"],
+    form button:not([type="button"]) {
+        pointer-events: none !important;
+        opacity: 0.4 !important;
+        cursor: not-allowed !important;
+    }
 </style>
 """
 

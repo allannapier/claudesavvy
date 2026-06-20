@@ -6,7 +6,7 @@
     <meta name="description" content="Claude Monitor - Track Claude Code usage and analytics">
     <meta name="theme-color" content="#0770E3">
 
-    <title>Files - Claude Monitor</title>
+    <title>Configuration - Claude Monitor</title>
 
     <!-- Tailwind CSS 3.x -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -329,8 +329,8 @@
                     
                     
                     <a href="configuration.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
-                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
-                        
+                        bg-blue-50 text-[#0770E3] font-semibold">
+                        <span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#0770E3] rounded-r-full -ml-3"></span>
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>
                         <span class="flex-1 leading-none">Configuration</span>
                     </a>
@@ -356,8 +356,8 @@
                     
                     
                     <a href="files.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
-                        bg-blue-50 text-[#0770E3] font-semibold">
-                        <span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#0770E3] rounded-r-full -ml-3"></span>
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/></svg>
                         <span class="flex-1 leading-none">Files</span>
                     </a>
@@ -407,157 +407,326 @@
     <div class="flex-1 flex flex-col min-w-0">
         <main class="flex-1 px-8 py-8">
             
-<div class="space-y-8" x-data="{}">
-    <!-- Page Title and Time Filter -->
-    <div class="flex flex-wrap items-center justify-between gap-4">
-        <div class="min-w-0">
-            <h1 class="text-3xl font-bold text-gray-900">Files</h1>
-            <p class="mt-2 text-gray-600">File-level usage statistics and analytics</p>
+<div class="space-y-8" x-data="{ activeTab: 'skills', selectedFeature: null, selectedRepoPath: '/root' }">
+    <!-- Page Title -->
+    <div class="flex items-center justify-between flex-wrap gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Configuration</h1>
+            <p class="mt-2 text-gray-600">Claude Code configuration viewer</p>
         </div>
 
+        <div class="flex items-center gap-4">
+            <!-- Repository Selector -->
+            
+            <div class="w-64">
+                <label for="repo-select" class="block text-sm font-medium text-gray-700 mb-2">Repository</label>
+                <select
+                    id="repo-select"
+                    x-model="selectedRepoPath"
+                    @change="window.location.href = '/configuration?repo=' + encodeURIComponent($event.target.value)"
+                    class="w-full rounded-lg border-gray-300 border py-2 px-3 focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]"
+                >
+                    
+                    <option value="/root" selected>
+                        User Configuration
+                    </option>
+                    
+                </select>
+            </div>
+            
+
+            <!-- Action Buttons -->
+            <div class="flex gap-2 mt-7">
+                <!-- Export Button -->
+                
+                <a :href="'/export/configuration/' + encodeURIComponent(selectedRepoPath)"
+                   class="px-4 py-2 bg-[#0770E3] text-white rounded-lg hover:bg-[#0660C3] transition-colors flex items-center gap-2"
+                   download>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Export
+                </a>
+                
+
+                <!-- Refresh Button -->
+                <button onclick="window.location.reload()"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         
-            <!-- Time Filter Component
-     Required context variables:
-       - current_url:     API endpoint URL (e.g. '/api/tokens')
-       - target_id:       HTMX target element ID (e.g. 'tokens-content')
-     Optional context variables:
-       - show_realtime:   bool — include 15m option (default: false)
-       - storage_key:     localStorage key for per-page persistence (default: no persistence)
-       - default_period:  server-rendered default period value (default: 'today')
-       - filter_projects: list of {value, label} — when provided (non-empty), renders a
-                          project select BEFORE the period select; "All projects" is value "".
-                          Deliberately NOT named "projects": pages commonly have a global
-                          `projects` template variable that would leak into this include.
--->
 
-
-
-
-
-
-
-<div
-    x-data="{
-        selectedPeriod: 'today',
-        selectedProject: '',
-        showCustom: false,
-        customStart: '',
-        customEnd: '',
-        init() {
-            
-            const legacyMap = { week: '7days', month: 'this_month', '1hour': '15min' };
-            const raw = localStorage.getItem('cs_period');
-            const stored = raw && legacyMap[raw] ? legacyMap[raw] : raw;
-            const valid = ['15min','today','this_week','7days','this_month','3months','all','custom'];
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6  ">
+    <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-sm font-medium text-gray-600 truncate">Skills</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="1">1</p>
             
             
-            let willFire = false;
-            if (stored && valid.includes(stored)) {
-                this.selectedPeriod = stored;
-                if (stored === 'custom') {
-                    this.customStart = localStorage.getItem('cs_period_start') || '';
-                    this.customEnd   = localStorage.getItem('cs_period_end')   || '';
-                    if (this.customStart && this.customEnd) {
-                        this.showCustom = true;
-                    } else {
-                        this.selectedPeriod = 'today';
-                    }
-                }
-                if (stored !== 'today' && stored !== 'custom') {
-                    willFire = true;
-                    this.$nextTick(() => this._fire(stored));
-                } else if (stored === 'custom' && this.customStart && this.customEnd) {
-                    willFire = true;
-                    this.$nextTick(() => this._fire('custom'));
-                }
-            }
-            
-            
-        },
-        _fire(period) {
-            if (period === 'custom' && (!this.customStart || !this.customEnd)) return;
-            let url = '/api/files?period=' + period;
-            if (period === 'custom' && this.customStart && this.customEnd) {
-                url += '&start=' + this.customStart + '&end=' + this.customEnd;
-            }
-            
-            htmx.ajax('GET', url, {target: '#files-content', swap: 'innerHTML'});
-        },
-        select(period) {
-            this.selectedPeriod = period;
-            this.showCustom = (period === 'custom');
-            localStorage.setItem('cs_period', period);
-            if (period !== 'custom') { this._fire(period); }
-        },
+        </div>
         
-        applyCustom() {
-            if (!this.customStart || !this.customEnd) return;
+        <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+        </div>
+        
+    </div>
+</div>
+
+
+
+        
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6  ">
+    <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-sm font-medium text-gray-600 truncate">MCPs</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="0">0</p>
             
-            localStorage.setItem('cs_period_start', this.customStart);
-            localStorage.setItem('cs_period_end',   this.customEnd);
             
-            this._fire('custom');
-        }
-    }"
-    class="flex flex-wrap items-center gap-2"
->
+        </div>
+        
+        <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+        </div>
+        
+    </div>
+</div>
+
+
+
+        
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6  ">
+    <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-sm font-medium text-gray-600 truncate">Commands</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="0">0</p>
+            
+            
+        </div>
+        
+        <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+        </div>
+        
+    </div>
+</div>
+
+
+
+        
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6  ">
+    <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-sm font-medium text-gray-600 truncate">Plugins</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="0">0</p>
+            
+            
+        </div>
+        
+        <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+        </div>
+        
+    </div>
+</div>
+
+
+
+        
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6  ">
+    <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-sm font-medium text-gray-600 truncate">Hooks</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="0">0</p>
+            
+            
+        </div>
+        
+        <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        </div>
+        
+    </div>
+</div>
+
+
+
+        
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6  ">
+    <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-sm font-medium text-gray-600 truncate">Agents</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="0">0</p>
+            
+            
+        </div>
+        
+        <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+        </div>
+        
+    </div>
+</div>
+
+
+    </div>
     
 
-    <!-- Period select -->
-    <select
-        @change="select($event.target.value)"
-        :value="selectedPeriod"
-        aria-label="Time period"
-        class="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3] cursor-pointer"
-    >
-        <option value="15min">Last 15 min</option>
-        <option value="today">Today</option>
-        <option value="this_week">This week</option>
-        <option value="7days">Last 7 days</option>
-        <option value="this_month">This month</option>
-        <option value="3months">Last 3 months</option>
-        <option value="all">All time</option>
-        <option value="custom">Custom range…</option>
-    </select>
+    <!-- Feature Tabs and List -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <!-- Tab Headers -->
+        <div class="border-b border-gray-200 bg-gray-50">
+            <nav class="flex -mb-px overflow-x-auto" aria-label="Tabs">
+                <button @click="activeTab = 'skills'"
+                        :class="activeTab === 'skills' ? 'border-[#0770E3] text-[#0770E3]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm focus:outline-none transition-colors">
+                    Skills (1)
+                </button>
+                <button @click="activeTab = 'mcps'"
+                        :class="activeTab === 'mcps' ? 'border-[#0770E3] text-[#0770E3]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm focus:outline-none transition-colors">
+                    MCPs (0)
+                </button>
+                <button @click="activeTab = 'commands'"
+                        :class="activeTab === 'commands' ? 'border-[#0770E3] text-[#0770E3]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm focus:outline-none transition-colors">
+                    Commands (0)
+                </button>
+                <button @click="activeTab = 'plugins'"
+                        :class="activeTab === 'plugins' ? 'border-[#0770E3] text-[#0770E3]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm focus:outline-none transition-colors">
+                    Plugins (0)
+                </button>
+                <button @click="activeTab = 'hooks'"
+                        :class="activeTab === 'hooks' ? 'border-[#0770E3] text-[#0770E3]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm focus:outline-none transition-colors">
+                    Hooks (0)
+                </button>
+                <button @click="activeTab = 'agents'"
+                        :class="activeTab === 'agents' ? 'border-[#0770E3] text-[#0770E3]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm focus:outline-none transition-colors">
+                    Agents (0)
+                </button>
+            </nav>
+        </div>
 
-    <!-- Custom date range inputs -->
-    <div x-show="showCustom" x-transition class="flex items-center gap-2">
-        <input
-            type="date"
-            x-model="customStart"
-            :max="customEnd || undefined"
-            aria-label="Custom range start date"
-            class="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]"
-        />
-        <span class="text-gray-400 text-sm">–</span>
-        <input
-            type="date"
-            x-model="customEnd"
-            :min="customStart || undefined"
-            @change="applyCustom()"
-            aria-label="Custom range end date"
-            class="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]"
-        />
-        <button
-            @click="applyCustom()"
-            :disabled="!customStart || !customEnd"
-            class="px-3 py-2 text-sm font-medium rounded-lg bg-[#0770E3] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-        >Apply</button>
-    </div>
+        <!-- Feature List Container -->
+        <div id="feature-list" class="p-6">
+            <!-- Feature List Partial -->
 
-    <!-- Loading indicator -->
-    <span class="htmx-indicator text-[#0770E3]">
-        <svg class="w-5 h-5 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
-            <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
-        </svg>
-    </span>
-</div>
+<!-- Skills Tab Content -->
+<div x-show="activeTab === 'skills'" class="space-y-3">
+    
         
+        <div class="border border-gray-200 rounded-lg p-4 hover:border-[#0770E3] hover:shadow-md transition-all cursor-pointer"
+             hx-get="/api/feature-detail//root/skill/session-start-hook"
+             hx-trigger="click"
+             hx-target="#detail-panel"
+             hx-swap="innerHTML">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-[#0770E3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        <h4 class="text-lg font-semibold text-gray-900">session-start-hook</h4>
+                        <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                            user
+                        </span>
+                    </div>
+                    <p class="mt-1 text-sm text-gray-600">Creating and developing startup hooks for Claude Code on the web. Use when the user wants to set up ...</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </div>
+        </div>
+        
+    
+</div>
+
+<!-- MCPs Tab Content -->
+<div x-show="activeTab === 'mcps'" class="space-y-3">
+    
+        <div class="text-center py-12 text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <p class="mt-2">No MCP servers found</p>
+        </div>
+    
+</div>
+
+<!-- Commands Tab Content -->
+<div x-show="activeTab === 'commands'" class="space-y-3">
+    
+        <div class="text-center py-12 text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <p class="mt-2">No slash commands found</p>
+        </div>
+    
+</div>
+
+<!-- Plugins Tab Content -->
+<div x-show="activeTab === 'plugins'" class="space-y-3">
+    
+        <div class="text-center py-12 text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path>
+            </svg>
+            <p class="mt-2">No plugins found</p>
+        </div>
+    
+</div>
+
+<!-- Hooks Tab Content -->
+<div x-show="activeTab === 'hooks'" class="space-y-3">
+    
+        <div class="text-center py-12 text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <p class="mt-2">No hooks found</p>
+        </div>
+    
+</div>
+
+<!-- Agents Tab Content -->
+<div x-show="activeTab === 'agents'" class="space-y-3">
+    
+        <div class="text-center py-12 text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+            <p class="mt-2">No agents found</p>
+        </div>
+    
+</div>
+
+<!-- Detail Panel Placeholder -->
+<div id="detail-panel" class="mt-6"></div>
+
+
+        </div>
     </div>
 
-    <!-- Files Content (HTMX Target) -->
-    <div id="files-content" hx-get="/api/files?period=today" hx-trigger="load" hx-target="this" hx-swap="innerHTML"></div>
+    
 </div>
 
         </main>
