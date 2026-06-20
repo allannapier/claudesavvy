@@ -179,7 +179,7 @@
     display: flex; align-items: center; justify-content: center; gap: 12px;
     font-family: system-ui, sans-serif;
 ">
-    <span>&#9432; Static demo &mdash; showing sample data.</span>
+    <span>&#9432; Static demo &mdash; showing sample data. Settings are read-only.</span>
     <a href="https://github.com/allannapier/claudesavvy#quick-start"
        style="color:#fff; font-weight:600; text-decoration:underline;"
        target="_blank">Install ClaudeSavvy</a>
@@ -188,8 +188,29 @@
 <style>
     /* Push page content below the fixed banner */
     body { padding-top: 38px !important; }
-    /* Hide the HTMX time-filter controls in static mode */
+    /* Dim HTMX-driven controls (time filters, dynamic loaders) */
     [hx-get], [data-hx-get] { pointer-events: none; opacity: 0.5; }
+    /* Disable all mutation controls: POST/PUT/DELETE HTMX, forms, save buttons */
+    [hx-post], [data-hx-post],
+    [hx-put],  [data-hx-put],
+    [hx-delete],[data-hx-delete] {
+        pointer-events: none !important;
+        opacity: 0.4 !important;
+        cursor: not-allowed !important;
+    }
+    form input:not([type="search"]):not([type="text"][readonly]),
+    form select,
+    form textarea {
+        pointer-events: none !important;
+        opacity: 0.5 !important;
+        background: #f3f4f6 !important;
+    }
+    form button[type="submit"],
+    form button:not([type="button"]) {
+        pointer-events: none !important;
+        opacity: 0.4 !important;
+        cursor: not-allowed !important;
+    }
 </style>
 
     <!-- Global loading bar -->
@@ -267,7 +288,7 @@
                     
                     
                     
-                    <a href="#" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                    <a href="harness.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
                         text-gray-600 hover:text-gray-900 hover:bg-gray-100">
                         
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M6 8.5v3a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-3"/><path d="M12 14.5v1"/></svg>
@@ -275,7 +296,7 @@
                     </a>
                     
                     
-                    <a href="#" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                    <a href="subagents.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
                         text-gray-600 hover:text-gray-900 hover:bg-gray-100">
                         
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>
@@ -307,7 +328,7 @@
                     </a>
                     
                     
-                    <a href="#" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                    <a href="configuration.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
                         text-gray-600 hover:text-gray-900 hover:bg-gray-100">
                         
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>
@@ -353,7 +374,7 @@
                     
                     
                     
-                    <a href="#" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                    <a href="settings.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
                         text-gray-600 hover:text-gray-900 hover:bg-gray-100">
                         
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z"/></svg>
@@ -1050,7 +1071,7 @@
                     <a href="/conversations?session=demo-session-0001" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">claudesavvy</a>
                 </td>
                 <td class="px-6 py-3 text-sm text-gray-500 hidden md:table-cell whitespace-nowrap">
-                    Jun 20 02:01
+                    Jun 20 02:53
                 </td>
                 <td class="px-6 py-3 text-sm text-gray-500 text-right hidden sm:table-cell">14</td>
                 <td class="px-6 py-3 text-sm font-semibold text-right text-gray-900">$0.69</td>
@@ -1072,7 +1093,7 @@
                     <a href="/conversations?session=demo-session-0014" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">data-pipeline</a>
                 </td>
                 <td class="px-6 py-3 text-sm text-gray-500 hidden md:table-cell whitespace-nowrap">
-                    Jun 20 01:00
+                    Jun 20 01:52
                 </td>
                 <td class="px-6 py-3 text-sm text-gray-500 text-right hidden sm:table-cell">13</td>
                 <td class="px-6 py-3 text-sm font-semibold text-right text-gray-900">$0.43</td>
@@ -1155,7 +1176,7 @@
         </a>
 
         <!-- Sub-Agents -->
-        <a href="#" class="block group">
+        <a href="subagents.html" class="block group">
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md hover:border-[#0770E3] transition-all duration-200 h-full">
                 <div class="flex items-center gap-3 mb-3">
                     <div class="w-9 h-9 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
