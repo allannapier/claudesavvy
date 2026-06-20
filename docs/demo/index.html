@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Claude Monitor - Track Claude Code usage and analytics">
+    <meta name="theme-color" content="#0770E3">
+
+    <title>Dashboard - Claude Monitor</title>
+
+    <!-- Tailwind CSS 3.x -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.11.1/dist/full.min.css" rel="stylesheet" type="text/css">
+
+    <!-- Alpine.js 3.x -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+    <!-- HTMX 2.0 -->
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+
+    <!-- HTMX Loading Indicator Configuration -->
+    <style>
+        /* Global loading bar at top of page */
+        #global-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #0770E3, #38bdf8, #0770E3);
+            background-size: 200% 100%;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 100ms ease-out;
+            animation: shimmer 1s ease-in-out infinite;
+            box-shadow: 0 0 10px rgba(7, 112, 227, 0.5);
+        }
+        
+        #global-loader.htmx-request,
+        #global-loader.loading {
+            opacity: 1;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* Show loading indicator during HTMX requests */
+        .htmx-indicator {
+            display: none;
+            opacity: 0;
+            transition: opacity 200ms ease-in;
+        }
+        .htmx-request .htmx-indicator {
+            display: inline-flex;
+            opacity: 1;
+        }
+        .htmx-request.htmx-indicator {
+            display: inline-flex;
+            opacity: 1;
+        }
+        
+        /* Dim content while loading */
+        .htmx-request .loading-content {
+            opacity: 0.5;
+            pointer-events: none;
+            transition: opacity 150ms ease-out;
+        }
+        
+        /* Clickable row loading state - more visible */
+        tr.htmx-request {
+            background: linear-gradient(90deg, rgba(7, 112, 227, 0.15) 0%, rgba(7, 112, 227, 0.05) 50%, rgba(7, 112, 227, 0.15) 100%) !important;
+            background-size: 200% 100%;
+            animation: row-shimmer 1s ease-in-out infinite;
+            position: relative;
+        }
+        
+        tr.htmx-request td {
+            opacity: 0.6;
+        }
+        
+        tr.htmx-request td:first-child::before {
+            content: '';
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #0770E3;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes row-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* Button loading state */
+        button.htmx-request, a.htmx-request {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        /* Spinning loader animation */
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Skeleton loading placeholder */
+        .skeleton-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+
+    <!-- Chart.js 4.x -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <!-- Chart.js date adapter for time scales -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+    <!-- Table search / sort / pagination -->
+    <script src="static/js/enhanced-tables.js" defer></script>
+
+    <!-- Custom brand color configuration for Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-blue': '#0770E3',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --brand-blue: #0770E3;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .btn-brand {
+            @apply bg-[#0770E3] hover:bg-[#0560c1] text-white font-medium transition-colors;
+        }
+
+        .text-brand {
+            @apply text-[#0770E3];
+        }
+
+        .border-brand {
+            @apply border-[#0770E3];
+        }
+    </style>
+
+    
+</head>
+<body class="bg-gray-50" hx-indicator="#global-loader"><div id="demo-banner" style="
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: #0770E3; color: #fff;
+    padding: 8px 16px; font-size: 13px;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    font-family: system-ui, sans-serif;
+">
+    <span>&#9432; Static demo &mdash; showing sample data.</span>
+    <a href="https://github.com/allannapier/claudesavvy#quick-start"
+       style="color:#fff; font-weight:600; text-decoration:underline;"
+       target="_blank">Install ClaudeSavvy</a>
+    <span>for live data and interactive filtering.</span>
+</div>
+<style>
+    /* Push page content below the fixed banner */
+    body { padding-top: 38px !important; }
+    /* Hide the HTMX time-filter controls in static mode */
+    [hx-get], [data-hx-get] { pointer-events: none; opacity: 0.5; }
+</style>
+
+    <!-- Global loading bar -->
+    <div id="global-loader"></div>
+    
+    
+
+
+
+
+  
+
+
+<div class="min-h-screen flex bg-gray-50">
+
+    <!-- Left Sidebar -->
+    <aside class="w-60 shrink-0 bg-white border-r border-gray-200 flex flex-col sticky top-0 h-screen overflow-y-auto z-40">
+
+        <!-- Logo + Brand -->
+        <div class="flex items-center gap-2.5 px-5 py-5 pb-4">
+            <div class="w-8 h-8 rounded-lg bg-[#0770E3] flex items-center justify-center shrink-0">
+                <span class="text-white font-bold text-sm">CS</span>
+            </div>
+            <div>
+                <div class="text-sm font-bold text-gray-900 leading-tight">ClaudeSavvy</div>
+                <div class="text-xs text-gray-400 font-mono leading-tight">usage analytics</div>
+            </div>
+        </div>
+
+        <!-- Nav Groups -->
+        <nav class="flex-1 px-3 pb-4 space-y-5">
+
+            <!-- Costs & Usage -->
+            <div>
+                <div class="px-2 mb-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Costs &amp; Usage</span>
+                </div>
+                <div class="space-y-0.5">
+                    
+                    
+                    
+                    <a href="index.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        bg-blue-50 text-[#0770E3] font-semibold">
+                        <span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#0770E3] rounded-r-full -ml-3"></span>
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+                        <span class="flex-1 leading-none">Dashboard</span>
+                    </a>
+                    
+                    
+                    <a href="conversations.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M21 12a8 8 0 1 1-3.2-6.4L21 4l-1.3 3.4A8 8 0 0 1 21 12Z"/><path d="M8 11h8M8 14h5"/></svg>
+                        <span class="flex-1 leading-none">Conversations</span>
+                    </a>
+                    
+                    
+                    <a href="tokens.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="9" cy="9" r="6"/><circle cx="15" cy="15" r="6"/></svg>
+                        <span class="flex-1 leading-none">Tokens</span>
+                    </a>
+                    
+                </div>
+            </div>
+
+            <!-- Harness -->
+            <div>
+                <div class="px-2 mb-1 flex items-center gap-1.5">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Harness</span>
+                    <span class="text-[8px] font-bold tracking-wide px-1 py-0.5 rounded bg-[#0770E3] text-white leading-none">NEW</span>
+                </div>
+                <div class="space-y-0.5">
+                    
+                    
+                    
+                    <a href="#" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M6 8.5v3a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-3"/><path d="M12 14.5v1"/></svg>
+                        <span class="flex-1 leading-none">Overview</span>
+                    </a>
+                    
+                    
+                    <a href="#" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>
+                        <span class="flex-1 leading-none">Sub-Agents</span>
+                    </a>
+                    
+                    
+                    <a href="#" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M14 14a4 4 0 0 1 6 5"/></svg>
+                        <span class="flex-1 leading-none">Teams</span>
+                    </a>
+                    
+                    
+                    <a href="integrations.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M4 7v10l8 4 8-4V7l-8-4-8 4Z"/><path d="m4 7 8 4 8-4"/><path d="M12 11v10"/></svg>
+                        <span class="flex-1 leading-none">MCP Servers</span>
+                    </a>
+                    
+                    
+                    <a href="features.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6a1.4 1.4 0 0 0 2 2l6-6a4 4 0 0 0 5.4-5.4l-2.4 2.4-2-2 2.4-2.4Z"/></svg>
+                        <span class="flex-1 leading-none">Tools &amp; Features</span>
+                    </a>
+                    
+                    
+                    <a href="#" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>
+                        <span class="flex-1 leading-none">Configuration</span>
+                    </a>
+                    
+                </div>
+            </div>
+
+            <!-- Workspace -->
+            <div>
+                <div class="px-2 mb-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Workspace</span>
+                </div>
+                <div class="space-y-0.5">
+                    
+                    
+                    
+                    <a href="projects.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+                        <span class="flex-1 leading-none">Projects</span>
+                    </a>
+                    
+                    
+                    <a href="files.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/></svg>
+                        <span class="flex-1 leading-none">Files</span>
+                    </a>
+                    
+                </div>
+            </div>
+
+            <!-- System -->
+            <div>
+                <div class="px-2 mb-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">System</span>
+                </div>
+                <div class="space-y-0.5">
+                    
+                    
+                    
+                    <a href="#" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+                        <span class="flex-1 leading-none">Settings</span>
+                    </a>
+                    
+                </div>
+            </div>
+
+        </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="px-4 py-4 border-t border-gray-100">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center text-xs font-bold shrink-0">
+                    CS
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs font-semibold text-gray-700 truncate">ClaudeSavvy</div>
+                    <div class="text-[10px] text-gray-400">Open-source · MIT</div>
+                </div>
+                <a href="https://github.com/allannapier/claudesavvy" target="_blank" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Right Side: Main Content + Footer -->
+    <div class="flex-1 flex flex-col min-w-0">
+        <main class="flex-1 px-8 py-8">
+            
+<div class="space-y-8">
+    <!-- Page Title and Time Filter -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="min-w-0">
+            <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p class="mt-2 text-gray-600">Overview of your Claude Code usage and analytics</p>
+        </div>
+
+        <div class="flex gap-2 items-center shrink-0">
+            
+                <!-- Time Filter Component
+     Required context variables:
+       - current_url:     API endpoint URL (e.g. '/api/tokens')
+       - target_id:       HTMX target element ID (e.g. 'tokens-content')
+     Optional context variables:
+       - show_realtime:   bool — include 15m option (default: false)
+       - storage_key:     localStorage key for per-page persistence (default: no persistence)
+       - default_period:  server-rendered default period value (default: 'today')
+       - filter_projects: list of {value, label} — when provided (non-empty), renders a
+                          project select BEFORE the period select; "All projects" is value "".
+                          Deliberately NOT named "projects": pages commonly have a global
+                          `projects` template variable that would leak into this include.
+-->
+
+
+
+
+
+
+
+<div
+    x-data="{
+        selectedPeriod: 'today',
+        selectedProject: '',
+        showCustom: false,
+        customStart: '',
+        customEnd: '',
+        init() {
+            
+            const legacyMap = { week: '7days', month: 'this_month', '1hour': '15min' };
+            const raw = localStorage.getItem('cs_period');
+            const stored = raw && legacyMap[raw] ? legacyMap[raw] : raw;
+            const valid = ['15min','today','this_week','7days','this_month','3months','all','custom'];
+            valid.splice(valid.indexOf('15min'), 1);
+            
+            let willFire = false;
+            if (stored && valid.includes(stored)) {
+                this.selectedPeriod = stored;
+                if (stored === 'custom') {
+                    this.customStart = localStorage.getItem('cs_period_start') || '';
+                    this.customEnd   = localStorage.getItem('cs_period_end')   || '';
+                    if (this.customStart && this.customEnd) {
+                        this.showCustom = true;
+                    } else {
+                        this.selectedPeriod = 'today';
+                    }
+                }
+                if (stored !== 'today' && stored !== 'custom') {
+                    willFire = true;
+                    this.$nextTick(() => this._fire(stored));
+                } else if (stored === 'custom' && this.customStart && this.customEnd) {
+                    willFire = true;
+                    this.$nextTick(() => this._fire('custom'));
+                }
+            }
+            
+            
+        },
+        _fire(period) {
+            if (period === 'custom' && (!this.customStart || !this.customEnd)) return;
+            let url = '/api/dashboard?period=' + period;
+            if (period === 'custom' && this.customStart && this.customEnd) {
+                url += '&start=' + this.customStart + '&end=' + this.customEnd;
+            }
+            
+            htmx.ajax('GET', url, {target: '#dashboard-content', swap: 'innerHTML'});
+        },
+        select(period) {
+            this.selectedPeriod = period;
+            this.showCustom = (period === 'custom');
+            localStorage.setItem('cs_period', period);
+            if (period !== 'custom') { this._fire(period); }
+        },
+        
+        applyCustom() {
+            if (!this.customStart || !this.customEnd) return;
+            
+            localStorage.setItem('cs_period_start', this.customStart);
+            localStorage.setItem('cs_period_end',   this.customEnd);
+            
+            this._fire('custom');
+        }
+    }"
+    class="flex flex-wrap items-center gap-2"
+>
+    
+
+    <!-- Period select -->
+    <select
+        @change="select($event.target.value)"
+        :value="selectedPeriod"
+        aria-label="Time period"
+        class="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3] cursor-pointer"
+    >
+        
+        <option value="today">Today</option>
+        <option value="this_week">This week</option>
+        <option value="7days">Last 7 days</option>
+        <option value="this_month">This month</option>
+        <option value="3months">Last 3 months</option>
+        <option value="all">All time</option>
+        <option value="custom">Custom range…</option>
+    </select>
+
+    <!-- Custom date range inputs -->
+    <div x-show="showCustom" x-transition class="flex items-center gap-2">
+        <input
+            type="date"
+            x-model="customStart"
+            :max="customEnd || undefined"
+            aria-label="Custom range start date"
+            class="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]"
+        />
+        <span class="text-gray-400 text-sm">–</span>
+        <input
+            type="date"
+            x-model="customEnd"
+            :min="customStart || undefined"
+            @change="applyCustom()"
+            aria-label="Custom range end date"
+            class="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]"
+        />
+        <button
+            @click="applyCustom()"
+            :disabled="!customStart || !customEnd"
+            class="px-3 py-2 text-sm font-medium rounded-lg bg-[#0770E3] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >Apply</button>
+    </div>
+
+    <!-- Loading indicator -->
+    <span class="htmx-indicator text-[#0770E3]">
+        <svg class="w-5 h-5 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+            <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
+        </svg>
+    </span>
+</div>
+            
+
+            <!-- Export Dropdown -->
+            <div class="relative ml-4" x-data="{ open: false }">
+                <button
+                    @click="open = !open"
+                    class="px-4 py-2 text-sm font-medium rounded-lg border bg-white text-gray-700 border-gray-300 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:ring-offset-2"
+                >
+                    Export
+                    <svg class="inline-block w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div
+                    x-show="open"
+                    @click.away="open = false"
+                    class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10"
+                    style="display: none;"
+                >
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        Export as CSV
+                    </a>
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        Export as JSON
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Content (HTMX Target) -->
+    <div id="dashboard-content">
+        <!-- Stat Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+
+
+
+<a href="tokens.html" class="block">
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-[#0770E3] transition-all duration-200 cursor-pointer ">
+    <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-sm font-medium text-gray-600 truncate">Total Cost</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$1.11">$1.11</p>
+            
+            
+            
+            <p class="mt-2 text-sm text-green-600">
+                <span class="font-medium">▼ -21%</span>
+                <span class="text-gray-600">vs previous period</span>
+            </p>
+            
+        </div>
+        
+        <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        
+    </div>
+</div>
+</a>
+
+
+
+<a href="/conversations?session=demo-session-0001" class="block">
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-[#0770E3] transition-all duration-200 cursor-pointer ">
+    <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-sm font-medium text-gray-600 truncate">Top Conversation Cost</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$0.69">$0.69</p>
+            
+            <p class="mt-1 text-xs text-gray-500 truncate">claudesavvy</p>
+            
+            
+        </div>
+        
+        <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+        </div>
+        
+    </div>
+</div>
+</a>
+
+
+
+
+<a href="tokens.html" class="block">
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-[#0770E3] transition-all duration-200 cursor-pointer ">
+    <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-sm font-medium text-gray-600 truncate">Cache Write Cost</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$0.32">$0.32</p>
+            
+            <p class="mt-1 text-xs text-gray-500 truncate">29% of spend — re-caching context</p>
+            
+            
+            
+            <p class="mt-2 text-sm text-green-600">
+                <span class="font-medium">▼ -3%</span>
+                <span class="text-gray-600">vs previous period</span>
+            </p>
+            
+        </div>
+        
+        <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-3-3v6"></path></svg>
+        </div>
+        
+    </div>
+</div>
+</a>
+
+
+
+<a href="tokens.html" class="block">
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-[#0770E3] transition-all duration-200 cursor-pointer ">
+    <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-sm font-medium text-gray-600 truncate">Cache Savings</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="$1.94">$1.94</p>
+            
+            <p class="mt-1 text-xs text-gray-500 truncate">Net of cache-write premium</p>
+            
+            
+        </div>
+        
+        <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+        </div>
+        
+    </div>
+</div>
+</a>
+
+</div>
+
+<!-- Wasted-spend callout (lazy-loaded; scoring transcripts is too slow for first paint) -->
+<div hx-get="/api/harness/waste-card?period=today"
+     hx-trigger="load"
+     hx-swap="innerHTML"
+     class="mt-6"></div>
+
+<!-- Charts Row: Cost Over Time + Cost Breakdown -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+    <!-- Cost Over Time Trend Chart -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">Cost Over Time</h3>
+        <a href="tokens.html" class="text-sm text-[#0770E3] hover:underline flex items-center gap-1">
+            View breakdown
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </a>
+    </div>
+    <div style="height: 250px;">
+        <canvas id="costTrendChart"></canvas>
+    </div>
+</div>
+
+<!-- Cost Breakdown Pie Chart -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">Cost Breakdown</h3>
+        <a href="tokens.html" class="text-sm text-[#0770E3] hover:underline flex items-center gap-1">
+            View breakdown
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </a>
+    </div>
+    <div class="flex justify-center" style="height: 250px;">
+        <canvas id="costPieChart"></canvas>
+    </div>
+</div>
+
+<script>
+(function() {
+    // Use requestAnimationFrame to wait for DOM layout before creating charts
+    // This fixes rendering issues when HTMX swaps in new content
+    requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+            initCharts();
+        });
+    });
+
+    function initCharts() {
+        // Destroy existing charts if they exist (for HTMX reloads)
+        // Must be done right before creating new charts to avoid race conditions
+        const existingTokenChart = Chart.getChart('costTrendChart');
+        if (existingTokenChart) existingTokenChart.destroy();
+        const existingPieChart = Chart.getChart('costPieChart');
+        if (existingPieChart) existingPieChart.destroy();
+
+        // Cost Trend Chart (top-left panel)
+        const tokenCtx = document.getElementById('costTrendChart');
+        if (tokenCtx) {
+            const costLabels = ["Today"];
+            const costDatasets = {"cache": [0.5388], "input": [0.1664], "output": [0.4086], "total": [1.1139]};
+
+            if (costLabels && costLabels.length > 0) {
+                new Chart(tokenCtx, {
+                    type: 'line',
+                    data: {
+                        labels: costLabels,
+                        datasets: [
+                            {
+                                label: 'Total Cost',
+                                data: costDatasets.total || [],
+                                borderColor: '#0770E3',
+                                backgroundColor: 'rgba(7, 112, 227, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Input',
+                                data: costDatasets.input || [],
+                                borderColor: '#34D399',
+                                backgroundColor: 'transparent',
+                                tension: 0.4,
+                                fill: false,
+                                borderWidth: 1.5,
+                                borderDash: [5, 5]
+                            },
+                            {
+                                label: 'Output',
+                                data: costDatasets.output || [],
+                                borderColor: '#F59E0B',
+                                backgroundColor: 'transparent',
+                                tension: 0.4,
+                                fill: false,
+                                borderWidth: 1.5,
+                                borderDash: [5, 5]
+                            },
+                            {
+                                label: 'Cache',
+                                data: costDatasets.cache || [],
+                                borderColor: '#8B5CF6',
+                                backgroundColor: 'transparent',
+                                tension: 0.4,
+                                fill: false,
+                                borderWidth: 1.5,
+                                borderDash: [5, 5]
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: { padding: 12, usePointStyle: true, font: { size: 11 } }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        let value = context.parsed.y;
+                                        return value > 0 ? label + '$' + value.toFixed(4) : null;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { callback: function(value) { return '$' + value.toFixed(2); } }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Cost Pie Chart
+        const pieCtx = document.getElementById('costPieChart');
+        if (pieCtx) {
+            const inputCost = 0.17;
+            const outputCost = 0.41;
+            const cacheCost = 0.32;
+            const cacheReadCost = 0.22;
+
+            new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Input Tokens', 'Output Tokens', 'Cache Creation', 'Cache Reads'],
+                    datasets: [{
+                        data: [inputCost, outputCost, cacheCost, cacheReadCost],
+                        backgroundColor: [
+                            '#0770E3',
+                            '#34D399',
+                            '#F59E0B',
+                            '#8B5CF6'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += '$' + context.parsed.toFixed(2);
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+})();
+</script>
+</div>
+
+<!-- Charts Row: Project Costs Over Time + Top Projects Table -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+    <!-- Project Cost Trend Chart -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">Project Costs Over Time</h3>
+        <a href="projects.html" class="text-sm text-[#0770E3] hover:underline flex items-center gap-1">
+            View all projects
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </a>
+    </div>
+    <div style="height: 300px;">
+        <canvas id="projectCostTrendChart"></canvas>
+    </div>
+</div>
+
+<!-- Top Projects by Cost -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-gray-900">Top Projects by Cost</h3>
+        <a href="projects.html" class="text-sm text-[#0770E3] hover:underline flex items-center gap-1">
+            View all
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </a>
+    </div>
+    
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Project</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Cost</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Sessions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+            
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-3 text-sm font-medium truncate max-w-[160px]" title="claudesavvy">
+                    <a href="projects.html" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">claudesavvy</a>
+                </td>
+                <td class="px-6 py-3 text-sm text-gray-900 text-right font-semibold">$0.69</td>
+                <td class="px-6 py-3 text-sm text-gray-500 text-right">1</td>
+            </tr>
+            
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-3 text-sm font-medium truncate max-w-[160px]" title="data-pipeline">
+                    <a href="projects.html" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">data-pipeline</a>
+                </td>
+                <td class="px-6 py-3 text-sm text-gray-900 text-right font-semibold">$0.43</td>
+                <td class="px-6 py-3 text-sm text-gray-500 text-right">1</td>
+            </tr>
+            
+        </tbody>
+    </table>
+    
+</div>
+
+<script>
+(function() {
+    // Use requestAnimationFrame to wait for DOM layout before creating charts
+    requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+            initCostCharts();
+        });
+    });
+
+    function initCostCharts() {
+        // Destroy existing charts if they exist (for HTMX reloads)
+        const existingProjectCostChart = Chart.getChart('projectCostTrendChart');
+        if (existingProjectCostChart) existingProjectCostChart.destroy();
+
+        // Project Cost Trend Chart
+        const projectCostCtx = document.getElementById('projectCostTrendChart');
+        if (projectCostCtx) {
+            const projectLabels = ["Today"];
+            const projectDatasets = [{"borderColor": "#0770E3", "color": "#0770E3", "data": [0.6872], "label": "claudesavvy"}, {"borderColor": "#34D399", "color": "#34D399", "data": [0.4267], "label": "data-pipeline"}];
+
+            // Only create chart if we have data
+            if (projectLabels && projectLabels.length > 0 && projectDatasets && projectDatasets.length > 0) {
+                new Chart(projectCostCtx, {
+                    type: 'line',
+                    data: {
+                        labels: projectLabels,
+                        datasets: projectDatasets.map(ds => ({
+                            label: ds.label,
+                            data: ds.data,
+                            borderColor: ds.borderColor,
+                            backgroundColor: 'transparent',
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 2
+                        }))
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: {
+                                    padding: 12,
+                                    usePointStyle: true,
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        let value = context.parsed.y;
+                                        if (value > 0) {
+                                            label += '$' + value.toFixed(2);
+                                        } else {
+                                            return null;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toFixed(2);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    }
+})();
+</script>
+</div>
+
+<!-- Recent Conversations -->
+
+<div class="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-gray-900">Recent Conversations</h3>
+        <a href="conversations.html" class="text-sm text-[#0770E3] hover:underline flex items-center gap-1">
+            View all 2 conversations
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </a>
+    </div>
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Project</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider hidden md:table-cell">When</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider hidden sm:table-cell">Turns</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Cost</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider hidden lg:table-cell">Context</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+            
+            
+            
+            
+            
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-3 text-sm font-medium truncate max-w-[160px]" title="claudesavvy">
+                    <a href="/conversations?session=demo-session-0001" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">claudesavvy</a>
+                </td>
+                <td class="px-6 py-3 text-sm text-gray-500 hidden md:table-cell whitespace-nowrap">
+                    Jun 20 02:01
+                </td>
+                <td class="px-6 py-3 text-sm text-gray-500 text-right hidden sm:table-cell">14</td>
+                <td class="px-6 py-3 text-sm font-semibold text-right text-gray-900">$0.69</td>
+                <td class="px-6 py-3 text-xs font-mono hidden lg:table-cell">
+                    
+                    <span class="text-gray-400" title="24% of 200K context limit">
+                        ▓▓░░░░░░░░ 24%
+                    </span>
+                    
+                </td>
+            </tr>
+            
+            
+            
+            
+            
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-3 text-sm font-medium truncate max-w-[160px]" title="data-pipeline">
+                    <a href="/conversations?session=demo-session-0014" class="text-gray-900 hover:text-[#0770E3] focus:outline-none focus:underline">data-pipeline</a>
+                </td>
+                <td class="px-6 py-3 text-sm text-gray-500 hidden md:table-cell whitespace-nowrap">
+                    Jun 20 01:00
+                </td>
+                <td class="px-6 py-3 text-sm text-gray-500 text-right hidden sm:table-cell">13</td>
+                <td class="px-6 py-3 text-sm font-semibold text-right text-gray-900">$0.43</td>
+                <td class="px-6 py-3 text-xs font-mono hidden lg:table-cell">
+                    
+                    <span class="text-gray-400" title="17% of 200K context limit">
+                        ▓░░░░░░░░░ 17%
+                    </span>
+                    
+                </td>
+            </tr>
+            
+        </tbody>
+    </table>
+</div>
+
+
+<!-- Model Usage Card -->
+
+<div class="mt-8">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h3 class="text-lg font-semibold text-gray-900">Model Usage</h3>
+            <a href="tokens.html" class="text-sm text-[#0770E3] hover:underline flex items-center gap-1">
+                View details
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </a>
+        </div>
+        <div class="p-6">
+            <div class="space-y-4">
+                
+                <div class="flex items-center justify-between">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-medium text-gray-900 truncate">Claude Sonnet 4.5</span>
+                            <span class="text-sm font-semibold text-[#0770E3]">100.0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-[#0770E3] h-2 rounded-full transition-all" style="width: 100.0%"></div>
+                        </div>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-xs text-gray-500">909.8K tokens</span>
+                            <span class="text-xs text-gray-500">$1.11</span>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+
+<!-- Navigation Hub: Discover Other Pages -->
+<div class="mt-8">
+    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Explore Your Usage</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <!-- Features / Tools -->
+        <a href="features.html" class="block group">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md hover:border-[#0770E3] transition-all duration-200 h-full">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </div>
+                    <span class="font-semibold text-gray-900">Tools &amp; Features</span>
+                </div>
+                
+                <p class="text-sm text-gray-600">
+                    <span class="font-medium text-gray-900">Read</span>
+                    called 13 times
+                </p>
+                <p class="text-xs text-gray-400 mt-1">37 total tool calls</p>
+                
+                <div class="mt-3 flex items-center text-[#0770E3] text-sm font-medium">
+                    Explore tools <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </div>
+            </div>
+        </a>
+
+        <!-- Sub-Agents -->
+        <a href="#" class="block group">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md hover:border-[#0770E3] transition-all duration-200 h-full">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    </div>
+                    <span class="font-semibold text-gray-900">Sub-Agents</span>
+                </div>
+                
+                <p class="text-sm text-gray-400">No sub-agent usage in this period</p>
+                
+                <div class="mt-3 flex items-center text-[#0770E3] text-sm font-medium">
+                    Explore agents <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </div>
+            </div>
+        </a>
+
+        <!-- Files -->
+        <a href="files.html" class="block group">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md hover:border-[#0770E3] transition-all duration-200 h-full">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                    <span class="font-semibold text-gray-900">Files</span>
+                </div>
+                
+                <p class="text-sm text-gray-600">
+                    <span class="font-medium text-gray-900">5</span> files touched
+                </p>
+                
+                <p class="text-xs text-gray-400 mt-1 font-mono truncate" title="transform.py">Most edited: transform.py</p>
+                
+                <p class="text-xs text-gray-400">25 total operations</p>
+                
+                <div class="mt-3 flex items-center text-[#0770E3] text-sm font-medium">
+                    Explore files <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </div>
+            </div>
+        </a>
+
+        <!-- Integrations / MCP -->
+        <a href="integrations.html" class="block group">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md hover:border-[#0770E3] transition-all duration-200 h-full">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </div>
+                    <span class="font-semibold text-gray-900">Integrations</span>
+                </div>
+                
+                <p class="text-sm text-gray-600">
+                    <span class="font-medium text-gray-900">1</span> MCP server
+                </p>
+                
+                <p class="text-xs text-gray-400 mt-1">Top: github (3 calls)</p>
+                
+                <p class="text-xs text-gray-400">3 total calls</p>
+                
+                <div class="mt-3 flex items-center text-[#0770E3] text-sm font-medium">
+                    Explore integrations <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </div>
+            </div>
+        </a>
+
+        <!-- Conversations -->
+        <a href="conversations.html" class="block group">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md hover:border-[#0770E3] transition-all duration-200 h-full">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
+                    </div>
+                    <span class="font-semibold text-gray-900">Conversation Analytics</span>
+                </div>
+                
+                <p class="text-sm text-gray-600">
+                    <span class="font-medium text-gray-900">2</span> conversations
+                </p>
+                <p class="text-xs text-gray-400 mt-1">Priciest: $0.69</p>
+                <p class="text-xs text-gray-400">Context growth &amp; cost analytics</p>
+                
+                <div class="mt-3 flex items-center text-[#0770E3] text-sm font-medium">
+                    Explore conversations <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </div>
+            </div>
+        </a>
+
+        <!-- Projects -->
+        <a href="projects.html" class="block group">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md hover:border-[#0770E3] transition-all duration-200 h-full">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-9 h-9 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                    </div>
+                    <span class="font-semibold text-gray-900">Projects</span>
+                </div>
+                
+                <p class="text-sm text-gray-600">
+                    <span class="font-medium text-gray-900">2</span> active projects
+                </p>
+                <p class="text-xs text-gray-400 mt-1">Most active: data-pipeline</p>
+                <p class="text-xs text-gray-400">$1.11 total spend</p>
+                
+                <div class="mt-3 flex items-center text-[#0770E3] text-sm font-medium">
+                    Explore projects <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </div>
+            </div>
+        </a>
+
+    </div>
+</div>
+
+    </div>
+</div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t border-gray-200 px-8 py-5">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+                <p class="text-xs text-gray-400">Open-source usage tracking for Claude Code · MIT License</p>
+                <div class="flex items-center gap-5 text-xs text-gray-500">
+                    <a href="https://github.com/allannapier/claudesavvy" target="_blank" class="hover:text-[#0770E3] flex items-center gap-1 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                        GitHub
+                    </a>
+                    <span class="text-gray-300">|</span>
+                    <a href="https://github.com/anthropics/claude-code" target="_blank" class="hover:text-[#0770E3] transition-colors">Claude Code</a>
+                    <span class="text-gray-300">|</span>
+                    <a href="https://claude.ai" target="_blank" class="hover:text-[#0770E3] transition-colors">Claude.ai</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+</div>
+
+    
+    <!-- HTMX configuration -->
+    <script>
+        // Add loading class to body during any HTMX request
+        document.body.addEventListener('htmx:beforeRequest', function(evt) {
+            document.body.classList.add('htmx-requesting');
+        });
+
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            document.body.classList.remove('htmx-requesting');
+        });
+
+        // Handle failed requests
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            document.body.classList.remove('htmx-requesting');
+        });
+
+        // Show loading bar immediately on nav link clicks (full page navigations)
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a[href]');
+            if (!link || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            const href = link.getAttribute('href');
+            if (!href || href.startsWith('#') || href.startsWith('javascript:') || link.target === '_blank') return;
+            if (link.hasAttribute('hx-get') || link.hasAttribute('hx-post') ||
+                link.hasAttribute('hx-put') || link.hasAttribute('hx-patch') || link.hasAttribute('hx-delete')) return;
+            try {
+                const url = new URL(href, window.location.origin);
+                if (url.origin === window.location.origin) {
+                    // Skip hash-only navigations — they don't trigger pageshow so the loader would get stuck
+                    if (url.pathname === window.location.pathname &&
+                        url.search === window.location.search &&
+                        url.hash) return;
+                    document.getElementById('global-loader').classList.add('loading');
+                }
+            } catch(err) { /* Invalid URL – skip */ }
+        });
+
+        // Reset loader if navigation is cancelled (e.g. back-forward cache restore)
+        window.addEventListener('pageshow', function() {
+            document.getElementById('global-loader').classList.remove('loading');
+        });
+    </script>
+<script>
+/* Prevent HTMX API calls in static demo */
+document.addEventListener('htmx:beforeRequest', function(e) { e.preventDefault(); });
+</script>
+</body>
+</html>

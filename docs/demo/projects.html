@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Claude Monitor - Track Claude Code usage and analytics">
+    <meta name="theme-color" content="#0770E3">
+
+    <title>Projects - Claude Monitor</title>
+
+    <!-- Tailwind CSS 3.x -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.11.1/dist/full.min.css" rel="stylesheet" type="text/css">
+
+    <!-- Alpine.js 3.x -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+    <!-- HTMX 2.0 -->
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+
+    <!-- HTMX Loading Indicator Configuration -->
+    <style>
+        /* Global loading bar at top of page */
+        #global-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #0770E3, #38bdf8, #0770E3);
+            background-size: 200% 100%;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 100ms ease-out;
+            animation: shimmer 1s ease-in-out infinite;
+            box-shadow: 0 0 10px rgba(7, 112, 227, 0.5);
+        }
+        
+        #global-loader.htmx-request,
+        #global-loader.loading {
+            opacity: 1;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* Show loading indicator during HTMX requests */
+        .htmx-indicator {
+            display: none;
+            opacity: 0;
+            transition: opacity 200ms ease-in;
+        }
+        .htmx-request .htmx-indicator {
+            display: inline-flex;
+            opacity: 1;
+        }
+        .htmx-request.htmx-indicator {
+            display: inline-flex;
+            opacity: 1;
+        }
+        
+        /* Dim content while loading */
+        .htmx-request .loading-content {
+            opacity: 0.5;
+            pointer-events: none;
+            transition: opacity 150ms ease-out;
+        }
+        
+        /* Clickable row loading state - more visible */
+        tr.htmx-request {
+            background: linear-gradient(90deg, rgba(7, 112, 227, 0.15) 0%, rgba(7, 112, 227, 0.05) 50%, rgba(7, 112, 227, 0.15) 100%) !important;
+            background-size: 200% 100%;
+            animation: row-shimmer 1s ease-in-out infinite;
+            position: relative;
+        }
+        
+        tr.htmx-request td {
+            opacity: 0.6;
+        }
+        
+        tr.htmx-request td:first-child::before {
+            content: '';
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #0770E3;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes row-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* Button loading state */
+        button.htmx-request, a.htmx-request {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        /* Spinning loader animation */
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Skeleton loading placeholder */
+        .skeleton-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+
+    <!-- Chart.js 4.x -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <!-- Chart.js date adapter for time scales -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+    <!-- Table search / sort / pagination -->
+    <script src="static/js/enhanced-tables.js" defer></script>
+
+    <!-- Custom brand color configuration for Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-blue': '#0770E3',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --brand-blue: #0770E3;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .btn-brand {
+            @apply bg-[#0770E3] hover:bg-[#0560c1] text-white font-medium transition-colors;
+        }
+
+        .text-brand {
+            @apply text-[#0770E3];
+        }
+
+        .border-brand {
+            @apply border-[#0770E3];
+        }
+    </style>
+
+    
+</head>
+<body class="bg-gray-50" hx-indicator="#global-loader"><div id="demo-banner" style="
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: #0770E3; color: #fff;
+    padding: 8px 16px; font-size: 13px;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    font-family: system-ui, sans-serif;
+">
+    <span>&#9432; Static demo &mdash; showing sample data.</span>
+    <a href="https://github.com/allannapier/claudesavvy#quick-start"
+       style="color:#fff; font-weight:600; text-decoration:underline;"
+       target="_blank">Install ClaudeSavvy</a>
+    <span>for live data and interactive filtering.</span>
+</div>
+<style>
+    /* Push page content below the fixed banner */
+    body { padding-top: 38px !important; }
+    /* Hide the HTMX time-filter controls in static mode */
+    [hx-get], [data-hx-get] { pointer-events: none; opacity: 0.5; }
+</style>
+
+    <!-- Global loading bar -->
+    <div id="global-loader"></div>
+    
+    
+
+
+
+
+  
+
+
+<div class="min-h-screen flex bg-gray-50">
+
+    <!-- Left Sidebar -->
+    <aside class="w-60 shrink-0 bg-white border-r border-gray-200 flex flex-col sticky top-0 h-screen overflow-y-auto z-40">
+
+        <!-- Logo + Brand -->
+        <div class="flex items-center gap-2.5 px-5 py-5 pb-4">
+            <div class="w-8 h-8 rounded-lg bg-[#0770E3] flex items-center justify-center shrink-0">
+                <span class="text-white font-bold text-sm">CS</span>
+            </div>
+            <div>
+                <div class="text-sm font-bold text-gray-900 leading-tight">ClaudeSavvy</div>
+                <div class="text-xs text-gray-400 font-mono leading-tight">usage analytics</div>
+            </div>
+        </div>
+
+        <!-- Nav Groups -->
+        <nav class="flex-1 px-3 pb-4 space-y-5">
+
+            <!-- Costs & Usage -->
+            <div>
+                <div class="px-2 mb-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Costs &amp; Usage</span>
+                </div>
+                <div class="space-y-0.5">
+                    
+                    
+                    
+                    <a href="index.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+                        <span class="flex-1 leading-none">Dashboard</span>
+                    </a>
+                    
+                    
+                    <a href="conversations.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M21 12a8 8 0 1 1-3.2-6.4L21 4l-1.3 3.4A8 8 0 0 1 21 12Z"/><path d="M8 11h8M8 14h5"/></svg>
+                        <span class="flex-1 leading-none">Conversations</span>
+                    </a>
+                    
+                    
+                    <a href="tokens.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="9" cy="9" r="6"/><circle cx="15" cy="15" r="6"/></svg>
+                        <span class="flex-1 leading-none">Tokens</span>
+                    </a>
+                    
+                </div>
+            </div>
+
+            <!-- Harness -->
+            <div>
+                <div class="px-2 mb-1 flex items-center gap-1.5">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Harness</span>
+                    <span class="text-[8px] font-bold tracking-wide px-1 py-0.5 rounded bg-[#0770E3] text-white leading-none">NEW</span>
+                </div>
+                <div class="space-y-0.5">
+                    
+                    
+                    
+                    <a href="#" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M6 8.5v3a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-3"/><path d="M12 14.5v1"/></svg>
+                        <span class="flex-1 leading-none">Overview</span>
+                    </a>
+                    
+                    
+                    <a href="#" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>
+                        <span class="flex-1 leading-none">Sub-Agents</span>
+                    </a>
+                    
+                    
+                    <a href="#" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M14 14a4 4 0 0 1 6 5"/></svg>
+                        <span class="flex-1 leading-none">Teams</span>
+                    </a>
+                    
+                    
+                    <a href="integrations.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M4 7v10l8 4 8-4V7l-8-4-8 4Z"/><path d="m4 7 8 4 8-4"/><path d="M12 11v10"/></svg>
+                        <span class="flex-1 leading-none">MCP Servers</span>
+                    </a>
+                    
+                    
+                    <a href="features.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6a1.4 1.4 0 0 0 2 2l6-6a4 4 0 0 0 5.4-5.4l-2.4 2.4-2-2 2.4-2.4Z"/></svg>
+                        <span class="flex-1 leading-none">Tools &amp; Features</span>
+                    </a>
+                    
+                    
+                    <a href="#" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>
+                        <span class="flex-1 leading-none">Configuration</span>
+                    </a>
+                    
+                </div>
+            </div>
+
+            <!-- Workspace -->
+            <div>
+                <div class="px-2 mb-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Workspace</span>
+                </div>
+                <div class="space-y-0.5">
+                    
+                    
+                    
+                    <a href="projects.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        bg-blue-50 text-[#0770E3] font-semibold">
+                        <span class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#0770E3] rounded-r-full -ml-3"></span>
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+                        <span class="flex-1 leading-none">Projects</span>
+                    </a>
+                    
+                    
+                    <a href="files.html" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/></svg>
+                        <span class="flex-1 leading-none">Files</span>
+                    </a>
+                    
+                </div>
+            </div>
+
+            <!-- System -->
+            <div>
+                <div class="px-2 mb-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">System</span>
+                </div>
+                <div class="space-y-0.5">
+                    
+                    
+                    
+                    <a href="#" class="relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors
+                        text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                        
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+                        <span class="flex-1 leading-none">Settings</span>
+                    </a>
+                    
+                </div>
+            </div>
+
+        </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="px-4 py-4 border-t border-gray-100">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center text-xs font-bold shrink-0">
+                    CS
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs font-semibold text-gray-700 truncate">ClaudeSavvy</div>
+                    <div class="text-[10px] text-gray-400">Open-source · MIT</div>
+                </div>
+                <a href="https://github.com/allannapier/claudesavvy" target="_blank" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Right Side: Main Content + Footer -->
+    <div class="flex-1 flex flex-col min-w-0">
+        <main class="flex-1 px-8 py-8">
+            
+<div class="space-y-8" x-data="{
+    selectedPeriod: 'today',
+    selectedModel: '',
+    showCustom: false,
+    customStart: '',
+    customEnd: '',
+    init() {
+        window.selectedPeriod = this.selectedPeriod;
+        this.$watch('selectedPeriod', v => window.selectedPeriod = v);
+        const legacyMap = { week: '7days', month: 'this_month', '1hour': '15min' };
+        const raw = localStorage.getItem('cs_period');
+        const stored = raw && legacyMap[raw] ? legacyMap[raw] : raw;
+        const validPeriods = ['15min','today','this_week','7days','this_month','3months','all','custom'];
+        if (stored && validPeriods.includes(stored)) {
+            this.selectedPeriod = stored;
+            if (stored === 'custom') {
+                this.customStart = localStorage.getItem('cs_period_start') || '';
+                this.customEnd   = localStorage.getItem('cs_period_end')   || '';
+                if (this.customStart && this.customEnd) {
+                    this.showCustom = true;
+                } else {
+                    this.selectedPeriod = 'today';
+                }
+            }
+            const canReload = stored !== 'custom' || (this.customStart && this.customEnd);
+            if (canReload && stored !== 'today') {
+                this.$nextTick(() => this._reload(this.selectedPeriod));
+            }
+        }
+    },
+    _url(period) {
+        let url = '/api/projects?period=' + period + '&model=' + this.selectedModel;
+        if (period === 'custom' && this.customStart && this.customEnd) {
+            url += '&start=' + this.customStart + '&end=' + this.customEnd;
+        }
+        return url;
+    },
+    _reload(period) {
+        htmx.ajax('GET', this._url(period), {target: '#projects-content', swap: 'innerHTML'});
+    },
+    select(period) {
+        this.selectedPeriod = period;
+        this.showCustom = (period === 'custom');
+        localStorage.setItem('cs_period', period);
+        if (period !== 'custom') { this._reload(period); }
+    },
+    applyCustom() {
+        if (!this.customStart || !this.customEnd) return;
+        localStorage.setItem('cs_period_start', this.customStart);
+        localStorage.setItem('cs_period_end',   this.customEnd);
+        this._reload('custom');
+    }
+}">
+    <!-- Page Title and Filters -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="min-w-0">
+            <h1 class="text-3xl font-bold text-gray-900">Projects</h1>
+            <p class="mt-2 text-gray-600">Per-project usage analytics and statistics</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 shrink-0">
+            <!-- Model Filter -->
+            <div class="flex items-center gap-2">
+                <label for="model-filter" class="text-sm font-medium text-gray-700">Model:</label>
+                <select
+                    id="model-filter"
+                    name="model"
+                    @change="selectedModel = $event.target.value; _reload(selectedPeriod)"
+                    class="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3]"
+                >
+                    <option value="">All Models</option>
+                    
+                    <option value="claude-sonnet-4-5-20251022" >Claude Sonnet 4.5</option>
+                    
+                </select>
+            </div>
+
+            <!-- Time Filter -->
+            <div class="flex flex-wrap items-center gap-2">
+                <select
+                    @change="select($event.target.value)"
+                    :value="selectedPeriod"
+                    class="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#0770E3] focus:border-[#0770E3] cursor-pointer"
+                >
+                    <option value="15min">Last 15 min</option>
+                    <option value="today">Today</option>
+                    <option value="this_week">This week</option>
+                    <option value="7days">Last 7 days</option>
+                    <option value="this_month">This month</option>
+                    <option value="3months">Last 3 months</option>
+                    <option value="all">All time</option>
+                    <option value="custom">Custom range…</option>
+                </select>
+
+                <!-- Custom date inputs -->
+                <div x-show="showCustom" x-transition class="flex items-center gap-2">
+                    <input type="date" x-model="customStart" :max="customEnd||undefined" class="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0770E3]" />
+                    <span class="text-gray-400 text-sm">–</span>
+                    <input type="date" x-model="customEnd" :min="customStart||undefined" @change="applyCustom()" class="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0770E3]" />
+                    <button @click="applyCustom()" :disabled="!customStart||!customEnd" class="px-3 py-2 text-sm font-medium rounded-lg bg-[#0770E3] text-white disabled:opacity-40 disabled:cursor-not-allowed">Apply</button>
+                </div>
+
+                <!-- Loading Spinner -->
+                <span class="htmx-indicator text-[#0770E3]">
+                    <svg class="w-5 h-5 spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/>
+                    </svg>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Projects Content (HTMX Target) -->
+    <div id="projects-content">
+        
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6  ">
+    <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-sm font-medium text-gray-600 truncate">Total Projects</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="2">2</p>
+            
+            
+        </div>
+        
+        <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+        </div>
+        
+    </div>
+</div>
+
+
+
+    
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6  ">
+    <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-sm font-medium text-gray-600 truncate">Avg Commands/Project</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="12.0">12.0</p>
+            
+            
+        </div>
+        
+        <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        </div>
+        
+    </div>
+</div>
+
+
+
+    
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6  ">
+    <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="text-sm font-medium text-gray-600 truncate">Most Active Project</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 truncate" title="data-pipeline">data-pipeline</p>
+            
+            
+        </div>
+        
+        <div class="w-10 h-10 rounded-lg bg-[#0770E3] bg-opacity-10 flex items-center justify-center text-[#0770E3] flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+        </div>
+        
+    </div>
+</div>
+
+
+</div>
+
+<!-- Pricing Disclaimer -->
+<div class="mt-4 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+    <div class="flex items-start gap-2">
+        <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <p class="text-sm text-blue-700">
+            <strong>Pricing note:</strong> Costs are calculated using each model's official API pricing. Unrecognized model IDs default to Claude Sonnet 4.5 rates.
+        </p>
+    </div>
+</div>
+
+<!-- Projects Table -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mt-8">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-900">All Projects</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table data-enhance="table" class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider max-w-xs">Project Name</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Commands</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Sessions</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Messages</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tokens</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                
+                    
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 max-w-xs">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-[#0770E3] bg-opacity-10 rounded-lg">
+                                    <svg class="h-6 w-6 text-[#0770E3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-4 min-w-0">
+                                    <div class="text-sm font-medium text-gray-900 truncate">data-pipeline</div>
+                                    <div class="text-sm text-gray-500 truncate" title="/home/demo/data-pipeline">/home/demo/data-pipeline</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">14</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">1</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">26</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">329.7K</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-[#0770E3]">$0.43</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                            <button
+                                onclick="openAnalysisModal('/home/demo/data-pipeline', 'data-pipeline', window.selectedPeriod || 'all')"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-[#0770E3] bg-[#0770E3] bg-opacity-10 hover:bg-opacity-20 rounded-lg transition-colors"
+                                title="Get optimization recommendations for this project"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                </svg>
+                                Analyze
+                            </button>
+                        </td>
+                    </tr>
+                    
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 max-w-xs">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-[#0770E3] bg-opacity-10 rounded-lg">
+                                    <svg class="h-6 w-6 text-[#0770E3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-4 min-w-0">
+                                    <div class="text-sm font-medium text-gray-900 truncate">claudesavvy</div>
+                                    <div class="text-sm text-gray-500 truncate" title="/home/demo/claudesavvy">/home/demo/claudesavvy</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">10</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">1</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">28</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">580.1K</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-[#0770E3]">$0.69</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                            <button
+                                onclick="openAnalysisModal('/home/demo/claudesavvy', 'claudesavvy', window.selectedPeriod || 'all')"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-[#0770E3] bg-[#0770E3] bg-opacity-10 hover:bg-opacity-20 rounded-lg transition-colors"
+                                title="Get optimization recommendations for this project"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                </svg>
+                                Analyze
+                            </button>
+                        </td>
+                    </tr>
+                    
+                
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Include the project analysis modal -->
+
+<div id="analysis-modal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity" onclick="closeAnalysisModal()"></div>
+
+    <!-- Modal panel -->
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-3xl">
+                <!-- Header -->
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 flex items-center justify-between border-b border-gray-200">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900" id="modal-title">
+                            <span id="analysis-project-name">Project Analysis</span>
+                        </h3>
+                        <p class="text-sm text-gray-500 mt-1">Optimization recommendations based on usage patterns</p>
+                    </div>
+                    <button onclick="closeAnalysisModal()" class="text-gray-400 hover:text-gray-500">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="px-4 py-4 sm:px-6 max-h-[70vh] overflow-y-auto" id="analysis-content">
+                    <!-- Loading state -->
+                    <div class="flex items-center justify-center py-12" id="analysis-loading">
+                        <svg class="animate-spin h-8 w-8 text-[#0770E3]" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="ml-3 text-gray-600">Analyzing project...</span>
+                    </div>
+
+                    <!-- Results (hidden initially) -->
+                    <div id="analysis-results" class="hidden space-y-6">
+                        <!-- Summary Cards -->
+                        <div class="grid grid-cols-4 gap-4" id="analysis-summary">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <!-- Metrics -->
+                        <div class="bg-gray-50 rounded-lg p-4" id="analysis-metrics">
+                            <h4 class="text-sm font-medium text-gray-700 mb-3">Project Metrics</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm" id="metrics-grid">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Trends Section (only shown when trends available) -->
+                        <div id="trends-section" class="hidden bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+                            <h4 class="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                                <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                </svg>
+                                Efficiency Trends (vs Previous Period)
+                            </h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm" id="trends-grid">
+                                <!-- Populated by JS -->
+                            </div>
+                            <p class="text-xs text-gray-500 mt-3" id="trends-context"></p>
+                        </div>
+
+                        <!-- Recommendations by category -->
+                        <div id="recommendations-container" class="space-y-4">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <!-- No recommendations state -->
+                        <div id="no-recommendations" class="hidden text-center py-8">
+                            <svg class="mx-auto h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <h3 class="mt-2 text-sm font-medium text-gray-900">No recommendations</h3>
+                            <p class="mt-1 text-sm text-gray-500">This project looks well-optimized!</p>
+                        </div>
+                    </div>
+
+                    <!-- Error state -->
+                    <div id="analysis-error" class="hidden text-center py-8">
+                        <svg class="mx-auto h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">Analysis failed</h3>
+                        <p class="mt-1 text-sm text-gray-500" id="error-message">Unable to analyze this project.</p>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 flex justify-end gap-3 border-t border-gray-200">
+                    <button onclick="closeAnalysisModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Store current analysis data (use var to allow redeclaration from htmx reloads)
+var currentAnalysis = null;
+
+// Only define functions if not already defined (prevents htmx reload issues)
+if (typeof openAnalysisModal === 'undefined') {
+
+function openAnalysisModal(projectPath, projectName, period = 'all') {
+    const modal = document.getElementById('analysis-modal');
+    const loading = document.getElementById('analysis-loading');
+    const results = document.getElementById('analysis-results');
+    const error = document.getElementById('analysis-error');
+
+    // Reset states
+    loading.classList.remove('hidden');
+    results.classList.add('hidden');
+    error.classList.add('hidden');
+
+    // Set project name
+    document.getElementById('analysis-project-name').textContent = projectName || 'Project Analysis';
+
+    // Show modal
+    modal.classList.remove('hidden');
+
+    // Fetch analysis
+    const url = new URL('/api/project/analyze', window.location.origin);
+    url.searchParams.append('project_path', projectPath);
+    url.searchParams.append('project_name', projectName || 'Unknown');
+    url.searchParams.append('period', period);
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            currentAnalysis = data;
+            loading.classList.add('hidden');
+
+            if (data.error) {
+                error.classList.remove('hidden');
+                document.getElementById('error-message').textContent = data.error;
+                return;
+            }
+
+            results.classList.remove('hidden');
+            renderAnalysisResults(data);
+        })
+        .catch(err => {
+            loading.classList.add('hidden');
+            error.classList.remove('hidden');
+            document.getElementById('error-message').textContent = err.message;
+        });
+}
+
+function closeAnalysisModal() {
+    document.getElementById('analysis-modal').classList.add('hidden');
+    currentAnalysis = null;
+}
+
+function renderAnalysisResults(data) {
+    const summary = data.summary || {};
+    const metrics = data.metrics || {};
+    const recommendations = data.recommendations || [];
+
+    // Render summary cards
+    renderSummaryCards(summary);
+
+    // Render metrics
+    renderMetrics(metrics);
+
+    // Render trends if available
+    renderTrends(metrics);
+
+    // Render recommendations
+    renderRecommendations(recommendations);
+
+    // Show/hide no recommendations message
+    const noRecs = document.getElementById('no-recommendations');
+    const recsContainer = document.getElementById('recommendations-container');
+    if (recommendations.length === 0) {
+        noRecs.classList.remove('hidden');
+        recsContainer.classList.add('hidden');
+    } else {
+        noRecs.classList.add('hidden');
+        recsContainer.classList.remove('hidden');
+    }
+}
+
+function renderSummaryCards(summary) {
+    const container = document.getElementById('analysis-summary');
+    const cards = [
+        { label: 'Total', value: summary.total || 0, color: 'bg-gray-100 text-gray-800' },
+        { label: 'High', value: summary.high_severity || 0, color: 'bg-red-100 text-red-800' },
+        { label: 'Medium', value: summary.medium_severity || 0, color: 'bg-yellow-100 text-yellow-800' },
+        { label: 'Low', value: summary.low_severity || 0, color: 'bg-blue-100 text-blue-800' },
+    ];
+
+    container.innerHTML = cards.map(card => `
+        <div class="${card.color} rounded-lg p-3 text-center">
+            <div class="text-2xl font-bold">${card.value}</div>
+            <div class="text-xs opacity-75">${card.label}</div>
+        </div>
+    `).join('');
+}
+
+function renderMetrics(metrics) {
+    const container = document.getElementById('metrics-grid');
+    const metricItems = [];
+
+    if (metrics.mcp_server_count !== undefined) {
+        metricItems.push({ label: 'MCP Servers', value: metrics.mcp_server_count });
+    }
+    if (metrics.mcp_user_count !== undefined && metrics.mcp_user_count > 0) {
+        metricItems.push({ label: 'User MCPs', value: metrics.mcp_user_count });
+    }
+    if (metrics.mcp_project_count !== undefined && metrics.mcp_project_count > 0) {
+        metricItems.push({ label: 'Project MCPs', value: metrics.mcp_project_count });
+    }
+    if (metrics.mcp_plugin_count !== undefined && metrics.mcp_plugin_count > 0) {
+        metricItems.push({ label: 'Plugin MCPs', value: metrics.mcp_plugin_count });
+    }
+    if (metrics.mcp_used_count !== undefined) {
+        metricItems.push({ label: 'Used MCPs', value: metrics.mcp_used_count });
+    }
+    if (metrics.mcp_total_tools !== undefined) {
+        metricItems.push({ label: 'MCP Tools', value: metrics.mcp_total_tools });
+    }
+    if (metrics.mcp_unused_count !== undefined && metrics.mcp_unused_count > 0) {
+        metricItems.push({ label: 'Unused MCPs', value: metrics.mcp_unused_count });
+    }
+    if (metrics.premium_model_ratio !== undefined) {
+        metricItems.push({ label: 'Premium Model Ratio', value: `${(metrics.premium_model_ratio * 100).toFixed(0)}%` });
+    }
+    if (metrics.model_total_cost !== undefined) {
+        metricItems.push({ label: 'Total Cost', value: `$${metrics.model_total_cost.toFixed(2)}` });
+    }
+    if (metrics.claude_md_size_kb !== undefined) {
+        metricItems.push({ label: 'CLAUDE.md Size', value: `${metrics.claude_md_size_kb} KB` });
+    }
+    if (metrics.cache_hit_rate !== undefined) {
+        metricItems.push({ label: 'Cache Hit Rate', value: `${metrics.cache_hit_rate.toFixed(1)}%` });
+    }
+    if (metrics.project_agents_count !== undefined) {
+        metricItems.push({ label: 'Project Agents', value: metrics.project_agents_count });
+    }
+
+    container.innerHTML = metricItems.map(item => `
+        <div>
+            <div class="text-gray-500">${item.label}</div>
+            <div class="font-medium text-gray-900">${item.value}</div>
+        </div>
+    `).join('');
+}
+
+function renderTrends(metrics) {
+    const section = document.getElementById('trends-section');
+    const container = document.getElementById('trends-grid');
+    const context = document.getElementById('trends-context');
+
+    // Hide if trends not available
+    if (!metrics.trends_available || !metrics.trends) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    section.classList.remove('hidden');
+    const trends = metrics.trends;
+    const trendItems = [];
+
+    // Helper to create trend indicator
+    function trendIndicator(direction, changePercent, isGoodWhenDown = true, isNeutral = false) {
+        if (direction === 'flat' || Math.abs(changePercent) < 1) {
+            return '<span class="text-gray-400">-</span>';
+        }
+
+        const arrow = direction === 'up' ? '&uarr;' : '&darr;';
+        const sign = changePercent > 0 ? '+' : '';
+
+        // Neutral metrics are always gray - they're informational only
+        if (isNeutral) {
+            return `<span class="text-gray-500">${arrow} ${sign}${changePercent.toFixed(1)}%</span>`;
+        }
+
+        const isGood = isGoodWhenDown ? direction === 'down' : direction === 'up';
+        const isBad = isGoodWhenDown ? direction === 'up' : direction === 'down';
+        const color = isGood ? 'text-green-600' : (isBad ? 'text-red-600' : 'text-gray-600');
+
+        return `<span class="${color} font-medium">${arrow} ${sign}${changePercent.toFixed(1)}%</span>`;
+    }
+
+    // Cost per Session
+    if (trends.cost_per_session) {
+        const t = trends.cost_per_session;
+        trendItems.push({
+            label: 'Cost per Session',
+            value: `$${t.current.toFixed(4)}`,
+            trend: trendIndicator(t.direction, t.change_percent, true),
+            tooltip: `Previous: $${t.previous.toFixed(4)}`
+        });
+    }
+
+    // Cost per Message (more useful than tokens per session)
+    if (trends.cost_per_message) {
+        const t = trends.cost_per_message;
+        trendItems.push({
+            label: 'Cost per Message',
+            value: `$${t.current.toFixed(6)}`,
+            trend: trendIndicator(t.direction, t.change_percent, true),
+            tooltip: `Previous: $${t.previous.toFixed(6)}`
+        });
+    }
+
+    // Cache Hit Rate
+    if (trends.cache_hit_rate) {
+        const t = trends.cache_hit_rate;
+        trendItems.push({
+            label: 'Cache Hit Rate',
+            value: `${t.current.toFixed(1)}%`,
+            trend: trendIndicator(t.direction, t.change_percent, false), // higher is better
+            tooltip: `Previous: ${t.previous.toFixed(1)}%`
+        });
+    }
+
+    // Tokens per Message - context window hygiene (lower is better)
+    if (trends.tokens_per_message) {
+        const t = trends.tokens_per_message;
+        trendItems.push({
+            label: 'Tokens per Message',
+            value: t.current.toLocaleString(),
+            trend: trendIndicator(t.direction, t.change_percent, true), // lower is better
+            tooltip: `Previous: ${t.previous.toLocaleString()} - Lower = cleaner context window`
+        });
+    }
+
+    container.innerHTML = trendItems.map(item => `
+        <div title="${item.tooltip || ''}">
+            <div class="text-gray-500">${item.label}</div>
+            <div class="font-medium text-gray-900 flex items-center gap-2">
+                ${item.value}
+                ${item.trend}
+            </div>
+        </div>
+    `).join('');
+
+    // Add context about activity volume
+    if (trends.activity) {
+        const act = trends.activity;
+        const sessionChange = act.session_change_percent;
+        let contextText = `Comparing ${act.current_sessions} sessions (${act.current_messages} messages) vs ${act.previous_sessions} sessions (${act.previous_messages} messages) in previous period.`;
+
+        if (sessionChange !== undefined) {
+            const changeDir = sessionChange > 0 ? 'more' : 'fewer';
+            contextText += ` Activity is ${Math.abs(sessionChange).toFixed(0)}% ${changeDir} than before.`;
+        }
+
+        context.textContent = contextText;
+    }
+}
+
+function renderRecommendations(recommendations) {
+    const container = document.getElementById('recommendations-container');
+
+    // Group by category
+    const categories = {
+        mcp: { name: 'MCP Servers', icon: 'M6 5c-.001 0-.002 0-.003 0a3 3 0 00-2.983 2.998C3 8.002 3 8.004 3 8.005V19a2 2 0 002 2h14a2 2 0 002-2V8.005c0-.001 0-.003 0-.005a3 3 0 00-2.997-2.998V5a1 1 0 10-2 0v.001H8V5a1 1 0 10-2 0z', color: 'purple' },
+        model: { name: 'Model Usage', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', color: 'blue' },
+        config: { name: 'Configuration', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', color: 'green' },
+        cache: { name: 'Cache Efficiency', icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4', color: 'orange' },
+        agent: { name: 'Agent Configuration', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', color: 'indigo' },
+        trend: { name: 'Efficiency Trends', icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6', color: 'cyan' },
+    };
+
+    const severityColors = {
+        high: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', badge: 'bg-red-100 text-red-800' },
+        medium: { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-800', badge: 'bg-yellow-100 text-yellow-800' },
+        low: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', badge: 'bg-blue-100 text-blue-800' },
+        info: { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-800', badge: 'bg-gray-100 text-gray-800' },
+    };
+
+    // Group recommendations by category
+    const grouped = {};
+    recommendations.forEach(rec => {
+        if (!grouped[rec.category]) {
+            grouped[rec.category] = [];
+        }
+        grouped[rec.category].push(rec);
+    });
+
+    // Render each category
+    let html = '';
+    for (const [catKey, recs] of Object.entries(grouped)) {
+        const cat = categories[catKey] || { name: catKey, icon: '', color: 'gray' };
+
+        html += `
+            <div class="border border-gray-200 rounded-lg overflow-hidden">
+                <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-${cat.color}-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${cat.icon}" />
+                    </svg>
+                    <span class="font-medium text-gray-900">${cat.name}</span>
+                    <span class="ml-auto text-sm text-gray-500">${recs.length} recommendation(s)</span>
+                </div>
+                <div class="divide-y divide-gray-200">
+        `;
+
+        recs.forEach(rec => {
+            const colors = severityColors[rec.severity] || severityColors.info;
+            html += `
+                <div class="p-4 ${colors.bg}">
+                    <div class="flex items-start gap-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colors.badge} uppercase">${rec.severity}</span>
+                        <div class="flex-1">
+                            <h4 class="font-medium ${colors.text}">${rec.title}</h4>
+                            <p class="text-sm text-gray-700 mt-1">${rec.description}</p>
+                            ${rec.impact ? `<p class="text-sm text-gray-600 mt-2"><strong>Impact:</strong> ${rec.impact}</p>` : ''}
+                            ${rec.action_items && rec.action_items.length > 0 ? `
+                                <ul class="mt-3 text-sm text-gray-700 space-y-1">
+                                    ${rec.action_items.map(item => `<li class="flex items-start gap-2"><span class="text-gray-400">•</span>${item}</li>`).join('')}
+                                </ul>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+} // end if (typeof openAnalysisModal === 'undefined')
+
+// Close modal on escape key (safe to re-add listener)
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeAnalysisModal();
+    }
+});
+</script>
+    </div>
+</div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t border-gray-200 px-8 py-5">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+                <p class="text-xs text-gray-400">Open-source usage tracking for Claude Code · MIT License</p>
+                <div class="flex items-center gap-5 text-xs text-gray-500">
+                    <a href="https://github.com/allannapier/claudesavvy" target="_blank" class="hover:text-[#0770E3] flex items-center gap-1 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                        GitHub
+                    </a>
+                    <span class="text-gray-300">|</span>
+                    <a href="https://github.com/anthropics/claude-code" target="_blank" class="hover:text-[#0770E3] transition-colors">Claude Code</a>
+                    <span class="text-gray-300">|</span>
+                    <a href="https://claude.ai" target="_blank" class="hover:text-[#0770E3] transition-colors">Claude.ai</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+</div>
+
+    
+    <!-- HTMX configuration -->
+    <script>
+        // Add loading class to body during any HTMX request
+        document.body.addEventListener('htmx:beforeRequest', function(evt) {
+            document.body.classList.add('htmx-requesting');
+        });
+
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            document.body.classList.remove('htmx-requesting');
+        });
+
+        // Handle failed requests
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            document.body.classList.remove('htmx-requesting');
+        });
+
+        // Show loading bar immediately on nav link clicks (full page navigations)
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a[href]');
+            if (!link || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            const href = link.getAttribute('href');
+            if (!href || href.startsWith('#') || href.startsWith('javascript:') || link.target === '_blank') return;
+            if (link.hasAttribute('hx-get') || link.hasAttribute('hx-post') ||
+                link.hasAttribute('hx-put') || link.hasAttribute('hx-patch') || link.hasAttribute('hx-delete')) return;
+            try {
+                const url = new URL(href, window.location.origin);
+                if (url.origin === window.location.origin) {
+                    // Skip hash-only navigations — they don't trigger pageshow so the loader would get stuck
+                    if (url.pathname === window.location.pathname &&
+                        url.search === window.location.search &&
+                        url.hash) return;
+                    document.getElementById('global-loader').classList.add('loading');
+                }
+            } catch(err) { /* Invalid URL – skip */ }
+        });
+
+        // Reset loader if navigation is cancelled (e.g. back-forward cache restore)
+        window.addEventListener('pageshow', function() {
+            document.getElementById('global-loader').classList.remove('loading');
+        });
+    </script>
+<script>
+/* Prevent HTMX API calls in static demo */
+document.addEventListener('htmx:beforeRequest', function(e) { e.preventDefault(); });
+</script>
+</body>
+</html>

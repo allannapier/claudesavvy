@@ -78,7 +78,12 @@ def cli(ctx):
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
     help='Custom Claude data directory (default: ~/.claude/)'
 )
-def serve(port, host, debug, claude_dir):
+@click.option(
+    '--demo',
+    is_flag=True,
+    help='Run with sample data (no Claude Code installation required)'
+)
+def serve(port, host, debug, claude_dir, demo):
     """
     Start the ClaudeSavvy web dashboard.
 
@@ -112,7 +117,10 @@ def serve(port, host, debug, claude_dir):
         from .web.app import create_app
 
         # Get Claude data paths
-        if claude_dir:
+        if demo:
+            from .data.demo import generate_demo_data
+            paths = generate_demo_data()
+        elif claude_dir:
             paths = ClaudeDataPaths(Path(claude_dir))
         else:
             paths = get_claude_paths()
@@ -124,6 +132,9 @@ def serve(port, host, debug, claude_dir):
         console.print("\n[cyan]═══ ClaudeSavvy Web Server ═══[/cyan]")
         console.print("[dim]Starting web interface...[/dim]\n")
         console.print(f"[green]✓ Server running at:[/green] [bold]http://{host}:{port}[/bold]")
+
+        if demo:
+            console.print("[yellow]⚠ Demo mode:[/yellow] [bold]Showing sample data[/bold] (not your real usage)")
 
         if debug:
             console.print("[yellow]⚠ Debug mode:[/yellow] [bold]Enabled[/bold] (auto-reload on code changes)")
