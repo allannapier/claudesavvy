@@ -49,6 +49,23 @@ ClaudeSavvy provides comprehensive analytics for your Claude Code usage by readi
 
 ### Installation
 
+> [!TIP]
+> **Install with [`uv`](https://docs.astral.sh/uv/) package manager:**
+> 
+> This installs ClaudeSavvy as an isolated, globally available CLI tool, so it
+> won't interfere with your system Python or any of your projects.
+>
+> ```bash
+> uv tool install claudesavvy
+> ```
+>
+> You can also run the package once without installing anything.
+> ```bash
+> uvx claudesavvy
+> ```
+
+---
+
 **Install via PyPI (Recommended):**
 
 ```bash
