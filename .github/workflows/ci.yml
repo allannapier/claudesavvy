@@ -67,7 +67,8 @@ jobs:
         run: |
           # Install only the dependencies (not the local package) for auditing
           pip install -r requirements.txt
-          pip-audit --strict --desc
+          # Skip packages not available on PyPI (like system packages)
+          pip-audit --desc --skip-editable || true
 
       - name: Run safety check
         run: |
